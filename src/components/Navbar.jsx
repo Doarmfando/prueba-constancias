@@ -15,58 +15,74 @@ import {
   FaChartBar,
   FaBars,
   FaTimes,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaLock
 } from 'react-icons/fa';
 
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { usuario, logout } = useAuth();
+  const { usuario, logout, esAdministrador } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const menuItems = [
-    {
-      section: "Principal",
-      items: [
-        { path: "/dashboard", icon: FaHome, label: "Dashboard" },
-      ]
-    },
-    {
-      section: "Mi Área de Trabajo",
-      items: [
-        { path: "/mis-proyectos", icon: FaFolderOpen, label: "Mis Proyectos" },
-        { path: "/crear-proyecto", icon: FaPlus, label: "Crear Proyecto" },
-      ]
-    },
-    {
-      section: "Área Pública",
-      items: [
-        { path: "/proyectos-publicos", icon: FaGlobe, label: "Proyectos Públicos" },
-      ]
-    },
-    {
-      section: "Administración",
-      items: [
-        { path: "/usuarios", icon: FaUsers, label: "Usuarios" },
-        { path: "/auditoria", icon: FaClipboardList, label: "Auditoría" },
-      ]
-    },
-    {
-      section: "Herramientas",
-      items: [
-        { path: "/informacion", icon: FaInfoCircle, label: "Información" },
-        { path: "/gestion-datos", icon: FaDatabase, label: "Gestión de Datos" },
-      ]
-    },
-    {
-      section: "Legacy (Compatibilidad)",
-      items: [
-        { path: "/registros", icon: FaFileAlt, label: "Registros" },
-        { path: "/papeleria", icon: FaPrint, label: "Papelería" },
-        { path: "/graficos", icon: FaChartBar, label: "Gráficos" },
-      ]
+  // Función para filtrar los items del menú según el rol del usuario
+  const obtenerMenuItems = () => {
+    const menuBase = [
+      {
+        section: "Principal",
+        items: [
+          { path: "/dashboard", icon: FaHome, label: "Dashboard" },
+        ]
+      },
+      {
+        section: "Mi Área de Trabajo",
+        items: [
+          { path: "/mis-proyectos", icon: FaFolderOpen, label: "Mis Proyectos" },
+          { path: "/crear-proyecto", icon: FaPlus, label: "Crear Proyecto" },
+        ]
+      },
+      {
+        section: "Área Pública",
+        items: [
+          { path: "/proyectos-publicos", icon: FaGlobe, label: "Proyectos Públicos" },
+        ]
+      }
+    ];
+
+    // Solo mostrar sección de administración si es administrador
+    if (esAdministrador()) {
+      menuBase.push({
+        section: "Administración",
+        items: [
+          { path: "/usuarios", icon: FaUsers, label: "Usuarios" },
+          { path: "/auditoria", icon: FaClipboardList, label: "Auditoría" },
+          { path: "/proyectos-privados", icon: FaLock, label: "Proyectos Privados" },
+        ]
+      });
     }
-  ];
+
+    menuBase.push(
+      {
+        section: "Herramientas",
+        items: [
+          { path: "/informacion", icon: FaInfoCircle, label: "Información" },
+          { path: "/gestion-datos", icon: FaDatabase, label: "Gestión de Datos" },
+        ]
+      },
+      {
+        section: "Legacy (Compatibilidad)",
+        items: [
+          { path: "/registros", icon: FaFileAlt, label: "Registros" },
+          { path: "/papeleria", icon: FaPrint, label: "Papelería" },
+          { path: "/graficos", icon: FaChartBar, label: "Gráficos" },
+        ]
+      }
+    );
+
+    return menuBase;
+  };
+
+  const menuItems = obtenerMenuItems();
 
   const isActive = (path) => location.pathname === path;
 

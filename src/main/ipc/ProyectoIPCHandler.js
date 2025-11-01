@@ -153,6 +153,16 @@ class ProyectoIPCHandler {
       }
     });
 
+    // Exportar proyecto a PDF
+    ipcMain.handle("proyecto-exportar-pdf", async (event, { proyectoId, titulo, incluirEliminados, usuario }) => {
+      try {
+        return await this.proyectoController.exportarProyectoPDF(proyectoId, titulo, incluirEliminados, usuario);
+      } catch (error) {
+        console.error("Error en proyecto-exportar-pdf:", error);
+        return { success: false, error: error.message };
+      }
+    });
+
     // Exportar proyecto a Excel
     ipcMain.handle("proyecto-exportar-excel", async (event, { proyectoId, nombreProyecto, usuario }) => {
       try {
@@ -171,6 +181,7 @@ class ProyectoIPCHandler {
 
     const advancedChannels = [
       "proyecto-obtener-estadisticas",
+      "proyecto-exportar-pdf",
       "proyecto-exportar-excel"
     ];
 
@@ -192,8 +203,19 @@ class ProyectoIPCHandler {
       }
     });
 
+    // Obtener proyectos privados de otros usuarios (solo admin)
+    ipcMain.handle("proyecto-obtener-privados-otros", async (event, { usuario }) => {
+      try {
+        return await this.proyectoController.obtenerProyectosPrivadosOtros(usuario);
+      } catch (error) {
+        console.error("Error en proyecto-obtener-privados-otros:", error);
+        return { success: false, error: error.message };
+      }
+    });
+
     const adminChannels = [
-      "proyecto-obtener-todos"
+      "proyecto-obtener-todos",
+      "proyecto-obtener-privados-otros"
     ];
 
     this.registeredChannels.push(...adminChannels);

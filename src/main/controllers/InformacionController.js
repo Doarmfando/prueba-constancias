@@ -265,6 +265,72 @@ class InformacionController extends BaseController {
     }
   }
 
+  // Buscar persona por DNI (formato para frontend)
+  async buscarPersonaPorDni({ dni }) {
+    try {
+      if (!dni) {
+        throw new Error("DNI requerido");
+      }
+
+      const dniLimpio = dni.trim();
+
+      if (!/^\d{8}$/.test(dniLimpio)) {
+        throw new Error("El DNI debe tener exactamente 8 dígitos");
+      }
+
+      // Buscar registros por DNI
+      const registros = await this.registroModel.buscarPorDni(dniLimpio);
+
+      if (registros.length === 0) {
+        return {
+          success: true,
+          persona: null,
+          registros: [],
+          message: "No se encontraron registros para este DNI"
+        };
+      }
+
+      // Obtener datos de persona (del primer registro)
+      const primerRegistro = registros[0];
+      const persona = {
+        dni: primerRegistro.dni,
+        nombres: primerRegistro.nombre ? primerRegistro.nombre.split(' ').slice(0, -2).join(' ') : '',
+        apellidos: primerRegistro.nombre ? primerRegistro.nombre.split(' ').slice(-2).join(' ') : primerRegistro.nombre,
+        telefono: primerRegistro.telefono || 'No registrado',
+        email: primerRegistro.email || 'No registrado',
+        fecha_nacimiento: primerRegistro.fecha_nacimiento || '2000-01-01',
+        direccion: primerRegistro.direccion || 'No registrada',
+        ocupacion: primerRegistro.ocupacion || 'No registrada'
+      };
+
+      // Formatear registros para el frontend
+      const registrosFormateados = registros.map(r => ({
+        id: r.registro_id,
+        expediente: r.codigo || r.expediente,
+        codigo: r.codigo,
+        numero: r.numero,
+        fecha_registro: r.fecha_registro,
+        estado: r.estado_nombre || r.estado,
+        proyecto: r.proyecto_nombre || 'Proyecto General',
+        descripcion: r.observacion || 'Sin descripción'
+      }));
+
+      return {
+        success: true,
+        persona,
+        registros: registrosFormateados
+      };
+    } catch (error) {
+      console.error("Error en buscarPersonaPorDni:", error);
+      return {
+        success: false,
+        error: error.message,
+        persona: null,
+        registros: []
+      };
+    }
+  }
+
   // Buscar personas similares (para evitar duplicados)
   async buscarPersonasSimilares(nombre, dni) {
     try {
@@ -291,7 +357,7 @@ class InformacionController extends BaseController {
       }
 
       // Eliminar duplicados
-      const unicos = similares.filter((persona, index, arr) => 
+      const unicos = similares.filter((persona, index, arr) =>
         arr.findIndex(p => p.id === persona.id) === index
       );
 

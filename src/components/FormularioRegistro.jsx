@@ -1,19 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaSave, FaTimes } from 'react-icons/fa';
 import { mostrarExito, mostrarError } from '../utils/alertas';
 
 function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEditar = null }) {
   const [formData, setFormData] = useState({
-    nombre: registroEditar?.nombre || '',
-    dni: registroEditar?.dni || '',
-    numero: registroEditar?.numero || '',
-    expediente: registroEditar?.expediente || registroEditar?.codigo || '',
-    estado: registroEditar?.estado || 'Recibido',
-    fecha_registro: registroEditar?.fecha_registro || new Date().toISOString().split('T')[0],
-    fecha_en_caja: registroEditar?.fecha_en_caja || ''
+    nombre: '',
+    dni: '',
+    numero: '',
+    expediente: '',
+    estado: 'Recibido',
+    fecha_registro: new Date().toISOString().split('T')[0],
+    fecha_en_caja: ''
   });
 
   const [guardando, setGuardando] = useState(false);
+
+  // Actualizar formData cuando cambie registroEditar
+  useEffect(() => {
+    if (registroEditar) {
+      setFormData({
+        nombre: registroEditar.nombre || '',
+        dni: registroEditar.dni || '',
+        numero: registroEditar.numero || '',
+        expediente: registroEditar.expediente || registroEditar.codigo || '',
+        estado: registroEditar.estado || 'Recibido',
+        fecha_registro: registroEditar.fecha_registro || new Date().toISOString().split('T')[0],
+        fecha_en_caja: registroEditar.fecha_en_caja || ''
+      });
+    } else {
+      // Limpiar formulario para nuevo registro
+      setFormData({
+        nombre: '',
+        dni: '',
+        numero: '',
+        expediente: '',
+        estado: 'Recibido',
+        fecha_registro: new Date().toISOString().split('T')[0],
+        fecha_en_caja: ''
+      });
+    }
+  }, [registroEditar]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -80,39 +106,42 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
   if (!mostrar) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <FaSave className="text-lg" />
             {registroEditar ? 'Editar Registro' : 'Nuevo Registro'}
           </h3>
           <button
             onClick={onCerrar}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-white hover:text-gray-200 transition-colors p-2 hover:bg-white/10 rounded-lg"
+            title="Cerrar"
           >
-            <FaTimes />
+            <FaTimes className="text-lg" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre completo
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Nombre completo <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="nombre"
               value={formData.nombre}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Ingrese el nombre completo"
+              required
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
+              placeholder="Ej: Juan Pérez García"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                DNI
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                DNI <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -120,12 +149,13 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
                 value={formData.dni}
                 onChange={handleInputChange}
                 maxLength="8"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="12345678"
+                required
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
+                placeholder="Ej: 12345678"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Número
               </label>
               <input
@@ -133,35 +163,37 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
                 name="numero"
                 value={formData.numero}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Número"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
+                placeholder="Ej: 001-2024"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Expediente
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Expediente <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="expediente"
               value={formData.expediente}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Número de expediente"
+              required
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
+              placeholder="Ej: EXP-2024-001"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Estado <span className="text-red-500">*</span>
             </label>
             <select
               name="estado"
               value={formData.estado}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              required
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 bg-white"
             >
               <option value="Recibido">Recibido</option>
               <option value="En Caja">En Caja</option>
@@ -170,21 +202,22 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de registro
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Fecha de registro <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 name="fecha_registro"
                 value={formData.fecha_registro}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                required
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Fecha en caja
               </label>
               <input
@@ -192,23 +225,23 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
                 name="fecha_en_caja"
                 value={formData.fecha_en_caja}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900"
               />
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 pt-6 border-t">
             <button
               type="button"
               onClick={onCerrar}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-6 py-3 text-gray-700 bg-gray-100 border-2 border-gray-300 rounded-lg hover:bg-gray-200 hover:border-gray-400 transition-all duration-200 font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={guardando}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50"
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg hover:shadow-xl"
             >
               <FaSave className="text-sm" />
               <span>{guardando ? 'Guardando...' : (registroEditar ? 'Actualizar' : 'Crear')}</span>

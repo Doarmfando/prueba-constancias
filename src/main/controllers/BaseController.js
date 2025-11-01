@@ -61,12 +61,32 @@ class BaseController {
 
   // Formato de respuesta de error
   errorResponse(error, code = null) {
-    const response = { 
-      success: false, 
-      error: error.message || error 
+    const response = {
+      success: false,
+      error: error.message || error
     };
     if (code) response.code = code;
     return response;
+  }
+
+  // Verificar si el usuario es administrador
+  verificarEsAdmin(usuario) {
+    return usuario && usuario.rol === 'administrador';
+  }
+
+  // Verificar si el usuario está autenticado
+  verificarAutenticado(usuario) {
+    return usuario && usuario.id;
+  }
+
+  // Verificar si el usuario es el propietario del recurso
+  verificarEsPropietario(usuario, recursoUsuarioId) {
+    return usuario && usuario.id === recursoUsuarioId;
+  }
+
+  // Verificar si el usuario puede editar (es admin o propietario)
+  verificarPuedeEditar(usuario, recursoUsuarioId) {
+    return this.verificarEsAdmin(usuario) || this.verificarEsPropietario(usuario, recursoUsuarioId);
   }
 }
 

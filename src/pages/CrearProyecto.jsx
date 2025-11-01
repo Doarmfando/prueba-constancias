@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaSave, FaTimes } from 'react-icons/fa';
 import { mostrarExito, mostrarError } from '../utils/alertas';
+import { useAuth } from '../context/AuthContext';
 
 function CrearProyecto() {
   const [formData, setFormData] = useState({
@@ -13,8 +14,7 @@ function CrearProyecto() {
   const [errores, setErrores] = useState({});
   const [guardando, setGuardando] = useState(false);
 
-  // Temporalmente sin autenticación - simular usuario
-  const usuario = { id: 1, nombre: "Usuario Temporal" };
+  const { usuario } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -68,10 +68,11 @@ function CrearProyecto() {
         descripcion: formData.descripcion.trim() || null,
         es_publico: formData.es_publico ? 1 : 0,
         permite_edicion: formData.permite_edicion ? 1 : 0
-      });
+      }, usuario);
 
       if (response && response.success) {
         mostrarExito('Proyecto creado correctamente');
+        // Siempre navegar a mis-proyectos para ver el proyecto creado
         navigate('/mis-proyectos');
       } else {
         mostrarError('Error al crear proyecto', response?.error || 'Error desconocido');

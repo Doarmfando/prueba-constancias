@@ -41,31 +41,69 @@ function Graficos() {
     try {
       setCargando(true);
 
-      // Simular datos de estadísticas
-      setTimeout(() => {
-        const stats = {
-          total: 1247,
-          pendientes: 89,
-          aprobados: 1058,
-          rechazados: 100,
-          porEstado: {
-            'Pendiente': 89,
-            'Aprobado': 1058,
-            'Rechazado': 100
-          },
-          porMes: {
-            'Enero': 95,
-            'Febrero': 108,
-            'Marzo': 134,
-            'Abril': 122,
-            'Mayo': 156,
-            'Junio': 189
+      // Obtener registros reales
+      const response = await window.electronAPI?.registros.obtener();
+      let registros = [];
+
+      if (response && Array.isArray(response)) {
+        registros = response;
+      } else if (response && response.success && response.data) {
+        registros = response.data;
+      } else if (response && Array.isArray(response.registros)) {
+        registros = response.registros;
+      }
+
+      // Calcular estadísticas reales
+      const total = registros.length;
+      const recibidos = registros.filter(r => r.estado === 'Recibido').length;
+      const enCaja = registros.filter(r => r.estado === 'En Caja').length;
+      const entregados = registros.filter(r => r.estado === 'Entregado').length;
+      const tesoreria = registros.filter(r => r.estado === 'Tesoreria').length;
+
+      // Agrupar por estado
+      const porEstado = {
+        'Recibido': recibidos,
+        'En Caja': enCaja,
+        'Entregado': entregados,
+        'Tesorería': tesoreria
+      };
+
+      // Agrupar por mes
+      const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const porMes = {};
+
+      meses.forEach((mes, index) => {
+        const mesNum = index + 1;
+        const registrosDelMes = registros.filter(r => {
+          if (!r.fecha_registro) return false;
+          const fecha = new Date(r.fecha_registro);
+          const anioRegistro = fecha.getFullYear();
+          const mesRegistro = fecha.getMonth() + 1;
+
+          // Filtrar por año si no es "Todo"
+          if (filtroAnio !== 'Todo' && anioRegistro !== parseInt(filtroAnio)) {
+            return false;
           }
-        };
-        setEstadisticas(stats);
-        setCargando(false);
-      }, 800);
+
+          return mesRegistro === mesNum;
+        });
+        porMes[mes] = registrosDelMes.length;
+      });
+
+      const stats = {
+        total,
+        pendientes: recibidos,
+        aprobados: entregados,
+        rechazados: 0,
+        porEstado,
+        porMes
+      };
+
+      setEstadisticas(stats);
+      setCargando(false);
     } catch (error) {
+      console.error('Error al cargar estadísticas:', error);
       mostrarError('Error al cargar estadísticas', 'No se pudieron cargar las estadísticas');
       setCargando(false);
     }
@@ -75,8 +113,8 @@ function Graficos() {
     labels: estadisticas ? Object.keys(estadisticas.porEstado) : [],
     datasets: [{
       data: estadisticas ? Object.values(estadisticas.porEstado) : [],
-      backgroundColor: ['#fbbf24', '#10b981', '#ef4444'],
-      borderColor: ['#f59e0b', '#059669', '#dc2626'],
+      backgroundColor: ['#3b82f6', '#fbbf24', '#10b981', '#a855f7'],
+      borderColor: ['#1d4ed8', '#f59e0b', '#059669', '#7e22ce'],
       borderWidth: 2
     }]
   };

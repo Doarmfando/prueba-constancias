@@ -10,12 +10,12 @@ class DatabaseService {
   }
 
   getDatabasePath() {
-    // En desarrollo: usar la ruta actual del proyecto
-    if (process.env.NODE_ENV !== 'production') {
+    // Si la app NO está empaquetada, usar siempre la BD de desarrollo
+    if (!app.isPackaged) {
       return path.join(__dirname, "../../../database.sqlite");
     }
 
-    // En producción: usar userData para datos persistentes
+    // Solo cuando está empaquetada (instalador), usar userData
     const userDataPath = app.getPath('userData');
     return path.join(userDataPath, 'database.sqlite');
   }

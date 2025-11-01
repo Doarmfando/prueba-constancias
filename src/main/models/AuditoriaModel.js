@@ -65,7 +65,7 @@ class AuditoriaModel extends BaseModel {
     }
 
     const sql = `
-      SELECT a.*, u.nombre as nombre_usuario, u.nombre_usuario as nombre_usuario,
+      SELECT a.*, u.nombre_usuario as nombre_usuario,
         p.nombre as nombre_proyecto
       FROM auditoria a
       LEFT JOIN usuarios u ON a.usuario_id = u.id
@@ -76,7 +76,7 @@ class AuditoriaModel extends BaseModel {
     `;
 
     params.push(limite, offset);
-    return await this.obtenerTodos(sql, params);
+    return await this.executeQuery(sql, params);
   }
 
   // Contar total con filtros
@@ -113,8 +113,8 @@ class AuditoriaModel extends BaseModel {
       ${whereClause}
     `;
 
-    const result = await this.obtenerUno(sql, params);
-    return result.total;
+    const result = await this.executeGet(sql, params);
+    return result ? result.total : 0;
   }
 
   // Obtener historial completo (solo admin)
@@ -145,7 +145,7 @@ class AuditoriaModel extends BaseModel {
     }
 
     const sql = `
-      SELECT a.*, u.nombre as nombre_usuario, u.nombre_usuario as nombre_usuario,
+      SELECT a.*, u.nombre_usuario as nombre_usuario,
         p.nombre as nombre_proyecto
       FROM auditoria a
       LEFT JOIN usuarios u ON a.usuario_id = u.id
@@ -155,7 +155,7 @@ class AuditoriaModel extends BaseModel {
       LIMIT 10000
     `;
 
-    return await this.obtenerTodos(sql, params);
+    return await this.executeQuery(sql, params);
   }
 
   // Obtener estadísticas
@@ -173,7 +173,7 @@ class AuditoriaModel extends BaseModel {
       FROM auditoria a
     `;
 
-    return await this.obtenerUno(sql);
+    return await this.executeGet(sql);
   }
 
   // Limpiar historial antiguo
@@ -202,7 +202,7 @@ class AuditoriaModel extends BaseModel {
   // Obtener historial por usuario
   async obtenerHistorialPorUsuario(usuarioId, limite = 50, offset = 0) {
     const sql = `
-      SELECT a.*, u.nombre as nombre_usuario,
+      SELECT a.*, u.nombre_usuario as nombre_usuario,
         p.nombre as nombre_proyecto
       FROM auditoria a
       LEFT JOIN usuarios u ON a.usuario_id = u.id
@@ -211,20 +211,20 @@ class AuditoriaModel extends BaseModel {
       ORDER BY a.fecha DESC
       LIMIT ? OFFSET ?
     `;
-    return await this.obtenerTodos(sql, [usuarioId, limite, offset]);
+    return await this.executeQuery(sql, [usuarioId, limite, offset]);
   }
 
   // Obtener historial por proyecto
   async obtenerHistorialPorProyecto(proyectoId, limite = 50, offset = 0) {
     const sql = `
-      SELECT a.*, u.nombre as nombre_usuario, u.email
+      SELECT a.*, u.nombre_usuario as nombre_usuario, u.email
       FROM auditoria a
       LEFT JOIN usuarios u ON a.usuario_id = u.id
       WHERE a.proyecto_id = ?
       ORDER BY a.fecha DESC
       LIMIT ? OFFSET ?
     `;
-    return await this.obtenerTodos(sql, [proyectoId, limite, offset]);
+    return await this.executeQuery(sql, [proyectoId, limite, offset]);
   }
 
   // Obtener estadísticas de actividad
@@ -250,7 +250,7 @@ class AuditoriaModel extends BaseModel {
       ${whereClause}
     `;
 
-    return await this.obtenerUno(sql, params);
+    return await this.executeGet(sql, params);
   }
 
   // Obtener actividad reciente por usuario
@@ -264,7 +264,7 @@ class AuditoriaModel extends BaseModel {
       ORDER BY a.fecha DESC
       LIMIT ?
     `;
-    return await this.obtenerTodos(sql, [usuarioId, limite]);
+    return await this.executeQuery(sql, [usuarioId, limite]);
   }
 
   // Buscar en auditoría
@@ -283,7 +283,7 @@ class AuditoriaModel extends BaseModel {
     }
 
     const sql = `
-      SELECT a.*, u.nombre as nombre_usuario,
+      SELECT a.*, u.nombre_usuario as nombre_usuario,
         p.nombre as nombre_proyecto
       FROM auditoria a
       LEFT JOIN usuarios u ON a.usuario_id = u.id
@@ -293,7 +293,7 @@ class AuditoriaModel extends BaseModel {
       LIMIT 100
     `;
 
-    return await this.obtenerTodos(sql, params);
+    return await this.executeQuery(sql, params);
   }
 
   // Limpiar auditoría antigua (mantener solo últimos N días)

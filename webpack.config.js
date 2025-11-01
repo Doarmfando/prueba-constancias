@@ -44,7 +44,7 @@ module.exports = {
       {
         test: /\.css$/i,
         use: [
-          MiniCssExtractPlugin.loader,
+          isProduction ? MiniCssExtractPlugin.loader : "style-loader",
           "css-loader",
           "postcss-loader",
         ],
@@ -63,9 +63,10 @@ module.exports = {
     new CleanWebpackPlugin(),
 
     new HtmlWebpackPlugin({
-      template: "./public/index.html",
+      template: "./src/index.template.html",
       filename: "index.html",
-      inject: true,
+      inject: "body",
+      scriptLoading: "defer",
       minify: isProduction
         ? {
             collapseWhitespace: true,
@@ -74,9 +75,12 @@ module.exports = {
         : false,
     }),
 
-    new MiniCssExtractPlugin({
-      filename: "main.css",
-    }),
+    // Solo usar MiniCssExtractPlugin en producción
+    ...(isProduction ? [
+      new MiniCssExtractPlugin({
+        filename: "main.css",
+      })
+    ] : []),
 
     new webpack.DefinePlugin({
       "process.env.REACT_APP_ENV": JSON.stringify("electron"),
@@ -97,12 +101,12 @@ module.exports = {
   devtool: isProduction ? false : "source-map",
 
   devServer: {
-    static: {
-      directory: path.join(__dirname, "dist"),
-    },
     compress: true,
     port: 8083,
     hot: true,
     historyApiFallback: true,
+    devMiddleware: {
+      writeToDisk: true, // ✅ Escribir archivos en dist/ en desarrollo
+    },
   },
 };

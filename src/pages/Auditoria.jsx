@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaHistory, FaSearch, FaFilter, FaDownload, FaUser, FaCalendarAlt } from 'react-icons/fa';
 import { MdRefresh } from 'react-icons/md';
 import { mostrarError, mostrarExito } from '../utils/alertas';
+import { useAuth } from '../context/AuthContext';
 
 function Auditoria() {
   const [logs, setLogs] = useState([]);
@@ -13,21 +14,29 @@ function Auditoria() {
   const [pagina, setPagina] = useState(1);
   const [totalLogs, setTotalLogs] = useState(0);
 
-  // Temporalmente sin autenticación - simular usuario admin
-  const usuario = { id: 1, nombre: "Usuario Temporal", rol: "administrador" };
+  const { usuario } = useAuth();
   const logsPerPage = 50;
 
   useEffect(() => {
-    cargarLogs();
-    cargarUsuarios();
-  }, [pagina]);
+    if (usuario) {
+      cargarLogs();
+      cargarUsuarios();
+    }
+  }, [pagina, usuario]);
+
+  // Efecto para recargar cuando cambien los filtros
+  useEffect(() => {
+    if (usuario && pagina === 1) {
+      cargarLogs();
+    }
+  }, [busqueda, filtroUsuario, filtroAccion]);
 
   const cargarLogs = async () => {
     try {
       setCargando(true);
-      // Note: 'auditoria-obtener-historial' endpoint is not mapped in the new API
-      // This would need to be added to preload.js electronAPI structure
+
       const response = await window.electronAPI?.auditoria.obtenerHistorial({
+        usuario: usuario,
         limite: logsPerPage,
         offset: (pagina - 1) * logsPerPage,
         filtros: {
@@ -43,6 +52,9 @@ function Auditoria() {
       } else {
         setLogs([]);
         setTotalLogs(0);
+        if (response?.error) {
+          console.error('Error del servidor:', response.error);
+        }
       }
     } catch (error) {
       setLogs([]);
@@ -75,6 +87,30 @@ function Auditoria() {
     } catch (error) {
       mostrarError('Error al exportar logs', error.message);
     }
+  };
+
+  const traducirAccion = (accion) => {
+    const traducciones = {
+      'crear': 'Creación',
+      'editar': 'Edición',
+      'eliminar': 'Eliminación',
+      'publicar': 'Publicación',
+      'acceso': 'Acceso al Sistema'
+    };
+    return traducciones[accion] || accion;
+  };
+
+  const traducirTabla = (tabla) => {
+    const traducciones = {
+      'proyectos_registros': 'Proyectos',
+      'usuarios': 'Usuarios',
+      'sistema': 'Sistema',
+      'auditoria': 'Auditoría',
+      'personas': 'Personas',
+      'expedientes': 'Expedientes',
+      'registros': 'Registros'
+    };
+    return traducciones[tabla] || tabla;
   };
 
   const getIconoAccion = (accion) => {
@@ -253,11 +289,11 @@ function Auditoria() {
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="todos">Todas las acciones</option>
-            <option value="crear">Crear</option>
-            <option value="editar">Editar</option>
-            <option value="eliminar">Eliminar</option>
-            <option value="publicar">Publicar</option>
-            <option value="acceso">Acceso</option>
+            <option value="crear">➕ Creación</option>
+            <option value="editar">✏️ Edición</option>
+            <option value="eliminar">🗑️ Eliminación</option>
+            <option value="publicar">📢 Publicación</option>
+            <option value="acceso">🔑 Acceso al Sistema</option>
           </select>
 
           <div className="text-sm text-gray-600 flex items-center">
@@ -273,22 +309,22 @@ function Auditoria() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha/Hora
+                  📅 Fecha y Hora
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Usuario
+                  👤 Usuario
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acción
+                  ⚡ Acción Realizada
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tabla
+                  📋 Módulo Afectado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Proyecto
+                  📂 Proyecto
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Detalles
+                  📝 Detalles
                 </th>
               </tr>
             </thead>
@@ -315,14 +351,14 @@ function Auditoria() {
                     <div className="flex items-center space-x-2">
                       {getIconoAccion(log.accion)}
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getColorAccion(log.accion)}`}>
-                        {log.accion}
+                        {traducirAccion(log.accion)}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">
-                      {log.tabla_afectada}
-                    </code>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <span className="bg-blue-50 px-3 py-1 rounded-full text-sm font-medium text-blue-700">
+                      {traducirTabla(log.tabla_afectada)}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {log.nombre_proyecto || '---'}

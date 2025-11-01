@@ -15,6 +15,7 @@ class InformacionIPCHandler extends BaseIPCHandler {
     this.handle("validar-consistencia-datos", this.informacionController, "validarConsistenciaDatos");
     this.handle("generar-resumen-persona", this.informacionController, "generarResumenPersona");
     this.handle("buscar-personas-similares", this.informacionController, "buscarPersonasSimilares");
+    this.handle("buscar-persona-por-dni", this.informacionController, "buscarPersonaPorDni");
 
     console.log("Handlers de Información registrados");
   }

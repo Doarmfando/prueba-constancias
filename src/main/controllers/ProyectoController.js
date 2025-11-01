@@ -1,10 +1,13 @@
 const BaseController = require('./BaseController');
+const PDFService = require('../services/PDFService');
 
 class ProyectoController extends BaseController {
-  constructor(proyectoModel, auditoriaModel) {
+  constructor(proyectoModel, auditoriaModel, registroModel) {
     super();
     this.proyectoModel = proyectoModel;
     this.auditoriaModel = auditoriaModel;
+    this.registroModel = registroModel;
+    this.pdfService = new PDFService();
   }
 
   // Crear nuevo proyecto
@@ -43,21 +46,47 @@ class ProyectoController extends BaseController {
   // Obtener proyectos del usuario (solo sus propios proyectos)
   async obtenerMisProyectos(usuarioId, usuario = null) {
     try {
-      let proyectos;
-
-      // Si el usuario es administrador, mostrar todos los proyectos
-      if (usuario && usuario.rol === 'administrador') {
-        proyectos = await this.proyectoModel.listarTodos();
-      } else {
-        // Para trabajadores, mostrar solo sus propios proyectos (públicos y privados)
-        proyectos = await this.proyectoModel.listarPorUsuario(usuarioId);
-      }
+      // Siempre mostrar solo los proyectos del usuario, independientemente del rol
+      const proyectos = await this.proyectoModel.listarPorUsuario(usuarioId);
 
       return {
         success: true,
         proyectos
       };
     } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Obtener proyectos privados de otros usuarios (solo administrador)
+  async obtenerProyectosPrivadosOtros(usuarioActual) {
+    try {
+      if (usuarioActual.rol !== 'administrador') {
+        throw new Error('No tienes permisos para ver proyectos privados de otros usuarios');
+      }
+
+      // Obtener todos los proyectos privados que NO sean del usuario actual
+      const proyectos = await this.proyectoModel.executeQuery(
+        `SELECT
+          p.*,
+          u.nombre as nombre_creador,
+          (SELECT COUNT(*) FROM registros r WHERE r.proyecto_id = p.id AND r.eliminado = 0) as total_registros
+        FROM proyectos_registros p
+        LEFT JOIN usuarios u ON p.usuario_creador_id = u.id
+        WHERE p.es_publico = 0 AND p.usuario_creador_id != ? AND p.activo = 1
+        ORDER BY p.fecha_creacion DESC`,
+        [usuarioActual.id]
+      );
+
+      return {
+        success: true,
+        proyectos
+      };
+    } catch (error) {
+      console.error('Error obteniendo proyectos privados de otros:', error);
       return {
         success: false,
         error: error.message
@@ -372,6 +401,58 @@ class ProyectoController extends BaseController {
         proyecto: nuevoProyecto
       };
     } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Exportar proyecto a PDF
+  async exportarProyectoPDF(proyectoId, titulo, incluirEliminados = false, usuarioActual) {
+    try {
+      // Obtener el proyecto
+      const proyecto = await this.proyectoModel.obtenerPorId(proyectoId);
+
+      if (!proyecto) {
+        throw new Error('Proyecto no encontrado');
+      }
+
+      // Verificar permisos de acceso
+      const tieneAcceso = usuarioActual.rol === 'administrador' ||
+                          proyecto.usuario_creador_id === usuarioActual.id ||
+                          proyecto.es_publico === 1;
+
+      if (!tieneAcceso) {
+        throw new Error('No tienes permisos para exportar este proyecto');
+      }
+
+      // Obtener registros del proyecto
+      const registros = await this.registroModel.obtenerTodos(proyectoId);
+      const registrosEliminados = incluirEliminados ? await this.registroModel.obtenerEliminados(proyectoId) : [];
+
+      // Exportar a PDF
+      const resultado = await this.pdfService.exportarProyectoPDF(proyecto, registros, {
+        titulo: titulo || proyecto.nombre,
+        incluirEliminados,
+        registrosEliminados
+      });
+
+      // Registrar en auditoría si fue exitoso
+      if (resultado.success) {
+        await this.auditoriaModel.registrarAccion({
+          usuario_id: usuarioActual.id,
+          accion: 'exportar_pdf',
+          tabla_afectada: 'proyectos_registros',
+          registro_id: proyectoId,
+          proyecto_id: proyectoId,
+          detalles: { titulo, incluir_eliminados: incluirEliminados }
+        });
+      }
+
+      return resultado;
+    } catch (error) {
+      console.error('Error exportando proyecto a PDF:', error);
       return {
         success: false,
         error: error.message

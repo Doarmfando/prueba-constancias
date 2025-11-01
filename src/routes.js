@@ -10,6 +10,7 @@ const MisProyectos = lazy(() => import("./pages/MisProyectos"));
 const CrearProyecto = lazy(() => import("./pages/CrearProyecto"));
 const ProyectoDetalle = lazy(() => import("./pages/ProyectoDetalle"));
 const ProyectosPublicos = lazy(() => import("./pages/ProyectosPublicos"));
+const ProyectosPrivados = lazy(() => import("./pages/ProyectosPrivados"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
 const Auditoria = lazy(() => import("./pages/Auditoria"));
 const Informacion = lazy(() => import("./pages/Informacion"));
@@ -63,32 +64,6 @@ function ProtectedRoute({ children }) {
       </main>
     </div>
   );
-
-  // Código original comentado:
-  /*
-  const { estaAutenticado, estaCargando } = useAuth();
-
-  if (estaCargando()) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!estaAutenticado()) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <Navbar />
-      <main className="flex-1 p-6 lg:p-8 overflow-auto">
-        {children}
-      </main>
-    </div>
-  );
-  */
 }
 
 // Componente para rutas de admin
@@ -119,36 +94,6 @@ function AdminRoute({ children }) {
       </main>
     </div>
   );
-
-  // Código original comentado:
-  /*
-  const { estaAutenticado, estaCargando, esAdministrador } = useAuth();
-
-  if (estaCargando()) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!estaAutenticado()) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!esAdministrador()) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <Navbar />
-      <main className="flex-1 p-6 lg:p-8 overflow-auto">
-        {children}
-      </main>
-    </div>
-  );
-  */
 }
 
 // Componente para rutas públicas (solo mostrar si NO está autenticado)
@@ -168,25 +113,6 @@ function PublicRoute({ children }) {
   }
 
   return children;
-
-  // Código original comentado:
-  /*
-  const { estaAutenticado, estaCargando } = useAuth();
-
-  if (estaCargando()) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (estaAutenticado()) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
-  */
 }
 
 function AppRoutes() {
@@ -214,6 +140,7 @@ function AppRoutes() {
             {/* 👥 Administración (solo admin) */}
             <Route path="/usuarios" element={<AdminRoute><Usuarios /></AdminRoute>} />
             <Route path="/auditoria" element={<AdminRoute><Auditoria /></AdminRoute>} />
+            <Route path="/proyectos-privados" element={<AdminRoute><ProyectosPrivados /></AdminRoute>} />
 
             {/* 🔧 Herramientas */}
             <Route path="/informacion" element={<ProtectedRoute><Informacion /></ProtectedRoute>} />

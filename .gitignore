@@ -1,4 +1,3 @@
-@"
 # Node/Electron
 node_modules/
 dist/
@@ -14,10 +13,15 @@ release/
 *.db
 *.exe
 *.dll
+*.def
+
+# Archivos basura
+null
+nulDB
+taskillnul
 
 # Config locales
 .claude/
 .settings/
 .env
 .env.*
-"@ | Out-File -Encoding UTF8 ".gitignore"

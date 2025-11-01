@@ -47,6 +47,8 @@ const allowedChannels = new Set([
   "proyecto-hacer-publico",
   "proyecto-obtener-publicos",
   "proyecto-obtener-detalle",
+  "proyecto-obtener-privados-otros",
+  "proyecto-exportar-pdf",
   // Canales de auditoría
   "auditoria-obtener-historial",
   // Canales de gestión de datos
@@ -125,7 +127,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     hacerPublico: (id, usuario) => ipcRenderer.invoke("proyecto-hacer-publico", { id, usuario: usuario || { id: 1 } }),
     obtenerPublicos: () => ipcRenderer.invoke("proyecto-obtener-publicos"),
     obtenerProyectosPublicos: () => ipcRenderer.invoke("proyecto-obtener-publicos"),
-    obtenerDetalle: (id, usuario) => ipcRenderer.invoke("proyecto-obtener-por-id", { id, usuario: usuario || { id: 1 } })
+    obtenerDetalle: (id, usuario) => ipcRenderer.invoke("proyecto-obtener-por-id", { id, usuario: usuario || { id: 1 } }),
+    obtenerPrivadosOtros: (usuario) => ipcRenderer.invoke("proyecto-obtener-privados-otros", { usuario }),
+    exportarPDF: (proyectoId, titulo, incluirEliminados, usuario) => ipcRenderer.invoke("proyecto-exportar-pdf", { proyectoId, titulo, incluirEliminados, usuario })
   },
 
   // API de Auditoría

@@ -20,6 +20,10 @@ function ProyectoDetalle() {
   const [cargandoRegistros, setCargandoRegistros] = useState(false);
   const [mostrarFormularioRegistro, setMostrarFormularioRegistro] = useState(false);
   const [registroEditando, setRegistroEditando] = useState(null);
+  const [mostrarModalExportarPDF, setMostrarModalExportarPDF] = useState(false);
+  const [exportandoPDF, setExportandoPDF] = useState(false);
+  const [tituloPDF, setTituloPDF] = useState('');
+  const [incluirEliminadosEnPDF, setIncluirEliminadosEnPDF] = useState(false);
 
   // Obtener usuario actual del localStorage
   const getUsuarioActual = () => {
@@ -56,6 +60,11 @@ function ProyectoDetalle() {
     cargarProyecto();
   }, [id]);
 
+  // Recalcular estadísticas cuando cambien los registros
+  useEffect(() => {
+    cargarEstadisticas();
+  }, [registros, registrosEliminados]);
+
   const cargarProyecto = async () => {
     try {
       setCargando(true);
@@ -64,7 +73,6 @@ function ProyectoDetalle() {
 
       if (response?.success && response.proyecto) {
         setProyecto(response.proyecto);
-        cargarEstadisticas();
         cargarRegistros(response.proyecto);
       } else {
         console.error('Error cargando proyecto:', response?.error);
@@ -80,31 +88,32 @@ function ProyectoDetalle() {
 
   const cargarEstadisticas = async () => {
     try {
-      // Estadísticas simuladas temporalmente
-      const response = { success: true, estadisticas: {
+      // Calcular estadísticas desde los registros reales
+      const activos = registros.length;
+      const papeleria = registrosEliminados.length;
+      const total = activos + papeleria;
+
+      // Encontrar la última actualización
+      let ultimaActualizacion = null;
+      if (registros.length > 0) {
+        const fechas = registros.map(r => new Date(r.fecha_registro || r.fecha_creacion || Date.now()));
+        ultimaActualizacion = new Date(Math.max(...fechas)).toISOString();
+      }
+
+      setEstadisticas({
+        activos,
+        papeleria,
+        total,
+        ultima_actualizacion: ultimaActualizacion
+      });
+    } catch (error) {
+      console.error('Error cargando estadísticas:', error);
+      setEstadisticas({
         activos: 0,
         papeleria: 0,
         total: 0,
         ultima_actualizacion: null
-      }};
-
-      if (response?.success) {
-        setEstadisticas(response.estadisticas || {
-          activos: 0,
-          papeleria: 0,
-          total: 0,
-          ultima_actualizacion: null
-        });
-      } else {
-        setEstadisticas({
-          activos: 0,
-          papeleria: 0,
-          total: 0,
-          ultima_actualizacion: null
-        });
-      }
-    } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      });
     }
   };
 
@@ -196,19 +205,44 @@ function ProyectoDetalle() {
     }
   };
 
-  const exportarDatos = async () => {
+  const abrirModalExportarPDF = () => {
+    setTituloPDF(proyecto.nombre || '');
+    setIncluirEliminadosEnPDF(false);
+    setMostrarModalExportarPDF(true);
+  };
+
+  const exportarProyectoPDF = async () => {
     try {
-      // Exportación temporal deshabilitada
-      const response = { success: true, message: 'Exportación en desarrollo' };
+      setExportandoPDF(true);
+
+      const response = await window.electronAPI?.proyectos.exportarPDF(
+        proyecto.id,
+        tituloPDF,
+        incluirEliminadosEnPDF,
+        usuario
+      );
 
       if (response?.success) {
-        mostrarExito('Datos exportados correctamente a Excel');
+        mostrarExito('PDF exportado correctamente', response.filePath ? `Guardado en: ${response.filePath}` : '');
+        setMostrarModalExportarPDF(false);
       } else {
-        mostrarError('Error al exportar datos', response?.error || 'Error de conexión');
+        if (response?.message && response.message.includes('cancelada')) {
+          // No mostrar error si el usuario canceló
+          setMostrarModalExportarPDF(false);
+        } else {
+          mostrarError('Error al exportar PDF', response?.error || 'Error de conexión');
+        }
       }
     } catch (error) {
-      mostrarError('Error al exportar datos', 'Error de conexión');
+      mostrarError('Error al exportar PDF', 'Error de conexión');
+      console.error('Error exportando PDF:', error);
+    } finally {
+      setExportandoPDF(false);
     }
+  };
+
+  const exportarDatos = async () => {
+    abrirModalExportarPDF();
   };
 
   const puedeEditar = () => {
@@ -228,9 +262,10 @@ function ProyectoDetalle() {
   );
 
   const eliminarRegistro = async (registro) => {
+    const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || 'este registro';
     const confirmado = await mostrarConfirmacion({
       titulo: '¿Eliminar registro?',
-      texto: `Se eliminará el registro de ${registro.nombres} ${registro.apellidos}`,
+      texto: `Se eliminará el registro de ${nombreCompleto}`,
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     });
@@ -254,9 +289,10 @@ function ProyectoDetalle() {
   };
 
   const restaurarRegistro = async (registro) => {
+    const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || 'este registro';
     const confirmado = await mostrarConfirmacion({
       titulo: '¿Restaurar registro?',
-      texto: `Se restaurará el registro de ${registro.nombres} ${registro.apellidos}`,
+      texto: `Se restaurará el registro de ${nombreCompleto}`,
       confirmButtonText: 'Sí, restaurar',
       cancelButtonText: 'Cancelar'
     });
@@ -792,6 +828,100 @@ function ProyectoDetalle() {
           }}
         />
       )}
+
+      {/* Modal Exportar PDF */}
+      {mostrarModalExportarPDF && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+            <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <FaDownload className="text-lg" />
+                Exportar a PDF
+              </h3>
+              <button
+                onClick={() => setMostrarModalExportarPDF(false)}
+                disabled={exportandoPDF}
+                className="text-white hover:text-gray-200 transition-colors p-2 hover:bg-white/10 rounded-lg disabled:opacity-50"
+                title="Cerrar"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Título del documento <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={tituloPDF}
+                  onChange={(e) => setTituloPDF(e.target.value)}
+                  placeholder="Ej: Reporte de Registros - Enero 2024"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
+                />
+                <p className="mt-2 text-sm text-gray-500">
+                  Este título aparecerá en el encabezado del PDF
+                </p>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={incluirEliminadosEnPDF}
+                    onChange={(e) => setIncluirEliminadosEnPDF(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    Incluir registros en papelería ({registrosEliminados.length})
+                  </span>
+                </label>
+                <p className="ml-8 mt-1 text-xs text-gray-500">
+                  Se agregará una sección adicional con los registros eliminados
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <FaDownload className="text-blue-600 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Información a incluir</p>
+                    <ul className="space-y-1 text-xs">
+                      <li>• Datos del proyecto y estadísticas</li>
+                      <li>• Tabla con {registros.length} registros activos</li>
+                      {incluirEliminadosEnPDF && <li>• Tabla con {registrosEliminados.length} registros eliminados</li>}
+                      <li>• Fecha y hora de generación</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalExportarPDF(false)}
+                  disabled={exportandoPDF}
+                  className="px-6 py-3 text-gray-700 bg-gray-100 border-2 border-gray-300 rounded-lg hover:bg-gray-200 hover:border-gray-400 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={exportarProyectoPDF}
+                  disabled={exportandoPDF || !tituloPDF.trim()}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg hover:shadow-xl"
+                >
+                  <FaDownload className="text-sm" />
+                  <span>{exportandoPDF ? 'Generando PDF...' : 'Exportar PDF'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -799,8 +929,7 @@ function ProyectoDetalle() {
 // Componente del Formulario de Registro
 function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
   const [formData, setFormData] = useState({
-    nombres: '',
-    apellidos: '',
+    nombre: '',
     dni: '',
     numero: '',
     expediente_codigo: '',
@@ -815,8 +944,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
   useEffect(() => {
     if (registro) {
       setFormData({
-        nombres: registro.nombres || '',
-        apellidos: registro.apellidos || '',
+        nombre: registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || '',
         dni: registro.dni || '',
         numero: registro.numero || '',
         expediente_codigo: registro.expediente || '',
@@ -862,12 +990,8 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
   const validarFormulario = () => {
     const nuevosErrores = {};
 
-    if (!formData.nombres.trim()) {
-      nuevosErrores.nombres = 'Los nombres son obligatorios';
-    }
-
-    if (!formData.apellidos.trim()) {
-      nuevosErrores.apellidos = 'Los apellidos son obligatorios';
+    if (!formData.nombre.trim()) {
+      nuevosErrores.nombre = 'El nombre completo es obligatorio';
     }
 
     if (!formData.dni.trim()) {
@@ -904,7 +1028,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
 
       const datosRegistro = {
         proyecto_id: proyecto.id,
-        nombre: `${formData.nombres.trim()} ${formData.apellidos.trim()}`, // RegistroModel espera nombre completo
+        nombre: formData.nombre.trim(), // RegistroModel espera nombre completo
         dni: formData.dni.trim(),
         numero: formData.numero.trim() || null,
         expediente: formData.expediente_codigo.trim(), // RegistroModel espera 'expediente', no 'expediente_codigo'
@@ -960,47 +1084,29 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
           <div>
             <h4 className="text-md font-medium text-gray-900 mb-4">Información Personal</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="nombres" className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombres *
+              <div className="md:col-span-2">
+                <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre completo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  id="nombres"
-                  name="nombres"
-                  value={formData.nombres}
+                  id="nombre"
+                  name="nombre"
+                  value={formData.nombre}
                   onChange={handleInputChange}
+                  placeholder="Ej: Juan Pérez García"
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errores.nombres ? 'border-red-500' : 'border-gray-300'
+                    errores.nombre ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
-                {errores.nombres && (
-                  <p className="mt-1 text-sm text-red-600">{errores.nombres}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="apellidos" className="block text-sm font-medium text-gray-700 mb-2">
-                  Apellidos *
-                </label>
-                <input
-                  type="text"
-                  id="apellidos"
-                  name="apellidos"
-                  value={formData.apellidos}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errores.apellidos ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errores.apellidos && (
-                  <p className="mt-1 text-sm text-red-600">{errores.apellidos}</p>
+                {errores.nombre && (
+                  <p className="mt-1 text-sm text-red-600">{errores.nombre}</p>
                 )}
               </div>
 
               <div>
                 <label htmlFor="dni" className="block text-sm font-medium text-gray-700 mb-2">
-                  DNI *
+                  DNI <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1009,6 +1115,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   value={formData.dni}
                   onChange={handleInputChange}
                   maxLength={8}
+                  placeholder="Ej: 12345678"
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errores.dni ? 'border-red-500' : 'border-gray-300'
                   }`}
@@ -1028,6 +1135,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   name="numero"
                   value={formData.numero}
                   onChange={handleInputChange}
+                  placeholder="Ej: 001-2024"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -1040,7 +1148,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="expediente_codigo" className="block text-sm font-medium text-gray-700 mb-2">
-                  Código de Expediente *
+                  Código de Expediente <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1048,6 +1156,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   name="expediente_codigo"
                   value={formData.expediente_codigo}
                   onChange={handleInputChange}
+                  placeholder="Ej: EXP-2024-001"
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errores.expediente_codigo ? 'border-red-500' : 'border-gray-300'
                   }`}

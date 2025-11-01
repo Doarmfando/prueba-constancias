@@ -120,7 +120,8 @@ class Application {
     );
     this.controllers.proyecto = new ProyectoController(
       this.models.proyecto,
-      this.models.auditoria
+      this.models.auditoria,
+      this.models.registro
     );
     this.controllers.auditoria = new AuditoriaController(
       this.models.auditoria
