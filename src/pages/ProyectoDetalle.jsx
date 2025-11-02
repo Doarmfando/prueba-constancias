@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft, FaEdit, FaTrash, FaGlobe, FaLock, FaPlus,
   FaDownload, FaChartBar, FaCog, FaUsers, FaFileAlt, FaSearch,
-  FaCalendarAlt, FaUser, FaIdCard, FaFilter, FaPrint
+  FaCalendarAlt, FaUser, FaIdCard, FaFilter, FaPrint, FaCheckCircle
 } from 'react-icons/fa';
 import { MdPublic, MdPrivateConnectivity, MdRestore, MdDeleteForever } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
@@ -1100,6 +1100,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
   });
   const [errores, setErrores] = useState({});
   const [guardando, setGuardando] = useState(false);
+  const [buscandoDni, setBuscandoDni] = useState(false);
+  const [personaEncontrada, setPersonaEncontrada] = useState(null);
+  const [datosAutocompletados, setDatosAutocompletados] = useState(false);
 
   useEffect(() => {
     if (registro) {
@@ -1116,9 +1119,110 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
     }
   }, [registro]);
 
-  const handleInputChange = (e) => {
+  const buscarPersonaPorDni = async (dni) => {
+    if (!dni || dni.length < 8) {
+      setPersonaEncontrada(null);
+      setDatosAutocompletados(false);
+      return;
+    }
+
+    try {
+      setBuscandoDni(true);
+      console.log('🔍 Buscando persona con DNI:', dni);
+      const response = await window.electronAPI?.informacion.buscarPersonaPorDni(dni);
+      console.log('📥 Respuesta completa:', JSON.stringify(response, null, 2));
+
+      if (response?.success && response.persona) {
+        const persona = response.persona;
+        const registros = response.registros || [];
+
+        // Construir nombre completo desde nombres y apellidos
+        const nombreCompleto = `${persona.nombres || ''} ${persona.apellidos || ''}`.trim();
+
+        // Obtener número del primer registro si existe
+        const numeroRegistro = registros.length > 0 && registros[0].numero ? registros[0].numero : '';
+
+        console.log('✅ Persona encontrada - ID:', persona.id);
+        console.log('   - Nombres:', persona.nombres);
+        console.log('   - Apellidos:', persona.apellidos);
+        console.log('   - Nombre completo:', nombreCompleto);
+        console.log('   - DNI:', persona.dni);
+        console.log('   - Registros encontrados:', registros.length);
+        console.log('   - Número (del primer registro):', numeroRegistro);
+
+        // Guardar persona con nombre completo y número para uso posterior
+        const personaConNombreCompleto = {
+          ...persona,
+          nombre: nombreCompleto,
+          numero: numeroRegistro
+        };
+
+        setPersonaEncontrada(personaConNombreCompleto);
+
+        // Autocompletar solo si no estamos editando
+        if (!registro) {
+          const nombreNuevo = nombreCompleto;
+          const numeroNuevo = numeroRegistro;
+
+          console.log('📝 Valores a autocompletar:');
+          console.log('   - Nombre nuevo:', nombreNuevo);
+          console.log('   - Número nuevo:', numeroNuevo);
+
+          setFormData(prev => {
+            console.log('   - FormData anterior:', JSON.stringify(prev, null, 2));
+            const newData = {
+              ...prev,
+              nombre: nombreNuevo,
+              numero: numeroNuevo
+            };
+            console.log('✏️ FormData actualizado:', JSON.stringify(newData, null, 2));
+            return newData;
+          });
+
+          setDatosAutocompletados(true);
+          console.log('✅ Datos autocompletados establecido en true');
+        } else {
+          console.log('ℹ️ No se autocompleta porque estamos editando un registro existente');
+        }
+      } else {
+        console.log('❌ Persona no encontrada - response.success:', response?.success);
+        setPersonaEncontrada(null);
+        setDatosAutocompletados(false);
+      }
+    } catch (error) {
+      console.error('❌ Error buscando persona:', error);
+      setPersonaEncontrada(null);
+    } finally {
+      setBuscandoDni(false);
+      console.log('🏁 Búsqueda finalizada');
+    }
+  };
+
+  const handleInputChange = async (e) => {
     const { name, value } = e.target;
 
+    // Si se modificó el DNI, buscar persona primero antes de actualizar el estado
+    if (name === 'dni') {
+      // Actualizar DNI inmediatamente
+      setFormData(prev => ({
+        ...prev,
+        dni: value
+      }));
+
+      // Buscar persona y autocompletar
+      await buscarPersonaPorDni(value);
+
+      // Limpiar error si existe
+      if (errores.dni) {
+        setErrores(prev => ({
+          ...prev,
+          dni: ''
+        }));
+      }
+      return; // Salir para evitar actualización duplicada
+    }
+
+    // Para otros campos, actualizar normalmente
     let newFormData = {
       ...formData,
       [name]: value
@@ -1138,6 +1242,11 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
     }
 
     setFormData(newFormData);
+
+    // Si se modificó nombre o número manualmente, desactivar indicador de autocompletado
+    if ((name === 'nombre' || name === 'numero') && datosAutocompletados) {
+      setDatosAutocompletados(false);
+    }
 
     if (errores[name]) {
       setErrores(prev => ({
@@ -1195,7 +1304,8 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
         estado: estadosMap[parseInt(formData.estado_id)], // RegistroModel espera nombre del estado, no ID
         fecha_registro: formData.fecha_solicitud || new Date().toISOString().split('T')[0],
         fecha_en_caja: (parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? formData.fecha_entrega : null,
-        usuario_creador_id: 1 // Usuario temporal
+        usuario_creador_id: 1, // Usuario temporal
+        persona_existente_id: personaEncontrada?.id || null // Enviar ID de persona si existe
       };
 
       let response;
@@ -1268,18 +1378,40 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                 <label htmlFor="dni" className="block text-sm font-medium text-gray-700 mb-2">
                   DNI <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  id="dni"
-                  name="dni"
-                  value={formData.dni}
-                  onChange={handleInputChange}
-                  maxLength={8}
-                  placeholder="Ej: 12345678"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errores.dni ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="dni"
+                    name="dni"
+                    value={formData.dni}
+                    onChange={handleInputChange}
+                    maxLength={8}
+                    placeholder="Ej: 12345678"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      personaEncontrada
+                        ? 'border-green-500 bg-green-50'
+                        : errores.dni
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                    }`}
+                  />
+                  {buscandoDni && (
+                    <div className="absolute right-3 top-2.5">
+                      <FaSearch className="text-gray-400 animate-pulse" />
+                    </div>
+                  )}
+                  {personaEncontrada && !buscandoDni && (
+                    <div className="absolute right-3 top-2.5">
+                      <FaCheckCircle className="text-green-600" />
+                    </div>
+                  )}
+                </div>
+                {personaEncontrada && (
+                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <FaCheckCircle />
+                    Persona encontrada - Datos autocompletados
+                  </p>
+                )}
                 {errores.dni && (
                   <p className="mt-1 text-sm text-red-600">{errores.dni}</p>
                 )}

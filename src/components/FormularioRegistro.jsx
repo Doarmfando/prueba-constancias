@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaSave, FaTimes } from 'react-icons/fa';
+import { FaSave, FaTimes, FaSearch, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import { mostrarExito, mostrarError } from '../utils/alertas';
 
 function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEditar = null }) {
@@ -14,6 +14,9 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
   });
 
   const [guardando, setGuardando] = useState(false);
+  const [buscandoDni, setBuscandoDni] = useState(false);
+  const [personaEncontrada, setPersonaEncontrada] = useState(null);
+  const [datosAutocompletados, setDatosAutocompletados] = useState(false);
 
   // Actualizar formData cuando cambie registroEditar
   useEffect(() => {
@@ -41,12 +44,57 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
     }
   }, [registroEditar]);
 
+  const buscarPersonaPorDni = async (dni) => {
+    if (!dni || dni.length < 8) {
+      setPersonaEncontrada(null);
+      setDatosAutocompletados(false);
+      return;
+    }
+
+    try {
+      setBuscandoDni(true);
+      const response = await window.electronAPI?.informacion.buscarPersonaPorDni(dni);
+
+      if (response?.success && response.persona) {
+        setPersonaEncontrada(response.persona);
+
+        // Autocompletar solo si no estamos editando
+        if (!registroEditar) {
+          setFormData(prev => ({
+            ...prev,
+            nombre: response.persona.nombre || '',
+            numero: response.persona.numero || ''
+          }));
+          setDatosAutocompletados(true);
+        }
+      } else {
+        setPersonaEncontrada(null);
+        setDatosAutocompletados(false);
+      }
+    } catch (error) {
+      console.error('Error buscando persona:', error);
+      setPersonaEncontrada(null);
+    } finally {
+      setBuscandoDni(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+
+    // Si se modificó el DNI, buscar persona
+    if (name === 'dni') {
+      buscarPersonaPorDni(value);
+    }
+
+    // Si se modificó nombre o número manualmente, desactivar indicador de autocompletado
+    if ((name === 'nombre' || name === 'numero') && datosAutocompletados) {
+      setDatosAutocompletados(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -70,7 +118,8 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
         const datosCrear = {
           ...formData,
           proyecto_id: 1, // Proyecto por defecto
-          usuario_creador_id: 1 // Usuario por defecto
+          usuario_creador_id: 1, // Usuario por defecto
+          persona_existente_id: personaEncontrada?.id || null // Enviar ID de persona si existe
         };
         response = await window.electronAPI?.registros.agregar(datosCrear);
       }
@@ -143,16 +192,40 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 DNI <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                name="dni"
-                value={formData.dni}
-                onChange={handleInputChange}
-                maxLength="8"
-                required
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
-                placeholder="Ej: 12345678"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="dni"
+                  value={formData.dni}
+                  onChange={handleInputChange}
+                  maxLength="8"
+                  required
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900 ${
+                    personaEncontrada
+                      ? 'border-green-500 bg-green-50'
+                      : formData.dni.length === 8 && !buscandoDni
+                        ? 'border-blue-300'
+                        : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 12345678"
+                />
+                {buscandoDni && (
+                  <div className="absolute right-3 top-3.5">
+                    <FaSearch className="text-gray-400 animate-pulse" />
+                  </div>
+                )}
+                {personaEncontrada && !buscandoDni && (
+                  <div className="absolute right-3 top-3.5">
+                    <FaCheckCircle className="text-green-600" />
+                  </div>
+                )}
+              </div>
+              {personaEncontrada && (
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <FaCheckCircle />
+                  Persona encontrada - Datos autocompletados
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">

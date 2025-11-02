@@ -72,7 +72,7 @@ class RegistroModel extends BaseModel {
 
   // Agregar nuevo registro (transacción completa)
   async agregar(registroData) {
-    const { nombre, numero, dni, expediente, estado, fecha_registro, fecha_en_caja, proyecto_id, usuario_creador_id } = registroData;
+    const { nombre, numero, dni, expediente, estado, fecha_registro, fecha_en_caja, proyecto_id, usuario_creador_id, persona_existente_id } = registroData;
 
     // Validaciones
     this.validarCampos(registroData);
@@ -83,16 +83,46 @@ class RegistroModel extends BaseModel {
     return this.executeTransaction([
       async () => {
         try {
-          // Insertar persona
-          const personaResult = await this.executeRun(
-            `INSERT INTO personas (nombre, dni, numero) VALUES (?, ?, ?)`,
-            [nombre, dni, numero]
-          );
+          let personaId;
+
+          // Si se proporcionó persona_existente_id, usarla
+          if (persona_existente_id) {
+            personaId = persona_existente_id;
+            console.log(`♻️ Reutilizando persona existente con ID: ${personaId}`);
+          } else {
+            // Verificar si ya existe una persona con este DNI
+            const personaExistente = await this.executeGet(
+              `SELECT id, nombre, numero FROM personas WHERE dni = ?`,
+              [dni]
+            );
+
+            if (personaExistente) {
+              personaId = personaExistente.id;
+              console.log(`♻️ Persona con DNI ${dni} ya existe (ID: ${personaId}), reutilizando...`);
+
+              // Opcional: Actualizar datos si son diferentes
+              if (personaExistente.nombre !== nombre || personaExistente.numero !== numero) {
+                console.log(`⚠️ Datos diferentes detectados. Actualizando persona ID ${personaId}...`);
+                await this.executeRun(
+                  `UPDATE personas SET nombre = ?, numero = ? WHERE id = ?`,
+                  [nombre, numero, personaId]
+                );
+              }
+            } else {
+              // Insertar nueva persona
+              const personaResult = await this.executeRun(
+                `INSERT INTO personas (nombre, dni, numero) VALUES (?, ?, ?)`,
+                [nombre, dni, numero]
+              );
+              personaId = personaResult.lastID;
+              console.log(`✨ Nueva persona creada con ID: ${personaId}`);
+            }
+          }
 
           // Insertar expediente
           const expedienteResult = await this.executeRun(
             `INSERT INTO expedientes (persona_id, codigo, fecha_entrega) VALUES (?, NULLIF(?, ''), ?)`,
-            [personaResult.lastID, expediente, fechaEntrega]
+            [personaId, expediente, fechaEntrega]
           );
 
           // Obtener estado_id
@@ -110,12 +140,12 @@ class RegistroModel extends BaseModel {
             `INSERT INTO registros (
               proyecto_id, persona_id, expediente_id, estado_id, usuario_creador_id, fecha_registro, fecha_en_caja, eliminado
             ) VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
-            [proyecto_id, personaResult.lastID, expedienteResult.lastID, estadoRow.id, usuario_creador_id, fecha_registro, fecha_en_caja]
+            [proyecto_id, personaId, expedienteResult.lastID, estadoRow.id, usuario_creador_id, fecha_registro, fecha_en_caja]
           );
 
           return {
             id: registroResult.lastID,
-            persona_id: personaResult.lastID,
+            persona_id: personaId,
             expediente_id: expedienteResult.lastID,
             estado_id: estadoRow.id,
             nombre,
