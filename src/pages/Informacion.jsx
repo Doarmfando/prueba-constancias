@@ -50,6 +50,7 @@ function Informacion() {
       mostrarError('Error de conexión', 'No se pudo realizar la búsqueda');
       setPersona(null);
       setRegistros([]);
+    } finally {
       setCargando(false);
     }
   };

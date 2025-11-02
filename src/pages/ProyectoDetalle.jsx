@@ -7,6 +7,27 @@ import {
 } from 'react-icons/fa';
 import { MdPublic, MdPrivateConnectivity, MdRestore, MdDeleteForever } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 function ProyectoDetalle() {
   const { id } = useParams();
@@ -440,8 +461,23 @@ function ProyectoDetalle() {
           <div className="bg-white p-4 rounded-lg shadow border">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm text-gray-600">Total Registros</p>
+                <p className="text-2xl font-bold text-gray-900">{estadisticas.total || 0}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-full">
+                <FaChartBar className="text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm text-gray-600">Registros Activos</p>
-                <p className="text-2xl font-bold text-blue-600">{estadisticas.activos || 0}</p>
+                <p className="text-2xl font-bold text-green-600">{estadisticas.activos || 0}</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <FaFileAlt className="text-green-600" />
               </div>
             </div>
           </div>
@@ -452,14 +488,8 @@ function ProyectoDetalle() {
                 <p className="text-sm text-gray-600">En Papelería</p>
                 <p className="text-2xl font-bold text-orange-600">{estadisticas.papeleria || 0}</p>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Registros</p>
-                <p className="text-2xl font-bold text-gray-900">{estadisticas.total || 0}</p>
+              <div className="p-3 bg-orange-100 rounded-full">
+                <FaTrash className="text-orange-600" />
               </div>
             </div>
           </div>
@@ -474,6 +504,9 @@ function ProyectoDetalle() {
                     : 'Sin actividad'
                   }
                 </p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-full">
+                <FaCalendarAlt className="text-purple-600" />
               </div>
             </div>
           </div>
@@ -768,10 +801,137 @@ function ProyectoDetalle() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-gray-600">
-                  Este proyecto contiene información detallada sobre {estadisticas?.total || 0} registros documentales,
-                  con {estadisticas?.activos || 0} registros activos y {estadisticas?.papeleria || 0} en proceso de papelería.
+              {/* Gráficos */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Gráfico de Dona - Distribución */}
+                <div className="bg-white border rounded-lg p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <FaChartBar className="text-blue-600" />
+                    <h4 className="text-lg font-semibold text-gray-900">
+                      Distribución de Registros
+                    </h4>
+                  </div>
+                  <div className="h-64 flex items-center justify-center">
+                    <Doughnut
+                      data={{
+                        labels: ['Registros Activos', 'En Papelería'],
+                        datasets: [{
+                          data: [estadisticas?.activos || 0, estadisticas?.papeleria || 0],
+                          backgroundColor: [
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(251, 146, 60, 0.8)'
+                          ],
+                          borderColor: [
+                            'rgb(34, 197, 94)',
+                            'rgb(251, 146, 60)'
+                          ],
+                          borderWidth: 2
+                        }]
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: 'bottom',
+                            labels: {
+                              padding: 15,
+                              usePointStyle: true,
+                              font: {
+                                size: 12
+                              }
+                            }
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = estadisticas?.total || 0;
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                              }
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Gráfico de Barras - Comparación */}
+                <div className="bg-white border rounded-lg p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <FaChartBar className="text-blue-600" />
+                    <h4 className="text-lg font-semibold text-gray-900">
+                      Comparación Visual
+                    </h4>
+                  </div>
+                  <div className="h-64">
+                    <Bar
+                      data={{
+                        labels: ['Total Registros', 'Registros Activos', 'En Papelería'],
+                        datasets: [{
+                          label: 'Cantidad',
+                          data: [estadisticas?.total || 0, estadisticas?.activos || 0, estadisticas?.papeleria || 0],
+                          backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(34, 197, 94, 0.7)',
+                            'rgba(251, 146, 60, 0.7)'
+                          ],
+                          borderColor: [
+                            'rgb(59, 130, 246)',
+                            'rgb(34, 197, 94)',
+                            'rgb(251, 146, 60)'
+                          ],
+                          borderWidth: 2,
+                          borderRadius: 6
+                        }]
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: false
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: function(context) {
+                                return context.label + ': ' + context.parsed.y + ' registros';
+                              }
+                            }
+                          }
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            ticks: {
+                              stepSize: 1,
+                              font: {
+                                size: 11
+                              }
+                            }
+                          },
+                          x: {
+                            ticks: {
+                              font: {
+                                size: 11
+                              }
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Resumen:</strong> Este proyecto contiene {estadisticas?.total || 0} registros documentales,
+                  con {estadisticas?.activos || 0} registros activos ({estadisticas?.total > 0 ? ((estadisticas.activos / estadisticas.total) * 100).toFixed(1) : 0}%)
+                  y {estadisticas?.papeleria || 0} en papelería ({estadisticas?.total > 0 ? ((estadisticas.papeleria / estadisticas.total) * 100).toFixed(1) : 0}%).
                 </p>
               </div>
             </div>
