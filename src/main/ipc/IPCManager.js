@@ -9,6 +9,7 @@ const InformacionIPCHandler = require('./InformacionIPCHandler');
 const AuthIPCHandler = require('./AuthIPCHandler');
 const ProyectoIPCHandler = require('./ProyectoIPCHandler');
 const AuditoriaIPCHandler = require('./AuditoriaIPCHandler');
+const DocumentoPersonaIPCHandler = require('./DocumentoPersonaIPCHandler');
 
 class IPCManager {
   constructor() {
@@ -35,6 +36,7 @@ class IPCManager {
       this.initializeAuthHandlers(controllers.auth);
       this.initializeProyectoHandlers(controllers.proyecto);
       this.initializeAuditoriaHandlers(controllers.auditoria);
+      this.initializeDocumentoPersonaHandlers(controllers.documentoPersona);
 
       this.initialized = true;
       console.log("✅ IPCManager inicializado correctamente");
@@ -145,6 +147,18 @@ class IPCManager {
     auditoriaHandler.registerHandlers();
 
     this.handlers.set('auditoria', auditoriaHandler);
+  }
+
+  // Inicializar handlers de documentos de persona
+  initializeDocumentoPersonaHandlers(documentoPersonaController) {
+    if (!documentoPersonaController) {
+      throw new Error("DocumentoPersonaController requerido");
+    }
+
+    const documentoPersonaHandler = new DocumentoPersonaIPCHandler(documentoPersonaController);
+    documentoPersonaHandler.registerHandlers();
+
+    this.handlers.set('documentoPersona', documentoPersonaHandler);
   }
 
   // Listar todos los handlers registrados

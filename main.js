@@ -14,6 +14,7 @@ const EstadoModel = require("./src/main/models/EstadoModel");
 const UsuarioModel = require("./src/main/models/UsuarioModel");
 const ProyectoModel = require("./src/main/models/ProyectoModel");
 const AuditoriaModel = require("./src/main/models/AuditoriaModel");
+const DocumentoPersonaModel = require("./src/main/models/DocumentoPersonaModel");
 
 // Importar controladores
 const RegistroController = require("./src/main/controllers/RegistroController");
@@ -23,6 +24,7 @@ const InformacionController = require("./src/main/controllers/InformacionControl
 const AuthController = require("./src/main/controllers/AuthController");
 const ProyectoController = require("./src/main/controllers/ProyectoController");
 const AuditoriaController = require("./src/main/controllers/AuditoriaController");
+const DocumentoPersonaController = require("./src/main/controllers/DocumentoPersonaController");
 
 // Importar gestores
 const WindowManager = require("./src/main/window/WindowManager");
@@ -99,6 +101,7 @@ class Application {
     this.models.usuario = new UsuarioModel(this.db);
     this.models.proyecto = new ProyectoModel(this.db);
     this.models.auditoria = new AuditoriaModel(this.db);
+    this.models.documentoPersona = new DocumentoPersonaModel(this.db);
   }
 
   initializeControllers() {
@@ -125,6 +128,10 @@ class Application {
     );
     this.controllers.auditoria = new AuditoriaController(
       this.models.auditoria
+    );
+    this.controllers.documentoPersona = new DocumentoPersonaController(
+      this.models.documentoPersona,
+      this.models.persona
     );
   }
 

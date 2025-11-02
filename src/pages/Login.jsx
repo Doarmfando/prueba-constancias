@@ -105,7 +105,7 @@ function Login() {
                 name="nombre_usuario"
                 value={formData.nombre_usuario}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                   errores.nombre_usuario ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Ingresa tu nombre de usuario"
@@ -130,7 +130,7 @@ function Login() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                   errores.password ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Ingresa tu contraseña"

@@ -267,7 +267,7 @@ function Usuarios() {
                 placeholder="Buscar usuarios..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
               />
             </div>
           </div>
@@ -508,7 +508,7 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
                 name="nombre"
                 value={formData.nombre}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errores.nombre ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -526,7 +526,7 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
                 name="nombre_usuario"
                 value={formData.nombre_usuario}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errores.nombre_usuario ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -545,7 +545,7 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="usuario@empresa.com"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errores.email ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -563,7 +563,7 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errores.password ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -582,7 +582,7 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
                   name="confirmar_password"
                   value={formData.confirmar_password}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errores.confirmar_password ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
@@ -600,7 +600,7 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
                 name="rol"
                 value={formData.rol}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="trabajador">Trabajador</option>
                 <option value="administrador">Administrador</option>

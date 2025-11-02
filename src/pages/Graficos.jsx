@@ -185,7 +185,7 @@ function Graficos() {
           <select
             value={filtroTipo}
             onChange={(e) => setFiltroTipo(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="registro">Fecha de Registro</option>
             <option value="solicitud">Fecha de Solicitud</option>
@@ -194,7 +194,7 @@ function Graficos() {
           <select
             value={filtroAnio}
             onChange={(e) => setFiltroAnio(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="Todo">Todos los años</option>
             {aniosDisponibles.map((anio) => (

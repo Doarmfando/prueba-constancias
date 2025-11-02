@@ -94,7 +94,7 @@ function Informacion() {
               onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
               onKeyPress={handleKeyPress}
               placeholder="Ingrese DNI (8 dígitos)"
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg"
               maxLength={8}
             />
           </div>

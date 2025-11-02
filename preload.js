@@ -59,7 +59,19 @@ const allowedChannels = new Set([
   "crear-backup",
   // Canales de información
   "buscar-persona-por-dni",
-  "obtener-registros-eliminados"
+  "obtener-registros-eliminados",
+  // Canales de documentos de persona
+  "documento-persona-subir",
+  "documento-persona-obtener-por-persona",
+  "documento-persona-eliminar",
+  "documento-persona-abrir",
+  "documento-persona-descargar",
+  "documento-persona-actualizar-comentario",
+  "documento-persona-estadisticas",
+  "documento-persona-seleccionar-archivo",
+  // Canales de personas
+  "personas-obtener-con-documentos",
+  "personas-buscar"
 ]);
 
 const isChannelAllowed = (channel) => allowedChannels.has(channel);
@@ -150,6 +162,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
   informacion: {
     buscarPersonaPorDni: (dni) => ipcRenderer.invoke("buscar-persona-por-dni", { dni }),
     actualizarInformacion: (datos) => ipcRenderer.invoke("actualizar-informacion", datos)
+  },
+
+  // API de Personas
+  personas: {
+    obtenerConDocumentos: () => ipcRenderer.invoke("personas-obtener-con-documentos"),
+    buscar: (termino) => ipcRenderer.invoke("personas-buscar", termino)
+  },
+
+  // API de Documentos de Persona
+  documentosPersona: {
+    seleccionarArchivo: () => ipcRenderer.invoke("documento-persona-seleccionar-archivo"),
+    subirDocumento: (datos) => ipcRenderer.invoke("documento-persona-subir", datos),
+    obtenerPorPersona: (persona_id) => ipcRenderer.invoke("documento-persona-obtener-por-persona", persona_id),
+    eliminar: (id, usuario) => ipcRenderer.invoke("documento-persona-eliminar", { id, usuario }),
+    abrir: (id) => ipcRenderer.invoke("documento-persona-abrir", { id }),
+    descargar: (id) => ipcRenderer.invoke("documento-persona-descargar", { id }),
+    actualizarComentario: (id, comentario) => ipcRenderer.invoke("documento-persona-actualizar-comentario", { id, comentario }),
+    obtenerEstadisticas: () => ipcRenderer.invoke("documento-persona-estadisticas")
   }
 });
 

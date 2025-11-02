@@ -127,7 +127,7 @@ function CrearProyecto() {
               value={formData.nombre}
               onChange={handleInputChange}
               placeholder="Ej: Constancias Q1 2025"
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errores.nombre ? 'border-red-500' : 'border-gray-300'
               }`}
               maxLength={100}
@@ -152,7 +152,7 @@ function CrearProyecto() {
               onChange={handleInputChange}
               placeholder="Describe brevemente el propósito de este proyecto..."
               rows={4}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none ${
                 errores.descripcion ? 'border-red-500' : 'border-gray-300'
               }`}
               maxLength={500}

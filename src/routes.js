@@ -15,6 +15,8 @@ const Usuarios = lazy(() => import("./pages/Usuarios"));
 const Auditoria = lazy(() => import("./pages/Auditoria"));
 const Informacion = lazy(() => import("./pages/Informacion"));
 const GestionDatos = lazy(() => import("./pages/GestionDatos"));
+const Personas = lazy(() => import("./pages/Personas"));
+const PersonaDetalle = lazy(() => import("./pages/PersonaDetalle"));
 // Rutas legacy (mantener por compatibilidad)
 const Registros = lazy(() => import("./pages/Registros"));
 const Papeleria = lazy(() => import("./pages/Papeleria"));
@@ -143,6 +145,8 @@ function AppRoutes() {
             <Route path="/proyectos-privados" element={<AdminRoute><ProyectosPrivados /></AdminRoute>} />
 
             {/* 🔧 Herramientas */}
+            <Route path="/personas" element={<ProtectedRoute><Personas /></ProtectedRoute>} />
+            <Route path="/persona/:id" element={<ProtectedRoute><PersonaDetalle /></ProtectedRoute>} />
             <Route path="/informacion" element={<ProtectedRoute><Informacion /></ProtectedRoute>} />
             <Route path="/informacion/:dni" element={<ProtectedRoute><Informacion /></ProtectedRoute>} />
             <Route path="/gestion-datos" element={<ProtectedRoute><GestionDatos /></ProtectedRoute>} />

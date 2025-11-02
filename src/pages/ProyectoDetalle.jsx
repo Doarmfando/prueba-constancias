@@ -579,7 +579,7 @@ function ProyectoDetalle() {
                       placeholder="Buscar registros..."
                       value={busqueda}
                       onChange={(e) => setBusqueda(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
                     />
                   </div>
                   {puedeEditar() && (
@@ -1255,7 +1255,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   value={formData.nombre}
                   onChange={handleInputChange}
                   placeholder="Ej: Juan Pérez García"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errores.nombre ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
@@ -1276,7 +1276,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   onChange={handleInputChange}
                   maxLength={8}
                   placeholder="Ej: 12345678"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errores.dni ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
@@ -1296,7 +1296,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   value={formData.numero}
                   onChange={handleInputChange}
                   placeholder="Ej: 001-2024"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -1317,7 +1317,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   value={formData.expediente_codigo}
                   onChange={handleInputChange}
                   placeholder="Ej: EXP-2024-001"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errores.expediente_codigo ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
@@ -1335,7 +1335,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   name="estado_id"
                   value={formData.estado_id}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value={1}>Recibido</option>
                   <option value={2}>En Caja</option>
@@ -1354,7 +1354,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   name="fecha_solicitud"
                   value={formData.fecha_solicitud}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -1369,7 +1369,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   value={formData.fecha_entrega}
                   onChange={handleInputChange}
                   disabled={parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     (parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 />
@@ -1390,7 +1390,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   value={formData.observacion}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                 />
               </div>
             </div>
