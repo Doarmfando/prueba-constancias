@@ -87,7 +87,7 @@ function Registros() {
 
     if (confirmado) {
       try {
-        const response = await window.electronAPI?.registros.moverAPapelera(registro.id);
+        const response = await window.electronAPI?.registros.moverAPapelera(registro.id, usuario);
         if (response && response.success) {
           setRegistros(prev => prev.filter(r => r.id !== registro.id));
           mostrarExito('Registro movido a papelera correctamente');
@@ -429,3 +429,11 @@ function Registros() {
 }
 
 export default Registros;
+  // Obtener usuario actual del localStorage
+  const getUsuarioActual = () => {
+    try {
+      const sesion = localStorage.getItem('sesion_usuario');
+      return sesion ? JSON.parse(sesion) : null;
+    } catch (e) { return null; }
+  };
+  const usuario = getUsuarioActual();

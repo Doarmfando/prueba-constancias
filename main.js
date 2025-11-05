@@ -106,7 +106,7 @@ class Application {
   }
 
   initializeControllers() {
-    this.controllers.registro = new RegistroController(this.models.registro);
+    this.controllers.registro = new RegistroController(this.models.registro, this.models.proyecto);
     this.controllers.excel = new ExcelController(
       this.services.excel,
       this.services.file,

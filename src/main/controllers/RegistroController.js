@@ -1,9 +1,24 @@
-// src/main/controllers/RegistroController.js
+﻿// src/main/controllers/RegistroController.js
 const BaseController = require('./BaseController');
 
 class RegistroController extends BaseController {
-  constructor(registroModel) {
+  constructor(registroModel, proyectoModel = null) {
     super(registroModel);
+    this.proyectoModel = proyectoModel;
+  }
+
+  async verificarPermisoEdicion(proyectoId, usuario) {
+    if (!usuario || !usuario.id) {
+      return true;
+    }
+    if (usuario.rol === 'administrador') return true;
+    if (!this.proyectoModel) return true;
+    const usuarioId = typeof usuario.id === 'string' ? parseInt(usuario.id, 10) : usuario.id;
+    const permitido = await this.proyectoModel.verificarAcceso(proyectoId, usuarioId, 'editar');
+    if (!permitido) {
+      throw new Error('No tienes permisos para editar este proyecto');
+    }
+    return true;
   }
 
   // Obtener todos los registros activos
@@ -29,12 +44,12 @@ class RegistroController extends BaseController {
   // Obtener registros por proyecto
   async obtenerRegistrosPorProyecto(proyectoId) {
     try {
-      console.log(`🔍 Obteniendo registros para proyecto ID: ${proyectoId}`);
+      console.log(`ðŸ” Obteniendo registros para proyecto ID: ${proyectoId}`);
 
       const registros = await this.model.obtenerTodos(proyectoId);
       const registrosEliminados = await this.model.obtenerEliminados(proyectoId);
 
-      console.log(`📊 Encontrados ${registros?.length || 0} registros activos y ${registrosEliminados?.length || 0} eliminados`);
+      console.log(`ðŸ“Š Encontrados ${registros?.length || 0} registros activos y ${registrosEliminados?.length || 0} eliminados`);
 
       return {
         success: true,
@@ -42,7 +57,7 @@ class RegistroController extends BaseController {
         registrosEliminados: registrosEliminados || []
       };
     } catch (error) {
-      console.error(`❌ Error obteniendo registros para proyecto ${proyectoId}:`, error);
+      console.error(`âŒ Error obteniendo registros para proyecto ${proyectoId}:`, error);
       return {
         success: false,
         error: error.message
@@ -51,9 +66,15 @@ class RegistroController extends BaseController {
   }
 
   // Agregar nuevo registro
-  async agregarRegistro(datos) {
+  async agregarRegistro(payload) {
     try {
+      const datos = payload?.datos || payload;
+      const usuario = payload?.usuario || null;
       const datosSanitizados = this.sanitizeInput(datos);
+
+      if (datosSanitizados?.proyecto_id) {
+        await this.verificarPermisoEdicion(datosSanitizados.proyecto_id, usuario);
+      }
       const resultado = await this.model.agregar(datosSanitizados);
 
       // Crear una respuesta serializable
@@ -90,10 +111,17 @@ class RegistroController extends BaseController {
   }
 
   // Actualizar registro existente
-  async actualizarRegistro(datos) {
+  async actualizarRegistro(payload) {
     try {
+      const datos = payload?.datos || payload;
+      const usuario = payload?.usuario || null;
       this.validateRequired(datos, ['id']);
       const datosSanitizados = this.sanitizeInput(datos);
+
+      const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [datosSanitizados.id]);
+      if (reg?.proyecto_id) {
+        await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+      }
       const resultado = await this.model.actualizar(datosSanitizados);
 
       // Retornar en el mismo formato que agregarRegistro
@@ -107,9 +135,15 @@ class RegistroController extends BaseController {
   }
 
   // Mover registro a papelera
-  async moverAPapelera(id) {
+  async moverAPapelera(payload) {
     try {
+      const id = typeof payload === 'object' ? payload.id : payload;
+      const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
+      const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+      if (reg?.proyecto_id) {
+        await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+      }
       const resultado = await this.model.moverAPapelera(id);
       return resultado;
     } catch (error) {
@@ -117,24 +151,38 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Mover múltiples registros a papelera
-  async moverMultipleAPapelera(ids) {
+  // Mover mÃºltiples registros a papelera
+  async moverMultipleAPapelera(payload) {
     try {
+      const ids = Array.isArray(payload) ? payload : payload?.ids;
+      const usuario = Array.isArray(payload) ? null : payload?.usuario;
       if (!Array.isArray(ids) || ids.length === 0) {
-        throw new Error("No se proporcionaron IDs válidos");
+        throw new Error("No se proporcionaron IDs vÃ¡lidos");
       }
-      
+      // Validar permisos por cada registro
+      for (const id of ids) {
+        const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+        if (reg?.proyecto_id) {
+          await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+        }
+      }
       const resultado = await this.model.moverMultipleAPapelera(ids);
       return resultado;
     } catch (error) {
-      this.handleError(error, "Error moviendo múltiples registros a papelera");
+      this.handleError(error, "Error moviendo mÃºltiples registros a papelera");
     }
   }
 
   // Restaurar registro desde papelera
-  async restaurarRegistro(id) {
+  async restaurarRegistro(payload) {
     try {
+      const id = typeof payload === 'object' ? payload.id : payload;
+      const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
+      const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+      if (reg?.proyecto_id) {
+        await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+      }
       const resultado = await this.model.restaurar(id);
       return resultado;
     } catch (error) {
@@ -142,24 +190,37 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Restaurar múltiples registros
-  async restaurarMultiple(ids) {
+  // Restaurar mÃºltiples registros
+  async restaurarMultiple(payload) {
     try {
+      const ids = Array.isArray(payload) ? payload : payload?.ids;
+      const usuario = Array.isArray(payload) ? null : payload?.usuario;
       if (!Array.isArray(ids) || ids.length === 0) {
-        throw new Error("No se proporcionaron IDs válidos");
+        throw new Error("No se proporcionaron IDs vÃ¡lidos");
       }
-      
+      for (const id of ids) {
+        const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+        if (reg?.proyecto_id) {
+          await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+        }
+      }
       const resultado = await this.model.restaurarMultiple(ids);
       return resultado;
     } catch (error) {
-      this.handleError(error, "Error restaurando múltiples registros");
+      this.handleError(error, "Error restaurando mÃºltiples registros");
     }
   }
 
   // Eliminar registro permanentemente
-  async eliminarPermanentemente(id) {
+  async eliminarPermanentemente(payload) {
     try {
+      const id = typeof payload === 'object' ? payload.id : payload;
+      const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
+      const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+      if (reg?.proyecto_id) {
+        await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+      }
       const resultado = await this.model.eliminarPermanentemente(id);
       return resultado;
     } catch (error) {
@@ -167,17 +228,23 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Eliminar múltiples registros permanentemente
-  async eliminarMultiple(ids) {
+  // Eliminar mÃºltiples registros permanentemente
+  async eliminarMultiple(payload) {
     try {
+      const ids = Array.isArray(payload) ? payload : payload?.ids;
+      const usuario = Array.isArray(payload) ? null : payload?.usuario;
       if (!Array.isArray(ids) || ids.length === 0) {
-        throw new Error("No se proporcionaron IDs válidos");
+        throw new Error("No se proporcionaron IDs vÃ¡lidos");
       }
 
-      // Eliminar uno por uno para mantener la lógica de limpieza
+      // Eliminar uno por uno para mantener la lÃ³gica de limpieza
       const resultados = [];
       for (const id of ids) {
         try {
+          const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+          if (reg?.proyecto_id) {
+            await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+          }
           const resultado = await this.model.eliminarPermanentemente(id);
           resultados.push({ id, success: true, ...resultado });
         } catch (error) {
@@ -193,7 +260,7 @@ class RegistroController extends BaseController {
         details: resultados
       };
     } catch (error) {
-      this.handleError(error, "Error eliminando múltiples registros");
+      this.handleError(error, "Error eliminando mÃºltiples registros");
     }
   }
 
@@ -204,7 +271,7 @@ class RegistroController extends BaseController {
       
       // Validar formato de DNI
       if (!/^\d{8}$/.test(dni.trim())) {
-        throw new Error("El DNI debe tener exactamente 8 dígitos");
+        throw new Error("El DNI debe tener exactamente 8 dÃ­gitos");
       }
       
       const resultado = await this.model.buscarPorDni(dni.trim());
@@ -220,7 +287,7 @@ class RegistroController extends BaseController {
       this.validateRequired({ dni }, ['dni']);
       
       if (!/^\d{8}$/.test(dni.trim())) {
-        throw new Error("El DNI debe tener exactamente 8 dígitos");
+        throw new Error("El DNI debe tener exactamente 8 dÃ­gitos");
       }
       
       const resultado = await this.model.moverDniCompletoPapelera(dni.trim());
@@ -240,15 +307,15 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Obtener estadísticas del dashboard
+  // Obtener estadÃ­sticas del dashboard
   async obtenerEstadisticas(params = {}) {
     try {
       const { tipo = "registro", anio = "Todo" } = params;
 
-      // Obtener estadísticas básicas y detalladas
+      // Obtener estadÃ­sticas bÃ¡sicas y detalladas
       const resultado = await this.calcularEstadisticas(tipo, anio);
 
-      // Agregar estadísticas adicionales para el dashboard
+      // Agregar estadÃ­sticas adicionales para el dashboard
       const hoy = new Date().toISOString().split('T')[0];
       const registrosHoy = await this.model.executeQuery(`
         SELECT COUNT(*) as total
@@ -261,11 +328,11 @@ class RegistroController extends BaseController {
         hoy: registrosHoy[0]?.total || 0
       };
     } catch (error) {
-      this.handleError(error, "Error obteniendo estadísticas");
+      this.handleError(error, "Error obteniendo estadÃ­sticas");
     }
   }
 
-  // Obtener años disponibles para filtros
+  // Obtener aÃ±os disponibles para filtros
   async obtenerFechasDisponibles(tipo = "registro") {
     try {
       const resultado = await this.model.obtenerFechasDisponibles(tipo);
@@ -275,14 +342,14 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Métodos auxiliares privados
+  // MÃ©todos auxiliares privados
 
   verificarCamposFaltantes(datos) {
     const { nombre, numero, dni, expediente } = datos;
     const faltantes = [];
     
     if (!nombre || nombre === "---") faltantes.push("nombre");
-    if (!numero || numero === "---") faltantes.push("número");
+    if (!numero || numero === "---") faltantes.push("nÃºmero");
     if (!dni || dni === "---") faltantes.push("DNI");
     if (!expediente || expediente === "" || expediente === "---") faltantes.push("expediente");
     
@@ -290,8 +357,8 @@ class RegistroController extends BaseController {
   }
 
   async calcularEstadisticas(tipo, anio) {
-    // Esta lógica debería estar en el modelo o en un servicio de estadísticas
-    // La mantenemos aquí temporalmente para compatibilidad
+    // Esta lÃ³gica deberÃ­a estar en el modelo o en un servicio de estadÃ­sticas
+    // La mantenemos aquÃ­ temporalmente para compatibilidad
     const campoFecha = tipo === "solicitud" ? "expedientes.fecha_solicitud" : "registros.fecha_registro";
     const whereFecha = anio !== "Todo" ? `AND strftime('%Y', ${campoFecha}) = ?` : "";
     
@@ -332,3 +399,4 @@ class RegistroController extends BaseController {
 }
 
 module.exports = RegistroController;
+

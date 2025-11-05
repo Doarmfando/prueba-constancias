@@ -266,7 +266,12 @@ function ProyectoDetalle() {
   };
 
   const puedeEditar = () => {
-    return usuario.rol === 'administrador' || proyecto?.usuario_creador_id === usuario.id;
+    if (!proyecto) return false;
+    return (
+      usuario.rol === 'administrador' ||
+      proyecto.usuario_creador_id === usuario.id ||
+      (proyecto.es_publico === 1 && proyecto.permite_edicion === 1)
+    );
   };
 
   const puedeEliminar = () => {
@@ -670,13 +675,15 @@ function ProyectoDetalle() {
                                   <FaEdit />
                                 </button>
                               )}
-                              <button
-                                onClick={() => eliminarRegistro(registro)}
-                                className="text-red-600 hover:text-red-900"
-                                title="Eliminar registro"
-                              >
-                                <FaTrash />
-                              </button>
+                              {puedeEliminar() && (
+                                <button
+                                  onClick={() => eliminarRegistro(registro)}
+                                  className="text-red-600 hover:text-red-900"
+                                  title="Eliminar registro"
+                                >
+                                  <FaTrash />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -739,13 +746,15 @@ function ProyectoDetalle() {
                             {new Date(registro.fecha_eliminacion).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button
-                              onClick={() => restaurarRegistro(registro)}
-                              className="text-green-600 hover:text-green-900"
-                              title="Restaurar registro"
-                            >
-                              <MdRestore />
-                            </button>
+                            {puedeEditar() && (
+                              <button
+                                onClick={() => restaurarRegistro(registro)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Restaurar registro"
+                              >
+                                <MdRestore />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -962,6 +971,7 @@ function ProyectoDetalle() {
         <FormularioRegistro
           proyecto={proyecto}
           registro={registroEditando}
+          usuario={usuario}
           onClose={() => {
             setMostrarFormularioRegistro(false);
             setRegistroEditando(null);
@@ -1058,7 +1068,7 @@ function ProyectoDetalle() {
 }
 
 // Componente del Formulario de Registro
-function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
+function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
   const [formData, setFormData] = useState({
     nombre: '',
     dni: '',
@@ -1297,9 +1307,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
           persona_id: formData.persona_id,
           expediente_id: formData.expediente_id,
           ...datosRegistro
-        });
+        }, usuario);
       } else {
-        response = await window.electronAPI?.registros.agregar(datosRegistro);
+        response = await window.electronAPI?.registros.agregar(datosRegistro, usuario);
       }
 
       if (response?.success) {
