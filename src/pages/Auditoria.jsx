@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaHistory, FaSearch, FaFilter, FaDownload, FaUser, FaCalendarAlt } from 'react-icons/fa';
+import { FaHistory, FaSearch, FaFilter, FaUser, FaCalendarAlt } from 'react-icons/fa';
 import { MdRefresh } from 'react-icons/md';
 import { mostrarError, mostrarExito } from '../utils/alertas';
 import { useAuth } from '../context/AuthContext';
@@ -59,7 +59,7 @@ function Auditoria() {
     } catch (error) {
       setLogs([]);
       setTotalLogs(0);
-      console.error('Error cargando logs de auditoría:', error);
+      console.error('Error cargando logs de auditorÃ­a:', error);
     } finally {
       setCargando(false);
     }
@@ -83,7 +83,7 @@ function Auditoria() {
 
   const exportarLogs = async () => {
     try {
-      mostrarExito('Funcionalidad de exportación en desarrollo');
+      mostrarExito('Funcionalidad de exportaciÃ³n en desarrollo');
     } catch (error) {
       mostrarError('Error al exportar logs', error.message);
     }
@@ -91,10 +91,10 @@ function Auditoria() {
 
   const traducirAccion = (accion) => {
     const traducciones = {
-      'crear': 'Creación',
-      'editar': 'Edición',
-      'eliminar': 'Eliminación',
-      'publicar': 'Publicación',
+      'crear': 'CreaciÃ³n',
+      'editar': 'EdiciÃ³n',
+      'eliminar': 'EliminaciÃ³n',
+      'publicar': 'PublicaciÃ³n',
       'acceso': 'Acceso al Sistema'
     };
     return traducciones[accion] || accion;
@@ -105,7 +105,7 @@ function Auditoria() {
       'proyectos_registros': 'Proyectos',
       'usuarios': 'Usuarios',
       'sistema': 'Sistema',
-      'auditoria': 'Auditoría',
+      'auditoria': 'AuditorÃ­a',
       'personas': 'Personas',
       'expedientes': 'Expedientes',
       'registros': 'Registros'
@@ -113,22 +113,7 @@ function Auditoria() {
     return traducciones[tabla] || tabla;
   };
 
-  const getIconoAccion = (accion) => {
-    switch (accion) {
-      case 'crear':
-        return <span className="text-green-600">➕</span>;
-      case 'editar':
-        return <span className="text-blue-600">✏️</span>;
-      case 'eliminar':
-        return <span className="text-red-600">🗑️</span>;
-      case 'publicar':
-        return <span className="text-purple-600">📢</span>;
-      case 'acceso':
-        return <span className="text-gray-600">🔑</span>;
-      default:
-        return <span className="text-gray-600">📝</span>;
-    }
-  };
+  
 
   const getColorAccion = (accion) => {
     switch (accion) {
@@ -174,7 +159,7 @@ function Auditoria() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Auditoría del Sistema</h1>
+          <h1 className="text-2xl font-bold text-gray-900">AuditorÃ­a del Sistema</h1>
           <p className="text-gray-600 mt-1">
             Registro completo de todas las acciones realizadas en el sistema
           </p>
@@ -187,17 +172,11 @@ function Auditoria() {
           >
             <MdRefresh className="text-lg" />
           </button>
-          <button
-            onClick={exportarLogs}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-          >
-            <FaDownload className="text-sm" />
-            <span>Exportar</span>
-          </button>
+          {/* BotÃ³n de exportaciÃ³n removido */}
         </div>
       </div>
 
-      {/* Estadísticas */}
+      {/* EstadÃ­sticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow border">
           <div className="flex items-center justify-between">
@@ -289,15 +268,15 @@ function Auditoria() {
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="todos">Todas las acciones</option>
-            <option value="crear">➕ Creación</option>
-            <option value="editar">✏️ Edición</option>
-            <option value="eliminar">🗑️ Eliminación</option>
-            <option value="publicar">📢 Publicación</option>
-            <option value="acceso">🔑 Acceso al Sistema</option>
+            <option value="crear">Creacion</option>
+            <option value="editar">Edicion</option>
+            <option value="eliminar">Eliminacion</option>
+            <option value="publicar">Publicacion</option>
+            <option value="acceso">Acceso al Sistema</option>
           </select>
 
           <div className="text-sm text-gray-600 flex items-center">
-            Página {pagina} de {totalPaginas}
+           Página {pagina} de {totalPaginas}
           </div>
         </div>
       </div>
@@ -309,22 +288,22 @@ function Auditoria() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  📅 Fecha y Hora
+                  Fecha y Hora
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  👤 Usuario
+                  Usuario
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ⚡ Acción Realizada
+                  Acción Realizada
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  📋 Módulo Afectado
+                  Módulo Afectado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  📂 Proyecto
+                 Proyecto
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  📝 Detalles
+                  Detalles
                 </th>
               </tr>
             </thead>
@@ -348,12 +327,9 @@ function Auditoria() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      {getIconoAccion(log.accion)}
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getColorAccion(log.accion)}`}>
-                        {traducirAccion(log.accion)}
-                      </span>
-                    </div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getColorAccion(log.accion)}`}>
+                      {traducirAccion(log.accion)}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className="bg-blue-50 px-3 py-1 rounded-full text-sm font-medium text-blue-700">
@@ -377,7 +353,7 @@ function Auditoria() {
         </div>
       </div>
 
-      {/* Paginación */}
+      {/* PaginaciÃ³n */}
       {totalPaginas > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
@@ -405,17 +381,17 @@ function Auditoria() {
         </div>
       )}
 
-      {/* Información adicional */}
+      {/* InformaciÃ³n adicional */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <FaHistory className="text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Información sobre la auditoría</p>
+            <p className="font-medium mb-1">InformaciÃ³n sobre la auditorÃ­a</p>
             <ul className="space-y-1">
-              <li>• Se registran todas las acciones de los usuarios en el sistema</li>
-              <li>• Los logs incluyen fecha, usuario, acción realizada y detalles</li>
-              <li>• Solo los administradores pueden acceder a esta información</li>
-              <li>• Los registros se mantienen por tiempo indefinido para trazabilidad</li>
+              <li> Se registran todas las acciones de los usuarios en el sistema</li>
+              <li> Los logs incluyen fecha, usuario, acciÃ³n realizada y detalles</li>
+              <li> Solo los administradores pueden acceder a esta informaciÃ³n</li>
+              <li> Los registros se mantienen por tiempo indefinido para trazabilidad</li>
             </ul>
           </div>
         </div>
@@ -425,3 +401,6 @@ function Auditoria() {
 }
 
 export default Auditoria;
+
+
+

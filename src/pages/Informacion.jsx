@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { FaSearch, FaUser, FaIdCard, FaPhone, FaEnvelope, FaMapMarkerAlt, FaCalendarAlt, FaFileAlt, FaEdit, FaTrash, FaEye } from 'react-icons/fa';
+import { FaSearch, FaUser, FaIdCard, FaPhone, FaEnvelope, FaMapMarkerAlt, FaCalendarAlt, FaFileAlt, FaEdit, FaTrash, FaEye, FaInfoCircle } from 'react-icons/fa';
 import { MdPersonSearch, MdHistory, MdPlace } from 'react-icons/md';
 import { mostrarError, mostrarExito } from '../utils/alertas';
 
@@ -12,8 +12,9 @@ function Informacion() {
   const [cargando, setCargando] = useState(false);
   const [busquedaRealizada, setBusquedaRealizada] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [observacionModal, setObservacionModal] = useState(null);
 
-  // Efecto para cargar automáticamente si hay DNI en la URL
+  // Efecto para cargar automaticamente si hay DNI en la URL
   useEffect(() => {
     if (dniParam && dniParam.length >= 8) {
       buscarPersona(dniParam);
@@ -23,7 +24,7 @@ function Informacion() {
 
   const buscarPersona = async (dniBusqueda = dni) => {
     if (!dniBusqueda || dniBusqueda.length < 8) {
-      mostrarError('DNI inválido', 'Debe ingresar un DNI de 8 dígitos');
+      mostrarError('DNI invalido', 'Debe ingresar un DNI de 8 digitos');
       return;
     }
 
@@ -37,17 +38,17 @@ function Informacion() {
         setPersona(response.persona);
         setRegistros(response.registros || []);
         if (response.persona) {
-          mostrarExito(`Se encontró información para el DNI ${dniBusqueda}`);
+          mostrarExito(`Se encontro informacion para el DNI ${dniBusqueda}`);
         } else {
-          mostrarError('No encontrado', 'No se encontró información para el DNI ingresado');
+          mostrarError('No encontrado', 'No se encontro informacion para el DNI ingresado');
         }
       } else {
-        mostrarError('Error en la búsqueda', response?.error || 'Error de conexión');
+        mostrarError('Error en la busqueda', response?.error || 'Error de conexion');
         setPersona(null);
         setRegistros([]);
       }
     } catch (error) {
-      mostrarError('Error de conexión', 'No se pudo realizar la búsqueda');
+      mostrarError('Error de conexion', 'No se pudo realizar la busqueda');
       setPersona(null);
       setRegistros([]);
     } finally {
@@ -73,9 +74,9 @@ function Informacion() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Búsqueda por DNI</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Busqueda por DNI</h1>
           <p className="text-gray-600 mt-1">
-            Consulta información personal y registros asociados a un documento de identidad
+            Consulta informacion personal y registros asociados a un documento de identidad
           </p>
         </div>
       </div>
@@ -84,7 +85,7 @@ function Informacion() {
       <div className="bg-white p-6 rounded-lg shadow border">
         <div className="max-w-md mx-auto">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Número de DNI
+            Numero de DNI
           </label>
           <div className="relative">
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -93,7 +94,7 @@ function Informacion() {
               value={dni}
               onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
               onKeyPress={handleKeyPress}
-              placeholder="Ingrese DNI (8 dígitos)"
+              placeholder="Ingrese DNI (8 digitos)"
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg"
               maxLength={8}
             />
@@ -112,7 +113,7 @@ function Informacion() {
               ) : (
                 <>
                   <MdPersonSearch className="text-lg" />
-                  <span>Buscar Información</span>
+                  <span>Buscar Informacion</span>
                 </>
               )}
             </button>
@@ -125,12 +126,12 @@ function Informacion() {
         <>
           {persona ? (
             <div className="space-y-6">
-              {/* Información Personal */}
+              {/* Informacion Personal */}
               <div className="bg-white rounded-lg shadow border overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
                     <FaUser />
-                    <span>Información Personal</span>
+                    <span>Informacion Personal</span>
                   </h2>
                 </div>
 
@@ -163,7 +164,7 @@ function Informacion() {
                     <div className="flex items-center space-x-3">
                       <FaPhone className="text-orange-600 text-lg" />
                       <div>
-                        <p className="text-sm text-gray-600">Teléfono</p>
+                        <p className="text-sm text-gray-600">Telefono</p>
                         <p className="font-semibold text-gray-900">{persona.telefono}</p>
                       </div>
                     </div>
@@ -189,7 +190,7 @@ function Informacion() {
                     <div className="flex items-start space-x-3 md:col-span-2">
                       <FaMapMarkerAlt className="text-blue-600 text-lg mt-1" />
                       <div>
-                        <p className="text-sm text-gray-600">Dirección</p>
+                        <p className="text-sm text-gray-600">Direccion</p>
                         <p className="font-semibold text-gray-900">{persona.direccion}</p>
                       </div>
                     </div>
@@ -197,7 +198,7 @@ function Informacion() {
                     <div className="flex items-center space-x-3">
                       <MdPlace className="text-indigo-600 text-lg" />
                       <div>
-                        <p className="text-sm text-gray-600">Ocupación</p>
+                        <p className="text-sm text-gray-600">Ocupacion</p>
                         <p className="font-semibold text-gray-900">{persona.ocupacion}</p>
                       </div>
                     </div>
@@ -205,7 +206,7 @@ function Informacion() {
                 </div>
               </div>
 
-              {/* Estadísticas de Registros */}
+              {/* Estadisticas de Registros */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white p-4 rounded-lg shadow border">
                   <div className="flex items-center justify-between">
@@ -246,7 +247,7 @@ function Informacion() {
                 <div className="bg-white p-4 rounded-lg shadow border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Último Registro</p>
+                      <p className="text-sm text-gray-600">Ultimo Registro</p>
                       <p className="text-sm font-bold text-purple-600">
                         {estadisticas.ultimoRegistro ?
                           new Date(estadisticas.ultimoRegistro).toLocaleDateString() :
@@ -286,9 +287,12 @@ function Informacion() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Fecha en Caja
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Proyecto
-                          </th>
+                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                             Proyecto
+                           </th>
+                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '250px' }}>
+                             Observaciones
+                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -327,6 +331,26 @@ function Informacion() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {registro.proyecto}
                             </td>
+                            <td className="px-6 py-4 text-sm text-gray-700" style={{ maxWidth: '250px' }}>
+                              {registro.observacion ? (
+                                <div className="group relative">
+                                  <div className="line-clamp-2 overflow-hidden text-ellipsis">
+                                    {registro.observacion}
+                                  </div>
+                                  {registro.observacion.length > 100 && (
+                                    <button
+                                      onClick={() => setObservacionModal(registro.observacion)}
+                                      className="text-blue-600 hover:text-blue-800 text-xs mt-1 flex items-center gap-1"
+                                    >
+                                      <FaInfoCircle />
+                                      Ver completa
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">---</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -352,7 +376,7 @@ function Informacion() {
                 Persona no encontrada
               </h3>
               <p className="text-gray-600 mb-4">
-                No se encontró información para el DNI <strong>{dni}</strong>
+                No se encontro informacion para el DNI <strong>{dni}</strong>
               </p>
             </div>
           )}
@@ -364,20 +388,49 @@ function Informacion() {
         <div className="bg-white p-12 rounded-lg shadow border text-center">
           <MdPersonSearch className="mx-auto text-6xl text-gray-400 mb-6" />
           <h3 className="text-xl font-medium text-gray-900 mb-2">
-            Búsqueda de Información Personal
+            Busqueda de Informacion Personal
           </h3>
           <p className="text-gray-600 mb-6">
-            Ingrese un número de DNI válido para consultar la información personal y registros asociados
+            Ingrese un numero de DNI valido para consultar la informacion personal y registros asociados
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">💡 Información</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Ingrese 8 dígitos del DNI</li>
+            <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center justify-center gap-2">
+              <FaInfoCircle /> Informacion
+            </h4>
+            <ul className="text-sm text-blue-800 space-y-1 text-left">
+              <li>• Ingrese 8 digitos del DNI</li>
               <li>• Presione Enter o haga clic en Buscar</li>
-              <li>• Se mostrarán datos personales y registros</li>
+              <li>• Se mostraran datos personales y registros</li>
               <li>• Los datos se consultan en tiempo real desde la base de datos</li>
             </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para ver observacion completa */}
+      {observacionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <FaInfoCircle />
+                Observacion Completa
+              </h3>
+              <button
+                onClick={() => setObservacionModal(null)}
+                className="text-white hover:text-gray-200 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+              <p className="text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                {observacionModal}
+              </p>
+            </div>
           </div>
         </div>
       )}

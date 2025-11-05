@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft, FaUser, FaIdCard, FaFileAlt, FaFolderOpen,
   FaCalendarAlt, FaDownload, FaTrash, FaPlus, FaEdit,
-  FaPaperclip, FaFilePdf, FaFileExcel, FaFileImage,
-  FaFile, FaEye
+  FaPaperclip, FaFilePdf, FaFileExcel, FaFileImage, FaFileWord,
+  FaFile, FaEye, FaInfoCircle
 } from 'react-icons/fa';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
 import { useAuth } from '../context/AuthContext';
@@ -23,6 +23,7 @@ function PersonaDetalle() {
   const [comentarioDocumento, setComentarioDocumento] = useState('');
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
+  const [observacionModal, setObservacionModal] = useState(null);
 
   useEffect(() => {
     cargarDatos();
@@ -32,7 +33,7 @@ function PersonaDetalle() {
     try {
       setCargando(true);
 
-      // Cargar persona (usando la API de información)
+      // Cargar persona (usando la API de informacion)
       const responsePersona = await window.electronAPI?.informacion.buscarPersonaPorDni('');
 
       // Buscar la persona por ID
@@ -132,7 +133,7 @@ function PersonaDetalle() {
   const handleEliminarDocumento = async (documento) => {
     const confirmado = await mostrarConfirmacion(
       '¿Eliminar documento?',
-      `¿Estás seguro de que deseas eliminar "${documento.nombre_archivo}"? Esta acción no se puede deshacer.`
+      `¿Estas seguro de que deseas eliminar "${documento.nombre_archivo}"? Esta accion no se puede deshacer.`
     );
 
     if (confirmado) {
@@ -184,6 +185,8 @@ function PersonaDetalle() {
     switch (tipoArchivo) {
       case 'pdf':
         return <FaFilePdf className="text-red-500 text-2xl" />;
+      case 'word':
+        return <FaFileWord className="text-blue-600 text-2xl" />;
       case 'excel':
         return <FaFileExcel className="text-green-500 text-2xl" />;
       case 'imagen':
@@ -193,7 +196,7 @@ function PersonaDetalle() {
     }
   };
 
-  const formatearTamaño = (bytes) => {
+  const formatearTamano = (bytes) => {
     if (!bytes) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -240,13 +243,13 @@ function PersonaDetalle() {
               {persona.nombre || 'Sin nombre'}
             </h1>
             <p className="text-gray-600 mt-1">
-              DNI: {persona.dni || 'Sin DNI'} {persona.numero ? `| Número: ${persona.numero}` : ''}
+              DNI: {persona.dni || 'Sin DNI'} {persona.numero ? `| Numero: ${persona.numero}` : ''}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Estadísticas rápidas */}
+      {/* Estadisticas rapidas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-lg shadow border">
           <div className="flex items-center justify-between">
@@ -334,7 +337,7 @@ function PersonaDetalle() {
           {/* Tab: Datos Personales */}
           {tabActiva === 'datos' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Información Personal</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Informacion Personal</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
@@ -348,7 +351,7 @@ function PersonaDetalle() {
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <label className="text-sm font-medium text-gray-600">Número</label>
+                  <label className="text-sm font-medium text-gray-600">Numero</label>
                   <p className="text-gray-900 font-medium mt-1">{persona.numero || 'No especificado'}</p>
                 </div>
 
@@ -406,7 +409,7 @@ function PersonaDetalle() {
                             {doc.nombre_archivo}
                           </h4>
                           <p className="text-sm text-gray-600 mt-1">
-                            {formatearTamaño(doc.tamaño_bytes)}
+                            {formatearTamano(doc.tamaño_bytes)}
                           </p>
                           {doc.comentario && (
                             <p className="text-sm text-gray-500 mt-2 italic">
@@ -486,6 +489,9 @@ function PersonaDetalle() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Fecha en Caja
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '250px' }}>
+                          Observaciones
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Proyecto
                         </th>
@@ -523,6 +529,26 @@ function PersonaDetalle() {
                               ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
                               : '---'
                             }
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-700" style={{ maxWidth: '250px' }}>
+                            {registro.observacion ? (
+                              <div className="group relative">
+                                <div className="line-clamp-2 overflow-hidden text-ellipsis">
+                                  {registro.observacion}
+                                </div>
+                                {registro.observacion.length > 100 && (
+                                  <button
+                                    onClick={() => setObservacionModal(registro.observacion)}
+                                    className="text-blue-600 hover:text-blue-800 text-xs mt-1 flex items-center gap-1"
+                                  >
+                                    <FaInfoCircle />
+                                    Ver completa
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">---</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {registro.proyecto}
@@ -608,6 +634,33 @@ function PersonaDetalle() {
                   {subiendoDocumento ? 'Cargando...' : 'Cargar Documento'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para ver observacion completa */}
+      {observacionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <FaInfoCircle />
+                Observacion Completa
+              </h3>
+              <button
+                onClick={() => setObservacionModal(null)}
+                className="text-white hover:text-gray-200 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+              <p className="text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                {observacionModal}
+              </p>
             </div>
           </div>
         </div>

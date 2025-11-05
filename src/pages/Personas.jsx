@@ -6,6 +6,7 @@ import {
   FaCalendarAlt, FaEye, FaUser, FaEdit, FaTrash, FaPlus
 } from 'react-icons/fa';
 import { mostrarError, mostrarExito } from '../utils/alertas';
+import Paginacion from '../components/Paginacion';
 
 function Personas() {
   const [personas, setPersonas] = useState([]);
@@ -13,6 +14,8 @@ function Personas() {
   const [busqueda, setBusqueda] = useState('');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [personaEditando, setPersonaEditando] = useState(null);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const itemsPorPagina = 10;
   const navigate = useNavigate();
   const { esAdministrador, usuario } = useAuth();
 
@@ -92,6 +95,17 @@ function Personas() {
       mostrarError('Error de conexión', 'No se pudo eliminar la persona');
     }
   };
+
+  // Paginacion
+  const totalPaginas = Math.ceil(personas.length / itemsPorPagina);
+  const indiceInicio = (paginaActual - 1) * itemsPorPagina;
+  const indiceFin = indiceInicio + itemsPorPagina;
+  const personasPaginadas = personas.slice(indiceInicio, indiceFin);
+
+  // Resetear a pagina 1 cuando cambia la busqueda
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [personas.length]);
 
   if (cargando) {
     return (
@@ -220,7 +234,7 @@ function Personas() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {personas.map((persona) => (
+                {personasPaginadas.map((persona) => (
                   <tr
                     key={persona.id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -299,10 +313,22 @@ function Personas() {
               </tbody>
             </table>
           </div>
+
+          {/* Paginacion */}
+          {personas.length > 0 && (
+            <Paginacion
+              paginaActual={paginaActual}
+              totalPaginas={totalPaginas}
+              onCambioPagina={setPaginaActual}
+              totalItems={personas.length}
+              itemsPorPagina={itemsPorPagina}
+              itemsEnPaginaActual={personasPaginadas.length}
+            />
+          )}
         </div>
       )}
 
-      {/* Información adicional */}
+      {/* Informacion adicional */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <FaUsers className="text-blue-600 mt-0.5" />

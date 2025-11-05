@@ -342,8 +342,9 @@ class InformacionController extends BaseController {
         numero: r.numero,
         fecha_registro: r.fecha_registro,
         estado: r.estado_nombre || r.estado,
+        fecha_en_caja: r.fecha_en_caja,
         proyecto: r.proyecto_nombre || 'Proyecto General',
-        descripcion: r.observacion || 'Sin descripción'
+        observacion: r.observacion || null
       }));
 
       return {

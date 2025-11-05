@@ -109,6 +109,7 @@ class DocumentoPersonaModel extends BaseModel {
       'jpeg': 'imagen',
       'png': 'imagen',
       'gif': 'imagen',
+      'bmp': 'imagen',
       'txt': 'texto',
       'zip': 'comprimido',
       'rar': 'comprimido'

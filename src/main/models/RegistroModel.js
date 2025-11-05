@@ -24,6 +24,7 @@ class RegistroModel extends BaseModel {
         p.numero,
         p.dni,
         e.codigo AS expediente,
+        e.observacion AS observacion,
         r.fecha_registro,
         s.nombre AS estado,
         r.fecha_en_caja,
@@ -72,7 +73,7 @@ class RegistroModel extends BaseModel {
 
   // Agregar nuevo registro (transacción completa)
   async agregar(registroData) {
-    const { nombre, numero, dni, expediente, estado, fecha_registro, fecha_en_caja, proyecto_id, usuario_creador_id, persona_existente_id } = registroData;
+    const { nombre, numero, dni, expediente, estado, fecha_registro, fecha_en_caja, proyecto_id, usuario_creador_id, persona_existente_id, observacion } = registroData;
 
     // Validaciones
     this.validarCampos(registroData);
@@ -121,8 +122,8 @@ class RegistroModel extends BaseModel {
 
           // Insertar expediente
           const expedienteResult = await this.executeRun(
-            `INSERT INTO expedientes (persona_id, codigo, fecha_entrega) VALUES (?, NULLIF(?, ''), ?)`,
-            [personaId, expediente, fechaEntrega]
+            `INSERT INTO expedientes (persona_id, codigo, fecha_entrega, observacion) VALUES (?, NULLIF(?, ''), ?, NULLIF(?, ''))`,
+            [personaId, expediente, fechaEntrega, observacion || null]
           );
 
           // Obtener estado_id
@@ -155,6 +156,7 @@ class RegistroModel extends BaseModel {
             estado,
             fecha_registro,
             fecha_en_caja,
+            observacion: observacion || null,
           };
         } catch (error) {
           throw error;
@@ -165,7 +167,7 @@ class RegistroModel extends BaseModel {
 
   // Actualizar registro existente
   async actualizar(registro) {
-    const { id, nombre, numero, dni, expediente, estado, fecha_registro, fecha_en_caja } = registro;
+    const { id, nombre, numero, dni, expediente, estado, fecha_registro, fecha_en_caja, observacion } = registro;
     
     if (!id) {
       throw new Error("Registro inválido o incompleto");
@@ -184,8 +186,8 @@ class RegistroModel extends BaseModel {
 
         // Actualizar expediente
         await this.executeRun(
-          `UPDATE expedientes SET codigo = NULLIF(?, '') WHERE id = ?`,
-          [expediente, registro.expediente_id]
+          `UPDATE expedientes SET codigo = NULLIF(?, ''), observacion = NULLIF(?, '') WHERE id = ?`,
+          [expediente, observacion || null, registro.expediente_id]
         );
 
         // Obtener estado_id
@@ -231,6 +233,7 @@ class RegistroModel extends BaseModel {
           dni,
           expediente,
           estado: estadoFinal,
+          observacion: observacion || null,
           fecha_registro,
           fecha_en_caja: fechaEnCaja,
           estado_id: estadoRow.id

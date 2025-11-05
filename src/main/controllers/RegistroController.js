@@ -1,4 +1,4 @@
-﻿// src/main/controllers/RegistroController.js
+// src/main/controllers/RegistroController.js
 const BaseController = require('./BaseController');
 
 class RegistroController extends BaseController {

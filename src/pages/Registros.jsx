@@ -3,6 +3,7 @@ import { FaPlus, FaSearch, FaFileAlt, FaEdit, FaTrash, FaFilePdf, FaCalendarAlt,
 import { MdPersonAdd, MdFilterList, MdVisibility } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
 import FormularioRegistro from '../components/FormularioRegistro';
+import Paginacion from '../components/Paginacion';
 
 function Registros() {
   const [registros, setRegistros] = useState([]);
@@ -68,6 +69,11 @@ function Registros() {
   const totalPaginas = Math.ceil(registrosFiltrados.length / registrosPorPagina);
   const indiceInicio = (paginaActual - 1) * registrosPorPagina;
   const registrosPaginados = registrosFiltrados.slice(indiceInicio, indiceInicio + registrosPorPagina);
+
+  // Resetear a pagina 1 cuando cambia el filtro o busqueda
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtroEstado, busqueda]);
 
   const estadisticas = {
     total: registros.length,
@@ -373,37 +379,21 @@ function Registros() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginacion */}
+        {registrosFiltrados.length > 0 && (
+          <Paginacion
+            paginaActual={paginaActual}
+            totalPaginas={totalPaginas}
+            onCambioPagina={setPaginaActual}
+            totalItems={registrosFiltrados.length}
+            itemsPorPagina={registrosPorPagina}
+            itemsEnPaginaActual={registrosPaginados.length}
+          />
+        )}
       </div>
 
-      {/* Paginación */}
-      {totalPaginas > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Mostrando {indiceInicio + 1} a {Math.min(indiceInicio + registrosPorPagina, registrosFiltrados.length)} de {registrosFiltrados.length} registros
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
-              disabled={paginaActual === 1}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              Anterior
-            </button>
-            <span className="px-3 py-2 text-sm text-gray-600">
-              {paginaActual} / {totalPaginas}
-            </span>
-            <button
-              onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
-              disabled={paginaActual === totalPaginas}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              Siguiente
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Información Legacy */}
+      {/* Informacion Legacy */}
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <FaFilter className="text-orange-600 mt-0.5" />

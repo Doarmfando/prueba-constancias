@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaUsers, FaUserCheck, FaUserTimes, FaSearch, FaKey } from 'react-icons/fa';
 import { MdAdminPanelSettings, MdWork, MdSettings } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
+import Paginacion from '../components/Paginacion';
 
 function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -10,8 +11,10 @@ function Usuarios() {
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [filtro, setFiltro] = useState('todos'); // 'todos', 'activos', 'inactivos', 'admin'
   const [busqueda, setBusqueda] = useState('');
+  const [paginaActual, setPaginaActual] = useState(1);
+  const itemsPorPagina = 10;
 
-  // Temporalmente sin autenticación - simular usuario admin
+  // Temporalmente sin autenticacion - simular usuario admin
   const usuarioActual = { id: 1, nombre: "Usuario Temporal", rol: "administrador" };
 
   useEffect(() => {
@@ -124,6 +127,17 @@ function Usuarios() {
     administradores: usuarios.filter(u => u.rol === 'administrador').length,
     trabajadores: usuarios.filter(u => u.rol === 'trabajador').length
   };
+
+  // Paginacion
+  const totalPaginas = Math.ceil(usuariosFiltrados.length / itemsPorPagina);
+  const indiceInicio = (paginaActual - 1) * itemsPorPagina;
+  const indiceFin = indiceInicio + itemsPorPagina;
+  const usuariosPaginados = usuariosFiltrados.slice(indiceInicio, indiceFin);
+
+  // Resetear a pagina 1 cuando cambia el filtro o busqueda
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtro, busqueda]);
 
   if (cargando) {
     return (
@@ -312,14 +326,14 @@ function Usuarios() {
                       <p className="text-gray-600">
                         {usuarios.length === 0
                           ? 'Crea el primer usuario para empezar'
-                          : 'Intenta con diferentes términos de búsqueda o filtros'
+                          : 'Intenta con diferentes terminos de busqueda o filtros'
                         }
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                usuariosFiltrados.map((usuario) => (
+                usuariosPaginados.map((usuario) => (
                 <tr key={usuario.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -398,6 +412,18 @@ function Usuarios() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginacion */}
+        {usuariosFiltrados.length > 0 && (
+          <Paginacion
+            paginaActual={paginaActual}
+            totalPaginas={totalPaginas}
+            onCambioPagina={setPaginaActual}
+            totalItems={usuariosFiltrados.length}
+            itemsPorPagina={itemsPorPagina}
+            itemsEnPaginaActual={usuariosPaginados.length}
+          />
+        )}
       </div>
 
       {/* Modal de formulario */}

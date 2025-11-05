@@ -67,7 +67,7 @@ class DocumentoPersonaIPCHandler extends BaseIPCHandler {
         filters: [
           { name: 'Documentos', extensions: ['pdf', 'doc', 'docx'] },
           { name: 'Hojas de Cálculo', extensions: ['xls', 'xlsx'] },
-          { name: 'Imágenes', extensions: ['jpg', 'jpeg', 'png', 'gif'] },
+          { name: 'Imágenes', extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp'] },
           { name: 'Todos los archivos', extensions: ['*'] }
         ]
       });

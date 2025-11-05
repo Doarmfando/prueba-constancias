@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { FaLock, FaUsers, FaEye, FaEdit, FaCalendarAlt, FaSearch, FaShieldAlt } from 'react-icons/fa';
 import { MdPrivateConnectivity } from 'react-icons/md';
 import { mostrarError } from '../utils/alertas';
+import Paginacion from '../components/Paginacion';
 
 function ProyectosPrivados() {
   const [proyectos, setProyectos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
+  const [paginaActual, setPaginaActual] = useState(1);
+  const itemsPorPagina = 9; // 3 columnas x 3 filas = 9 tarjetas por pagina
 
   // Obtener usuario actual del localStorage
   const getUsuarioActual = () => {
@@ -76,6 +79,17 @@ function ProyectosPrivados() {
     proyecto.descripcion?.toLowerCase().includes(busqueda.toLowerCase()) ||
     proyecto.nombre_creador?.toLowerCase().includes(busqueda.toLowerCase())
   );
+
+  // Paginacion
+  const totalPaginas = Math.ceil(proyectosFiltrados.length / itemsPorPagina);
+  const indiceInicio = (paginaActual - 1) * itemsPorPagina;
+  const indiceFin = indiceInicio + itemsPorPagina;
+  const proyectosPaginados = proyectosFiltrados.slice(indiceInicio, indiceFin);
+
+  // Resetear a pagina 1 cuando cambia la busqueda
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [busqueda]);
 
   if (cargando) {
     return (
@@ -185,8 +199,9 @@ function ProyectosPrivados() {
           </p>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {proyectosFiltrados.map((proyecto) => (
+          {proyectosPaginados.map((proyecto) => (
             <div
               key={proyecto.id}
               className="bg-white rounded-lg shadow border hover:shadow-lg transition-shadow"
@@ -247,9 +262,22 @@ function ProyectosPrivados() {
             </div>
           ))}
         </div>
+
+        {/* Paginacion */}
+        <div className="bg-white rounded-lg shadow border overflow-hidden">
+          <Paginacion
+            paginaActual={paginaActual}
+            totalPaginas={totalPaginas}
+            onCambioPagina={setPaginaActual}
+            totalItems={proyectosFiltrados.length}
+            itemsPorPagina={itemsPorPagina}
+            itemsEnPaginaActual={proyectosPaginados.length}
+          />
+        </div>
+        </>
       )}
 
-      {/* Información adicional */}
+      {/* Informacion adicional */}
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <FaLock className="text-orange-600 mt-0.5" />

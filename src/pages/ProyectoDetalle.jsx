@@ -8,6 +8,7 @@ import {
 import { MdPublic, MdPrivateConnectivity, MdRestore, MdDeleteForever } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
 import { Bar, Doughnut } from 'react-chartjs-2';
+import Paginacion from '../components/Paginacion';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -45,20 +46,23 @@ function ProyectoDetalle() {
   const [exportandoPDF, setExportandoPDF] = useState(false);
   const [tituloPDF, setTituloPDF] = useState('');
   const [incluirEliminadosEnPDF, setIncluirEliminadosEnPDF] = useState(false);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [paginaEliminados, setPaginaEliminados] = useState(1);
+  const itemsPorPagina = 10;
 
   // Obtener usuario actual del localStorage
   const getUsuarioActual = () => {
     try {
       const sesion = localStorage.getItem('sesion_usuario');
       if (!sesion) {
-        // Si no hay sesión, redirigir al login
+        // Si no hay sesiÃ³n, redirigir al login
         navigate('/login');
         return null;
       }
       return JSON.parse(sesion);
     } catch (error) {
       console.error('Error obteniendo usuario:', error);
-      // Si hay error leyendo la sesión, limpiar y redirigir al login
+      // Si hay error leyendo la sesiÃ³n, limpiar y redirigir al login
       localStorage.removeItem('sesion_usuario');
       navigate('/login');
       return null;
@@ -68,7 +72,7 @@ function ProyectoDetalle() {
   const navigate = useNavigate();
   const usuario = getUsuarioActual();
 
-  // Si no hay usuario, mostrar loading (se redirigirá al login)
+  // Si no hay usuario, mostrar loading (se redirigirÃ¡ al login)
   if (!usuario) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -81,7 +85,7 @@ function ProyectoDetalle() {
     cargarProyecto();
   }, [id]);
 
-  // Recalcular estadísticas cuando cambien los registros
+  // Recalcular estadÃ­sticas cuando cambien los registros
   useEffect(() => {
     cargarEstadisticas();
   }, [registros, registrosEliminados]);
@@ -101,7 +105,7 @@ function ProyectoDetalle() {
       }
       setCargando(false);
     } catch (error) {
-      mostrarError('Error de conexión', 'No se pudo cargar el proyecto');
+      mostrarError('Error de conexiÃ³n', 'No se pudo cargar el proyecto');
       navigate('/mis-proyectos');
       setCargando(false);
     }
@@ -109,7 +113,7 @@ function ProyectoDetalle() {
 
   const cargarEstadisticas = async () => {
     try {
-      // Calcular estadísticas por estado desde los registros reales
+      // Calcular estadÃ­sticas por estado desde los registros reales
       const recibidos = registros.filter(r => r.estado === 'Recibido').length;
       const enCaja = registros.filter(r => r.estado === 'En Caja').length;
       const entregados = registros.filter(r => r.estado === 'Entregado').length;
@@ -122,10 +126,10 @@ function ProyectoDetalle() {
         entregados,
         tesoreria,
         total,
-        pendientes: recibidos // Pendientes = los que están en estado "Recibido"
+        pendientes: recibidos // Pendientes = los que estÃ¡n en estado "Recibido"
       });
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      console.error('Error cargando estadÃ­sticas:', error);
       setEstadisticas({
         recibidos: 0,
         enCaja: 0,
@@ -141,10 +145,10 @@ function ProyectoDetalle() {
     try {
       setCargandoRegistros(true);
 
-      // Usar el proyecto pasado como parámetro o el del estado
+      // Usar el proyecto pasado como parÃ¡metro o el del estado
       const proyectoActual = proyectoData || proyecto;
 
-      // Verificar que el proyecto esté cargado
+      // Verificar que el proyecto estÃ© cargado
       if (!proyectoActual?.id) {
         console.warn('Proyecto no disponible, saltando carga de registros');
         setCargandoRegistros(false);
@@ -171,9 +175,9 @@ function ProyectoDetalle() {
 
   const eliminarProyecto = async () => {
     const confirmado = await mostrarConfirmacion({
-      titulo: '¿Eliminar proyecto?',
-      texto: `Se eliminará el proyecto \"${proyecto.nombre}\" y todos sus registros.`,
-      confirmButtonText: 'Sí, eliminar',
+      titulo: 'Â¿Eliminar proyecto?',
+      texto: `Se eliminarÃ¡ el proyecto \"${proyecto.nombre}\" y todos sus registros.`,
+      confirmButtonText: 'SÃ­, eliminar',
       cancelButtonText: 'Cancelar'
     });
 
@@ -185,20 +189,20 @@ function ProyectoDetalle() {
           mostrarExito('Proyecto eliminado correctamente');
           navigate('/mis-proyectos');
         } else {
-          mostrarError('Error al eliminar proyecto', response?.error || 'Error de conexión');
+          mostrarError('Error al eliminar proyecto', response?.error || 'Error de conexiÃ³n');
         }
       } catch (error) {
-        mostrarError('Error al eliminar proyecto', 'Error de conexión');
+        mostrarError('Error al eliminar proyecto', 'Error de conexiÃ³n');
       }
     }
   };
 
   const cambiarVisibilidad = async () => {
-    const accion = proyecto.es_publico ? 'hacer privado' : 'hacer público';
+    const accion = proyecto.es_publico ? 'hacer privado' : 'hacer pÃºblico';
     const confirmado = await mostrarConfirmacion({
-      titulo: `¿${accion.charAt(0).toUpperCase() + accion.slice(1)}?`,
+      titulo: `Â¿${accion.charAt(0).toUpperCase() + accion.slice(1)}?`,
       texto: `Se ${accion} el proyecto \"${proyecto.nombre}\".`,
-      confirmButtonText: `Sí, ${accion}`,
+      confirmButtonText: `SÃ­, ${accion}`,
       cancelButtonText: 'Cancelar'
     });
 
@@ -215,12 +219,12 @@ function ProyectoDetalle() {
             fecha_publicacion: !proyecto.es_publico ? new Date().toISOString() : null
           };
           setProyecto(proyectoActualizado);
-          mostrarExito(`Proyecto ${accion === 'hacer público' ? 'publicado' : 'hecho privado'} correctamente`);
+          mostrarExito(`Proyecto ${accion === 'hacer pÃºblico' ? 'publicado' : 'hecho privado'} correctamente`);
         } else {
-          mostrarError(`Error al ${accion} proyecto`, response?.error || 'Error de conexión');
+          mostrarError(`Error al ${accion} proyecto`, response?.error || 'Error de conexiÃ³n');
         }
       } catch (error) {
-        mostrarError(`Error al ${accion} proyecto`, 'Error de conexión');
+        mostrarError(`Error al ${accion} proyecto`, 'Error de conexiÃ³n');
       }
     }
   };
@@ -247,14 +251,14 @@ function ProyectoDetalle() {
         setMostrarModalExportarPDF(false);
       } else {
         if (response?.message && response.message.includes('cancelada')) {
-          // No mostrar error si el usuario canceló
+          // No mostrar error si el usuario cancelÃ³
           setMostrarModalExportarPDF(false);
         } else {
-          mostrarError('Error al exportar PDF', response?.error || 'Error de conexión');
+          mostrarError('Error al exportar PDF', response?.error || 'Error de conexiÃ³n');
         }
       }
     } catch (error) {
-      mostrarError('Error al exportar PDF', 'Error de conexión');
+      mostrarError('Error al exportar PDF', 'Error de conexiÃ³n');
       console.error('Error exportando PDF:', error);
     } finally {
       setExportandoPDF(false);
@@ -286,18 +290,37 @@ function ProyectoDetalle() {
     (registro.expediente || '').toLowerCase().includes(busqueda.toLowerCase())
   );
 
+  // Paginacion de registros activos
+  const totalPaginasRegistros = Math.ceil(registrosFiltrados.length / itemsPorPagina);
+  const indiceInicioRegistros = (paginaActual - 1) * itemsPorPagina;
+  const registrosPaginados = registrosFiltrados.slice(indiceInicioRegistros, indiceInicioRegistros + itemsPorPagina);
+
+  // Paginacion de registros eliminados
+  const totalPaginasEliminados = Math.ceil(registrosEliminados.length / itemsPorPagina);
+  const indiceInicioEliminados = (paginaEliminados - 1) * itemsPorPagina;
+  const eliminadosPaginados = registrosEliminados.slice(indiceInicioEliminados, indiceInicioEliminados + itemsPorPagina);
+
+  // Resetear pagina al cambiar busqueda o tab
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [busqueda, tabActiva]);
+
+  useEffect(() => {
+    setPaginaEliminados(1);
+  }, [tabActiva]);
+
   const eliminarRegistro = async (registro) => {
     const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || 'este registro';
     const confirmado = await mostrarConfirmacion({
-      titulo: '¿Eliminar registro?',
-      texto: `Se eliminará el registro de ${nombreCompleto}`,
-      confirmButtonText: 'Sí, eliminar',
+      titulo: 'Â¿Eliminar registro?',
+      texto: `Se eliminarÃ¡ el registro de ${nombreCompleto}`,
+      confirmButtonText: 'SÃ­, eliminar',
       cancelButtonText: 'Cancelar'
     });
 
     if (confirmado) {
       try {
-        // Eliminación de registros temporal deshabilitada
+        // EliminaciÃ³n de registros temporal deshabilitada
         const response = { success: true };
 
         if (response?.success) {
@@ -305,10 +328,10 @@ function ProyectoDetalle() {
           setRegistrosEliminados(prev => [...prev, { ...registro, fecha_eliminacion: new Date().toISOString(), eliminado_por: usuario.nombre, motivo: 'Eliminado por usuario' }]);
           mostrarExito('Registro eliminado correctamente');
         } else {
-          mostrarError('Error al eliminar registro', response?.error || 'Error de conexión');
+          mostrarError('Error al eliminar registro', response?.error || 'Error de conexiÃ³n');
         }
       } catch (error) {
-        mostrarError('Error al eliminar registro', 'Error de conexión');
+        mostrarError('Error al eliminar registro', 'Error de conexiÃ³n');
       }
     }
   };
@@ -316,15 +339,15 @@ function ProyectoDetalle() {
   const restaurarRegistro = async (registro) => {
     const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || 'este registro';
     const confirmado = await mostrarConfirmacion({
-      titulo: '¿Restaurar registro?',
-      texto: `Se restaurará el registro de ${nombreCompleto}`,
-      confirmButtonText: 'Sí, restaurar',
+      titulo: 'Â¿Restaurar registro?',
+      texto: `Se restaurarÃ¡ el registro de ${nombreCompleto}`,
+      confirmButtonText: 'SÃ­, restaurar',
       cancelButtonText: 'Cancelar'
     });
 
     if (confirmado) {
       try {
-        // Restauración de registros temporal deshabilitada
+        // RestauraciÃ³n de registros temporal deshabilitada
         const response = { success: true };
 
         if (response?.success) {
@@ -333,10 +356,10 @@ function ProyectoDetalle() {
           setRegistros(prev => [...prev, { ...registroRestaurado, estado: 'Restaurado' }]);
           mostrarExito('Registro restaurado correctamente');
         } else {
-          mostrarError('Error al restaurar registro', response?.error || 'Error de conexión');
+          mostrarError('Error al restaurar registro', response?.error || 'Error de conexiÃ³n');
         }
       } catch (error) {
-        mostrarError('Error al restaurar registro', 'Error de conexión');
+        mostrarError('Error al restaurar registro', 'Error de conexiÃ³n');
       }
     }
   };
@@ -400,11 +423,9 @@ function ProyectoDetalle() {
 
             <div className="flex items-center space-x-4 text-sm text-gray-500">
               <span>Creado por: {proyecto.nombre_creador}</span>
-              <span>•</span>
               <span>{new Date(proyecto.fecha_creacion).toLocaleDateString()}</span>
               {proyecto.fecha_publicacion && (
                 <>
-                  <span>•</span>
                   <span>Publicado: {new Date(proyecto.fecha_publicacion).toLocaleDateString()}</span>
                 </>
               )}
@@ -413,7 +434,7 @@ function ProyectoDetalle() {
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Botón exportar */}
+          {/* BotÃ³n exportar */}
           <button
             onClick={exportarDatos}
             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -422,7 +443,7 @@ function ProyectoDetalle() {
             <FaDownload />
           </button>
 
-          {/* Botones de gestión (solo para propietario/admin) */}
+          {/* Botones de gestiÃ³n (solo para propietario/admin) */}
           {puedeEditar() && (
             <>
               <button
@@ -440,7 +461,7 @@ function ProyectoDetalle() {
                     ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                     : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                 }`}
-                title={proyecto.es_publico ? 'Hacer privado' : 'Hacer público'}
+                title={proyecto.es_publico ? 'Hacer privado' : 'Hacer pÃºblico'}
               >
                 {proyecto.es_publico ? <FaLock /> : <FaGlobe />}
               </button>
@@ -572,7 +593,7 @@ function ProyectoDetalle() {
         <div className="p-6">
           {tabActiva === 'registros' && (
             <div className="space-y-6">
-              {/* Búsqueda */}
+              {/* BÃºsqueda */}
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium text-gray-900">Registros Activos</h3>
                 <div className="flex items-center space-x-4">
@@ -609,6 +630,7 @@ function ProyectoDetalle() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Persona</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expediente</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Observación</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Registro</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha en Caja</th>
@@ -616,7 +638,7 @@ function ProyectoDetalle() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {registrosFiltrados.map((registro) => (
+                      {registrosPaginados.map((registro) => (
                         <tr key={registro.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -637,6 +659,13 @@ function ProyectoDetalle() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <code className="bg-gray-100 px-2 py-1 rounded text-xs">{registro.expediente || '---'}</code>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-700 max-w-xs">
+                            {registro.Observación ? (
+                              <div className="whitespace-normal break-words max-h-24 overflow-auto pr-2">
+                                {registro.Observación}
+                              </div>
+                            ) : '---'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
@@ -691,6 +720,18 @@ function ProyectoDetalle() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Paginacion de registros activos */}
+                {registrosFiltrados.length > 0 && (
+                  <Paginacion
+                    paginaActual={paginaActual}
+                    totalPaginas={totalPaginasRegistros}
+                    onCambioPagina={setPaginaActual}
+                    totalItems={registrosFiltrados.length}
+                    itemsPorPagina={itemsPorPagina}
+                    itemsEnPaginaActual={registrosPaginados.length}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -708,12 +749,12 @@ function ProyectoDetalle() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Expediente</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Estado</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Eliminado por</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Fecha Eliminación</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Fecha EliminaciÃ³n</th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-red-600 uppercase">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {registrosEliminados.map((registro) => (
+                      {eliminadosPaginados.map((registro) => (
                         <tr key={registro.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -761,6 +802,18 @@ function ProyectoDetalle() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Paginacion de registros eliminados */}
+                {registrosEliminados.length > 0 && (
+                  <Paginacion
+                    paginaActual={paginaEliminados}
+                    totalPaginas={totalPaginasEliminados}
+                    onCambioPagina={setPaginaEliminados}
+                    totalItems={registrosEliminados.length}
+                    itemsPorPagina={itemsPorPagina}
+                    itemsEnPaginaActual={eliminadosPaginados.length}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -777,12 +830,12 @@ function ProyectoDetalle() {
                   <select className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option>Todo</option>
                     <option>Última semana</option>
-                    <option>Último mes</option>
+                    <option>Ãšltimo mes</option>
                   </select>
                 </div>
               </div>
 
-              {/* Tarjetas de estadísticas */}
+              {/* Tarjetas de estadÃ­sticas */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-yellow-500 p-6 rounded-lg shadow">
                   <p className="text-white text-sm font-medium mb-1">Recibidos</p>
@@ -800,22 +853,22 @@ function ProyectoDetalle() {
                 </div>
 
                 <div className="bg-purple-600 p-6 rounded-lg shadow">
-                  <p className="text-white text-sm font-medium mb-1">Tesorería</p>
+                  <p className="text-white text-sm font-medium mb-1">Tesoreria</p>
                   <p className="text-white text-4xl font-bold">{estadisticas?.tesoreria || 0}</p>
                 </div>
               </div>
 
-              {/* Gráficos */}
+              {/* GrÃ¡ficos */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Gráfico de Dona - Distribución por Estado */}
+                {/* GrÃ¡fico de Dona - DistribuciÃ³n por Estado */}
                 <div className="bg-white border rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">
-                    Distribución por Estado
+                    DistribuciÃ³n por Estado
                   </h4>
                   <div className="h-64 flex items-center justify-center">
                     <Doughnut
                       data={{
-                        labels: ['Recibido', 'En Caja', 'Entregado', 'Tesorería'],
+                        labels: ['Recibido', 'En Caja', 'Entregado', 'Tesoreria'],
                         datasets: [{
                           data: [
                             estadisticas?.recibidos || 0,
@@ -857,7 +910,7 @@ function ProyectoDetalle() {
                               label: function(context) {
                                 const label = context.label || '';
                                 const value = context.parsed || 0;
-                                return `${label}\n■ Total: ${value}`;
+                                return `${label}\nâ–  Total: ${value}`;
                               }
                             }
                           }
@@ -867,7 +920,7 @@ function ProyectoDetalle() {
                   </div>
                 </div>
 
-                {/* Gráfico de Barras - Pendientes por llegar a caja */}
+                {/* GrÃ¡fico de Barras - Pendientes por llegar a caja */}
                 <div className="bg-white border rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">
                     Pendientes por llegar a caja
@@ -950,14 +1003,14 @@ function ProyectoDetalle() {
                   <h4 className="font-medium text-gray-900 mb-2">Permisos</h4>
                   <div className="space-y-2 text-sm text-gray-600">
                     <p><strong>Creador:</strong> {proyecto.nombre_creador}</p>
-                    <p><strong>Edición:</strong> {proyecto.permite_edicion ? 'Habilitada' : 'Solo propietario'}</p>
+                    <p><strong>EdiciÃ³n:</strong> {proyecto.permite_edicion ? 'Habilitada' : 'Solo propietario'}</p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>Nota:</strong> Las opciones de configuración avanzada están disponibles
+                  <strong>Nota:</strong> Las opciones de configuraciÃ³n avanzada estÃ¡n disponibles
                   para administradores y propietarios del proyecto.
                 </p>
               </div>
@@ -977,7 +1030,7 @@ function ProyectoDetalle() {
             setRegistroEditando(null);
           }}
           onSave={async () => {
-            // Recargar los registros desde la base de datos después de guardar
+            // Recargar los registros desde la base de datos despuÃ©s de guardar
             await cargarRegistros();
             setMostrarFormularioRegistro(false);
             setRegistroEditando(null);
@@ -1009,7 +1062,7 @@ function ProyectoDetalle() {
             <div className="p-6 space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Título del documento <span className="text-red-500">*</span>
+                  Titulo del documento <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1031,10 +1084,10 @@ function ProyectoDetalle() {
                   <div className="text-sm text-blue-800">
                     <p className="font-medium mb-1">Información a incluir</p>
                     <ul className="space-y-1 text-xs">
-                      <li>• Datos del proyecto y estadísticas</li>
-                      <li>• Tabla con {registros.length} registros activos</li>
-                      {incluirEliminadosEnPDF && <li>• Tabla con {registrosEliminados.length} registros eliminados</li>}
-                      <li>• Fecha y hora de generación</li>
+                      <li> Datos del proyecto y estadisticas</li>
+                      <li>Tabla con {registros.length} registros activos</li>
+                      {incluirEliminadosEnPDF && <li> Tabla con {registrosEliminados.length} registros eliminados</li>}
+                      <li>Fecha y hora de generacion</li>
                     </ul>
                   </div>
                 </div>
@@ -1075,7 +1128,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
     numero: '',
     expediente_codigo: '',
     fecha_solicitud: new Date().toISOString().split('T')[0], // Fecha actual por defecto
-    observacion: '',
+    Observación: '',
     fecha_entrega: '',
     estado_id: 1,
     persona_id: null,
@@ -1103,7 +1156,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
         numero: registro.numero || '',
         expediente_codigo: registro.expediente || '',
         fecha_solicitud: (registro.fecha_registro && registro.fecha_registro !== '---') ? registro.fecha_registro : '',
-        observacion: registro.observacion || '',
+        Observación: registro.Observación || '',
         fecha_entrega: (registro.fecha_en_caja && registro.fecha_en_caja !== '---') ? registro.fecha_en_caja : '',
         estado_id: estadosInversoMap[registro.estado] || 1,
         persona_id: registro.persona_id || null,
@@ -1113,7 +1166,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
   }, [registro]);
 
   const buscarPersonaPorDni = async (dni) => {
-    // Validar que el DNI tenga exactamente 8 dígitos antes de buscar
+    // Validar que el DNI tenga exactamente 8 dÃ­gitos antes de buscar
     if (!dni || dni.trim().length !== 8) {
       setPersonaEncontrada(null);
       setDatosAutocompletados(false);
@@ -1122,9 +1175,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
 
     try {
       setBuscandoDni(true);
-      console.log('🔍 Buscando persona con DNI:', dni);
+      console.log('ðŸ” Buscando persona con DNI:', dni);
       const response = await window.electronAPI?.informacion.buscarPersonaPorDni(dni.trim());
-      console.log('📥 Respuesta completa:', JSON.stringify(response, null, 2));
+      console.log('ðŸ“¥ Respuesta completa:', JSON.stringify(response, null, 2));
 
       if (response?.success && response.persona) {
         const persona = response.persona;
@@ -1135,18 +1188,18 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
           ? persona.nombre.trim()
           : `${persona.nombres || ''} ${persona.apellidos || ''}`.trim();
 
-        // Obtener número del primer registro si existe
+        // Obtener nÃºmero del primer registro si existe
         const numeroRegistro = registros.length > 0 && registros[0].numero ? registros[0].numero : '';
 
-        console.log('✅ Persona encontrada - ID:', persona.id);
+        console.log('âœ… Persona encontrada - ID:', persona.id);
         console.log('   - Nombres:', persona.nombres);
         console.log('   - Apellidos:', persona.apellidos);
         console.log('   - Nombre completo:', nombreCompleto);
         console.log('   - DNI:', persona.dni);
         console.log('   - Registros encontrados:', registros.length);
-        console.log('   - Número (del primer registro):', numeroRegistro);
+        console.log('   - Numero (del primer registro):', numeroRegistro);
 
-        // Guardar persona con nombre completo y número para uso posterior
+        // Guardar persona con nombre completo y numero para uso posterior
         const personaConNombreCompleto = { ...persona, nombre: nombreCompleto, numero: numeroRegistro };
 
         setPersonaEncontrada(personaConNombreCompleto);
@@ -1156,9 +1209,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
           const nombreNuevo = nombreCompleto;
           const numeroNuevo = numeroRegistro;
 
-          console.log('📝 Valores a autocompletar:');
+          console.log(' Valores a autocompletar:');
           console.log('   - Nombre nuevo:', nombreNuevo);
-          console.log('   - Número nuevo:', numeroNuevo);
+          console.log('   - Numero nuevo:', numeroNuevo);
 
           setFormData(prev => {
             console.log('   - FormData anterior:', JSON.stringify(prev, null, 2));
@@ -1167,33 +1220,33 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
               nombre: nombreNuevo,
               numero: numeroNuevo
             };
-            console.log('✏️ FormData actualizado:', JSON.stringify(newData, null, 2));
+            console.log('FormData actualizado:', JSON.stringify(newData, null, 2));
             return newData;
           });
 
           setDatosAutocompletados(true);
-          console.log('✅ Datos autocompletados establecido en true');
+          console.log(' Datos autocompletados establecido en true');
         } else {
-          console.log('ℹ️ No se autocompleta porque estamos editando un registro existente');
+          console.log(' No se autocompleta porque estamos editando un registro existente');
         }
       } else {
-        console.log('❌ Persona no encontrada - response.success:', response?.success);
+        console.log('Persona no encontrada - response.success:', response?.success);
         setPersonaEncontrada(null);
         setDatosAutocompletados(false);
       }
     } catch (error) {
-      console.error('❌ Error buscando persona:', error);
+      console.error(' Error buscando persona:', error);
       setPersonaEncontrada(null);
     } finally {
       setBuscandoDni(false);
-      console.log('🏁 Búsqueda finalizada');
+      console.log('Busqueda finalizada');
     }
   };
 
   const handleInputChange = async (e) => {
     const { name, value } = e.target;
 
-    // Si se modificó el DNI, buscar persona primero antes de actualizar el estado
+    // Si se modificÃ³ el DNI, buscar persona primero antes de actualizar el estado
     if (name === 'dni') {
       // Actualizar DNI inmediatamente
       setFormData(prev => ({
@@ -1211,7 +1264,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
           dni: ''
         }));
       }
-      return; // Salir para evitar actualización duplicada
+      return; // Salir para evitar actualizaciÃ³n duplicada
     }
 
     // Para otros campos, actualizar normalmente
@@ -1220,11 +1273,11 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
       [name]: value
     };
 
-    // Lógica para fechas automáticas según el estado
+    // LÃ³gica para fechas automÃ¡ticas segÃºn el estado
     if (name === 'estado_id') {
       const estadoId = parseInt(value);
 
-      // Si cambia a "En Caja" (2) o "Entregado" (3), poner fecha de entrega automática
+      // Si cambia a "En Caja" (2) o "Entregado" (3), poner fecha de entrega automÃ¡tica
       if (estadoId === 2 || estadoId === 3) {
         newFormData.fecha_entrega = new Date().toISOString().split('T')[0];
       } else {
@@ -1235,7 +1288,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
 
     setFormData(newFormData);
 
-    // Si se modificó nombre o número manualmente, desactivar indicador de autocompletado
+    // Si se modificÃ³ nombre o nÃºmero manualmente, desactivar indicador de autocompletado
     if ((name === 'nombre' || name === 'numero') && datosAutocompletados) {
       setDatosAutocompletados(false);
     }
@@ -1258,11 +1311,11 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
     if (!formData.dni.trim()) {
       nuevosErrores.dni = 'El DNI es obligatorio';
     } else if (!/^\d{8}$/.test(formData.dni.trim())) {
-      nuevosErrores.dni = 'El DNI debe tener 8 dígitos';
+      nuevosErrores.dni = 'El DNI debe tener 8 dÃ­gitos';
     }
 
     if (!formData.expediente_codigo.trim()) {
-      nuevosErrores.expediente_codigo = 'El código de expediente es obligatorio';
+      nuevosErrores.expediente_codigo = 'El Código de Expediente es obligatorio';
     }
 
     setErrores(nuevosErrores);
@@ -1297,7 +1350,8 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
         fecha_registro: formData.fecha_solicitud || new Date().toISOString().split('T')[0],
         fecha_en_caja: (parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? formData.fecha_entrega : null,
         usuario_creador_id: 1, // Usuario temporal
-        persona_existente_id: personaEncontrada?.id || null // Enviar ID de persona si existe
+        persona_existente_id: personaEncontrada?.id || null, // Enviar ID de persona si existe
+        Observación: formData.Observación?.trim() || ''
       };
 
       let response;
@@ -1320,7 +1374,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
         mostrarError('Error al guardar registro', response?.error || 'Error desconocido');
       }
     } catch (error) {
-      mostrarError('Error de conexión', 'No se pudo guardar el registro');
+      mostrarError('Error de conexiÃ³n', 'No se pudo guardar el registro');
       console.error('Error guardando registro:', error);
     } finally {
       setGuardando(false);
@@ -1415,7 +1469,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
 
               <div>
                 <label htmlFor="numero" className="block text-sm font-medium text-gray-700 mb-2">
-                  Número (opcional)
+                  NÃºmero (opcional)
                 </label>
                 <input
                   type="text"
@@ -1469,7 +1523,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
                   <option value={1}>Recibido</option>
                   <option value={2}>En Caja</option>
                   <option value={3}>Entregado</option>
-                  <option value={4}>Tesorería</option>
+                  <option value={4}>Tesoreria</option>
                 </select>
               </div>
 
@@ -1489,7 +1543,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
 
               <div>
                 <label htmlFor="fecha_entrega" className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de Entrega {(parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? '(Automática, editable)' : ''}
+                  Fecha de Entrega {(parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? '(AutomÃ¡tica, editable)' : ''}
                 </label>
                 <input
                   type="date"
@@ -1501,19 +1555,19 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
                 />
                 {(parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) && (
                   <p className="mt-1 text-sm text-gray-500">
-                    La fecha se establece automáticamente cuando el estado es "En Caja" o "Entregado", pero puede editarla manualmente
+                    La fecha se establece automÃ¡ticamente cuando el estado es "En Caja" o "Entregado", pero puede editarla manualmente
                   </p>
                 )}
               </div>
 
               <div className="md:col-span-2">
-                <label htmlFor="observacion" className="block text-sm font-medium text-gray-700 mb-2">
-                  Observaciones
+                <label htmlFor="Observación" className="block text-sm font-medium text-gray-700 mb-2">
+                  Observaciónes
                 </label>
                 <textarea
-                  id="observacion"
-                  name="observacion"
-                  value={formData.observacion}
+                  id="Observación"
+                  name="Observación"
+                  value={formData.Observación}
                   onChange={handleInputChange}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
@@ -1546,3 +1600,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
 }
 
 export default ProyectoDetalle;
+
+
+
+
