@@ -1128,9 +1128,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
         dni: registro.dni || '',
         numero: registro.numero || '',
         expediente_codigo: registro.expediente || '',
-        fecha_solicitud: registro.fecha_registro || '',
+        fecha_solicitud: (registro.fecha_registro && registro.fecha_registro !== '---') ? registro.fecha_registro : '',
         observacion: registro.observacion || '',
-        fecha_entrega: registro.fecha_en_caja || '',
+        fecha_entrega: (registro.fecha_en_caja && registro.fecha_en_caja !== '---') ? registro.fecha_en_caja : '',
         estado_id: estadosInversoMap[registro.estado] || 1,
         persona_id: registro.persona_id || null,
         expediente_id: registro.expediente_id || null

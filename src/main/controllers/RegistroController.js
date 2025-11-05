@@ -95,7 +95,12 @@ class RegistroController extends BaseController {
       this.validateRequired(datos, ['id']);
       const datosSanitizados = this.sanitizeInput(datos);
       const resultado = await this.model.actualizar(datosSanitizados);
-      return resultado;
+
+      // Retornar en el mismo formato que agregarRegistro
+      return {
+        success: true,
+        registro: resultado
+      };
     } catch (error) {
       this.handleError(error, "Error actualizando registro");
     }
