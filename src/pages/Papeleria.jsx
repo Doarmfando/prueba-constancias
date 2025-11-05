@@ -173,10 +173,13 @@ function Papeleria() {
                   Expediente
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase tracking-wider">
+                  Fecha Registro
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase tracking-wider">
                   Estado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase tracking-wider">
-                  Eliminado por
+                  Fecha en Caja
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase tracking-wider">
                   Fecha Eliminación
@@ -189,7 +192,7 @@ function Papeleria() {
             <tbody className="bg-white divide-y divide-gray-200">
               {registrosPaginados.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
+                  <td colSpan="7" className="px-6 py-12 text-center">
                     <FaTrash className="mx-auto text-4xl text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
                       {registrosEliminados.length === 0 ? 'Papelería vacía' : 'No se encontraron registros'}
@@ -227,8 +230,19 @@ function Papeleria() {
                         {registro.expediente}
                       </code>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.estado || '---'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {registro.estado === 'Recibido'
+                        ? 'No entregado'
+                        : registro.estado === 'En Caja'
+                        ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                        : '---'
+                      }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{registro.eliminado_por}</div>

@@ -325,7 +325,7 @@ function PersonaDetalle() {
               }`}
             >
               <FaFileAlt className="inline mr-2" />
-              Historial de Registros ({registros.length})
+              Registros Asociados ({registros.length})
             </button>
           </nav>
         </div>
@@ -461,7 +461,7 @@ function PersonaDetalle() {
           {tabActiva === 'registros' && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Historial de Registros ({registros.length})
+                Registros Asociados ({registros.length})
               </h3>
 
               {registros.length === 0 ? (
@@ -474,37 +474,58 @@ function PersonaDetalle() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Expediente
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Fecha Registro
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Estado
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Fecha Solicitud
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Fecha en Caja
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Observación
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Proyecto
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {registros.map((registro) => (
                         <tr key={registro.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                            {registro.expediente}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <FaFileAlt className="text-blue-600 mr-2" />
+                              <span className="text-sm font-medium text-gray-900">
+                                {registro.expediente || registro.codigo || '---'}
+                              </span>
+                            </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {registro.estado || '---'}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {registro.fecha_solicitud
-                              ? new Date(registro.fecha_solicitud).toLocaleDateString()
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              registro.estado === 'Vigente'
+                                ? 'bg-green-100 text-green-800'
+                                : registro.estado === 'En Proceso'
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {registro.estado}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {registro.estado === 'Recibido'
+                              ? 'No entregado'
+                              : registro.estado === 'En Caja'
+                              ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
                               : '---'
                             }
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {registro.observacion || '---'}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {registro.proyecto}
                           </td>
                         </tr>
                       ))}

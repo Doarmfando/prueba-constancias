@@ -384,7 +384,7 @@ class RegistroModel extends BaseModel {
   // Buscar por DNI
   async buscarPorDni(dni) {
     return this.executeQuery(`
-      SELECT 
+      SELECT
         p.id AS persona_id,
         p.nombre,
         p.dni,
@@ -398,11 +398,13 @@ class RegistroModel extends BaseModel {
         e.fecha_solicitud,
         e.fecha_entrega,
         e.observacion,
-        es.nombre AS estado_nombre
+        es.nombre AS estado_nombre,
+        pr.nombre AS proyecto_nombre
       FROM personas p
       INNER JOIN registros r ON r.persona_id = p.id AND r.eliminado = 0
       LEFT JOIN estados es ON es.id = r.estado_id
       LEFT JOIN expedientes e ON e.id = r.expediente_id
+      LEFT JOIN proyectos_registros pr ON pr.id = r.proyecto_id
       WHERE p.dni = ?
       ORDER BY r.fecha_registro ASC
     `, [dni]);

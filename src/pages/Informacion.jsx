@@ -278,19 +278,16 @@ function Informacion() {
                             Expediente
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Número
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Fecha Registro
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Estado
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Proyecto
+                            Fecha en Caja
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Descripción
+                            Proyecto
                           </th>
                         </tr>
                       </thead>
@@ -304,11 +301,6 @@ function Informacion() {
                                   {registro.expediente || registro.codigo || '---'}
                                 </span>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <code className="bg-gray-100 px-2 py-1 rounded text-xs">
-                                {registro.numero || '---'}
-                              </code>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
@@ -325,12 +317,15 @@ function Informacion() {
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {registro.proyecto}
+                              {registro.estado === 'Recibido'
+                                ? 'No entregado'
+                                : registro.estado === 'En Caja'
+                                ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                                : '---'
+                              }
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              <div className="max-w-xs truncate" title={registro.descripcion}>
-                                {registro.descripcion}
-                              </div>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {registro.proyecto}
                             </td>
                           </tr>
                         ))}

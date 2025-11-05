@@ -45,7 +45,7 @@ function Dashboard() {
           registrosHoy: registros?.hoy || 0,
           papeleria: papeleria?.length || 0,
           proyectos: 1, // Proyecto por defecto creado
-          usuarios: usuarios?.total || 1
+          usuarios: usuarios?.activos || 1
         });
       } catch (error) {
         console.error('Error cargando estadísticas:', error);
@@ -81,13 +81,6 @@ function Dashboard() {
       icon: <FaCalendarDay className="text-green-500 text-2xl" />,
       color: "bg-green-50 border-green-200",
       path: "/registros"
-    },
-    {
-      title: "En Papelería",
-      value: stats.papeleria,
-      icon: <FaTrashAlt className="text-red-500 text-2xl" />,
-      color: "bg-red-50 border-red-200",
-      path: "/papeleria"
     },
     {
       title: "Proyectos",
@@ -184,7 +177,7 @@ function Dashboard() {
         {/* Estadísticas */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Estadísticas Generales</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {statsCards.map((card, index) => (
               <div
                 key={index}

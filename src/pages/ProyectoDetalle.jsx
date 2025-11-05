@@ -605,9 +605,9 @@ function ProyectoDetalle() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Persona</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expediente</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Registro</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha en Caja</th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                       </tr>
                     </thead>
@@ -625,15 +625,17 @@ function ProyectoDetalle() {
                                 <div className="text-sm font-medium text-gray-900">
                                   {registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim()}
                                 </div>
-                                <div className="text-sm text-gray-500">DNI: {registro.dni || '---'}</div>
+                                <div className="text-sm text-gray-500">
+                                  DNI: {registro.dni || '---'} | Nº: {registro.numero || '---'}
+                                </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <code className="bg-gray-100 px-2 py-1 rounded text-xs">{registro.expediente || '---'}</code>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {registro.numero || '---'}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs rounded-full ${
@@ -648,7 +650,12 @@ function ProyectoDetalle() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
+                            {registro.estado === 'Recibido'
+                              ? 'No entregado'
+                              : registro.estado === 'En Caja'
+                              ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                              : '---'
+                            }
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex items-center justify-end space-x-2">
@@ -1096,7 +1103,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
     fecha_solicitud: new Date().toISOString().split('T')[0], // Fecha actual por defecto
     observacion: '',
     fecha_entrega: '',
-    estado_id: 1
+    estado_id: 1,
+    persona_id: null,
+    expediente_id: null
   });
   const [errores, setErrores] = useState({});
   const [guardando, setGuardando] = useState(false);
@@ -1106,21 +1115,32 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
 
   useEffect(() => {
     if (registro) {
+      // Mapear nombre del estado a ID
+      const estadosInversoMap = {
+        'Recibido': 1,
+        'En Caja': 2,
+        'Entregado': 3,
+        'Tesoreria': 4
+      };
+
       setFormData({
         nombre: registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || '',
         dni: registro.dni || '',
         numero: registro.numero || '',
         expediente_codigo: registro.expediente || '',
-        fecha_solicitud: registro.fecha_solicitud || '',
+        fecha_solicitud: registro.fecha_registro || '',
         observacion: registro.observacion || '',
-        fecha_entrega: registro.fecha_entrega || '',
-        estado_id: registro.estado_id || 1
+        fecha_entrega: registro.fecha_en_caja || '',
+        estado_id: estadosInversoMap[registro.estado] || 1,
+        persona_id: registro.persona_id || null,
+        expediente_id: registro.expediente_id || null
       });
     }
   }, [registro]);
 
   const buscarPersonaPorDni = async (dni) => {
-    if (!dni || dni.length < 8) {
+    // Validar que el DNI tenga exactamente 8 dígitos antes de buscar
+    if (!dni || dni.trim().length !== 8) {
       setPersonaEncontrada(null);
       setDatosAutocompletados(false);
       return;
@@ -1129,7 +1149,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
     try {
       setBuscandoDni(true);
       console.log('🔍 Buscando persona con DNI:', dni);
-      const response = await window.electronAPI?.informacion.buscarPersonaPorDni(dni);
+      const response = await window.electronAPI?.informacion.buscarPersonaPorDni(dni.trim());
       console.log('📥 Respuesta completa:', JSON.stringify(response, null, 2));
 
       if (response?.success && response.persona) {
@@ -1312,6 +1332,8 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
       if (registro) {
         response = await window.electronAPI?.registros.actualizar({
           id: registro.id,
+          persona_id: formData.persona_id,
+          expediente_id: formData.expediente_id,
           ...datosRegistro
         });
       } else {
@@ -1320,7 +1342,8 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
 
       if (response?.success) {
         mostrarExito(registro ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
-        onSave(response.registro || { ...datosRegistro, id: Date.now() });
+        // Esperar a que se recarguen los datos antes de cerrar el modal
+        await onSave(response.registro || { ...datosRegistro, id: Date.now() });
       } else {
         mostrarError('Error al guardar registro', response?.error || 'Error desconocido');
       }
@@ -1492,7 +1515,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
 
               <div>
                 <label htmlFor="fecha_entrega" className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de Entrega {(parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? '(Automática)' : ''}
+                  Fecha de Entrega {(parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? '(Automática, editable)' : ''}
                 </label>
                 <input
                   type="date"
@@ -1500,14 +1523,11 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   name="fecha_entrega"
                   value={formData.fecha_entrega}
                   onChange={handleInputChange}
-                  disabled={parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    (parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? 'bg-gray-100 cursor-not-allowed' : ''
-                  }`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 {(parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) && (
                   <p className="mt-1 text-sm text-gray-500">
-                    La fecha se establece automáticamente cuando el estado es "En Caja" o "Entregado"
+                    La fecha se establece automáticamente cuando el estado es "En Caja" o "Entregado", pero puede editarla manualmente
                   </p>
                 )}
               </div>

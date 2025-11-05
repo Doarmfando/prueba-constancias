@@ -276,13 +276,13 @@ function Registros() {
                   Expediente
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Creado Por
+                  Fecha Registro
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha
+                  Fecha en Caja
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
@@ -330,8 +330,8 @@ function Registros() {
                         {registro.expediente || 'Sin expediente'}
                       </code>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.creado_por || 'Sistema'}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : 'Sin fecha'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEstadoColor(registro.estado)}`}>
@@ -339,7 +339,12 @@ function Registros() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : 'Sin fecha'}
+                      {registro.estado === 'Recibido'
+                        ? 'No entregado'
+                        : registro.estado === 'En Caja'
+                        ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                        : '---'
+                      }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
