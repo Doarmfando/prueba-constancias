@@ -313,6 +313,214 @@ function Personas() {
           </div>
         </div>
       </div>
+
+      {/* Modal Formulario */}
+      {mostrarFormulario && (
+        <FormularioPersona
+          persona={personaEditando}
+          onClose={() => {
+            setMostrarFormulario(false);
+            setPersonaEditando(null);
+          }}
+          onSave={() => {
+            cargarPersonas();
+            setMostrarFormulario(false);
+            setPersonaEditando(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Componente Formulario de Persona
+function FormularioPersona({ persona, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    dni: '',
+    numero: '',
+    nombre: ''
+  });
+  const [guardando, setGuardando] = useState(false);
+  const [errores, setErrores] = useState({});
+
+  useEffect(() => {
+    if (persona) {
+      setFormData({
+        dni: persona.dni || '',
+        numero: persona.numero || '',
+        nombre: persona.nombre || ''
+      });
+    }
+  }, [persona]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Limpiar error del campo al escribir
+    if (errores[name]) {
+      setErrores(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validarFormulario = () => {
+    const nuevosErrores = {};
+
+    if (!formData.dni || formData.dni.trim().length !== 8) {
+      nuevosErrores.dni = 'El DNI debe tener exactamente 8 dígitos';
+    }
+
+    if (!formData.nombre || formData.nombre.trim().length === 0) {
+      nuevosErrores.nombre = 'El nombre es obligatorio';
+    }
+
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validarFormulario()) {
+      return;
+    }
+
+    try {
+      setGuardando(true);
+
+      const datosPersona = {
+        dni: formData.dni.trim(),
+        numero: formData.numero.trim() || null,
+        nombre: formData.nombre.trim()
+      };
+
+      let response;
+      if (persona) {
+        // Actualizar persona existente
+        response = await window.electronAPI?.personas.actualizar({
+          id: persona.id,
+          ...datosPersona
+        });
+      } else {
+        // Crear nueva persona
+        response = await window.electronAPI?.personas.crear(datosPersona);
+      }
+
+      if (response?.success) {
+        mostrarExito(persona ? 'Persona actualizada correctamente' : 'Persona creada correctamente');
+        onSave();
+      } else {
+        mostrarError('Error al guardar persona', response?.error || 'Error desconocido');
+      }
+    } catch (error) {
+      mostrarError('Error de conexión', 'No se pudo guardar la persona');
+      console.error('Error guardando persona:', error);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">
+            {persona ? 'Editar Persona' : 'Nueva Persona'}
+          </h3>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* DNI */}
+            <div>
+              <label htmlFor="dni" className="block text-sm font-medium text-gray-700 mb-2">
+                DNI <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="dni"
+                name="dni"
+                value={formData.dni}
+                onChange={handleInputChange}
+                maxLength={8}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errores.dni ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="12345678"
+              />
+              {errores.dni && (
+                <p className="mt-1 text-sm text-red-500">{errores.dni}</p>
+              )}
+            </div>
+
+            {/* Número */}
+            <div>
+              <label htmlFor="numero" className="block text-sm font-medium text-gray-700 mb-2">
+                Número
+              </label>
+              <input
+                type="text"
+                id="numero"
+                name="numero"
+                value={formData.numero}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="001-2024"
+              />
+            </div>
+
+            {/* Nombre Completo */}
+            <div>
+              <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre Completo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errores.nombre ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Juan Pérez García"
+              />
+              {errores.nombre && (
+                <p className="mt-1 text-sm text-red-500">{errores.nombre}</p>
+              )}
+            </div>
+
+            {/* Botones */}
+            <div className="flex items-center justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={guardando}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={guardando}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {guardando ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Guardando...
+                  </>
+                ) : (
+                  persona ? 'Actualizar' : 'Crear'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

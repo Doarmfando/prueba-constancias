@@ -9,6 +9,7 @@ const InformacionIPCHandler = require('./InformacionIPCHandler');
 const AuthIPCHandler = require('./AuthIPCHandler');
 const ProyectoIPCHandler = require('./ProyectoIPCHandler');
 const AuditoriaIPCHandler = require('./AuditoriaIPCHandler');
+const PersonaIPCHandler = require('./PersonaIPCHandler');
 const DocumentoPersonaIPCHandler = require('./DocumentoPersonaIPCHandler');
 
 class IPCManager {
@@ -36,6 +37,7 @@ class IPCManager {
       this.initializeAuthHandlers(controllers.auth);
       this.initializeProyectoHandlers(controllers.proyecto);
       this.initializeAuditoriaHandlers(controllers.auditoria);
+      // this.initializePersonaHandlers(controllers.persona); // Deshabilitado - usar DocumentoPersonaController
       this.initializeDocumentoPersonaHandlers(controllers.documentoPersona);
 
       this.initialized = true;
@@ -147,6 +149,18 @@ class IPCManager {
     auditoriaHandler.registerHandlers();
 
     this.handlers.set('auditoria', auditoriaHandler);
+  }
+
+  // Inicializar handlers de persona
+  initializePersonaHandlers(personaController) {
+    if (!personaController) {
+      throw new Error("PersonaController requerido");
+    }
+
+    const personaHandler = new PersonaIPCHandler(personaController);
+    personaHandler.registerHandlers();
+
+    this.handlers.set('persona', personaHandler);
   }
 
   // Inicializar handlers de documentos de persona

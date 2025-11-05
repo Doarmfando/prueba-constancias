@@ -90,7 +90,7 @@ class PersonaModel extends BaseModel {
     const total = await this.contar("personas");
     const conRegistros = await this.executeGet(`
       SELECT COUNT(DISTINCT persona_id) as total
-      FROM registros 
+      FROM registros
       WHERE eliminado = 0
     `);
 
@@ -99,6 +99,49 @@ class PersonaModel extends BaseModel {
       conRegistros: conRegistros.total,
       sinRegistros: total - conRegistros.total
     };
+  }
+
+  // Verificar si tiene registros asociados
+  async tieneRegistros(personaId) {
+    const count = await this.contar("registros", "persona_id = ?", [personaId]);
+    return count > 0;
+  }
+
+  // Obtener personas con conteo de documentos y registros
+  async obtenerConDocumentos() {
+    return this.executeQuery(`
+      SELECT
+        p.id,
+        p.nombre,
+        p.dni,
+        p.numero,
+        COUNT(DISTINCT r.id) as total_registros,
+        COUNT(DISTINCT d.id) as total_documentos
+      FROM personas p
+      LEFT JOIN registros r ON p.id = r.persona_id AND r.eliminado = 0
+      LEFT JOIN documentos_persona d ON p.id = d.persona_id
+      GROUP BY p.id, p.nombre, p.dni, p.numero
+      ORDER BY p.nombre ASC
+    `);
+  }
+
+  // Buscar personas por término (DNI o nombre)
+  async buscar(termino) {
+    return this.executeQuery(`
+      SELECT
+        p.id,
+        p.nombre,
+        p.dni,
+        p.numero,
+        COUNT(DISTINCT r.id) as total_registros,
+        COUNT(DISTINCT d.id) as total_documentos
+      FROM personas p
+      LEFT JOIN registros r ON p.id = r.persona_id AND r.eliminado = 0
+      LEFT JOIN documentos_persona d ON p.id = d.persona_id
+      WHERE p.dni LIKE ? OR p.nombre LIKE ?
+      GROUP BY p.id, p.nombre, p.dni, p.numero
+      ORDER BY p.nombre ASC
+    `, [`%${termino}%`, `%${termino}%`]);
   }
 }
 

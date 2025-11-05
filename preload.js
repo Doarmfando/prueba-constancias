@@ -71,7 +71,10 @@ const allowedChannels = new Set([
   "documento-persona-seleccionar-archivo",
   // Canales de personas
   "personas-obtener-con-documentos",
-  "personas-buscar"
+  "personas-buscar",
+  "personas-crear",
+  "personas-actualizar",
+  "personas-eliminar"
 ]);
 
 const isChannelAllowed = (channel) => allowedChannels.has(channel);
@@ -167,7 +170,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // API de Personas
   personas: {
     obtenerConDocumentos: () => ipcRenderer.invoke("personas-obtener-con-documentos"),
-    buscar: (termino) => ipcRenderer.invoke("personas-buscar", termino)
+    buscar: (termino) => ipcRenderer.invoke("personas-buscar", termino),
+    crear: (datos) => ipcRenderer.invoke("personas-crear", datos),
+    actualizar: (datos) => ipcRenderer.invoke("personas-actualizar", datos),
+    eliminar: (id) => ipcRenderer.invoke("personas-eliminar", id)
   },
 
   // API de Documentos de Persona

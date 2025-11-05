@@ -24,6 +24,7 @@ const InformacionController = require("./src/main/controllers/InformacionControl
 const AuthController = require("./src/main/controllers/AuthController");
 const ProyectoController = require("./src/main/controllers/ProyectoController");
 const AuditoriaController = require("./src/main/controllers/AuditoriaController");
+const PersonaController = require("./src/main/controllers/PersonaController");
 const DocumentoPersonaController = require("./src/main/controllers/DocumentoPersonaController");
 
 // Importar gestores
@@ -128,6 +129,9 @@ class Application {
     );
     this.controllers.auditoria = new AuditoriaController(
       this.models.auditoria
+    );
+    this.controllers.persona = new PersonaController(
+      this.models.persona
     );
     this.controllers.documentoPersona = new DocumentoPersonaController(
       this.models.documentoPersona,

@@ -18,9 +18,12 @@ class DocumentoPersonaIPCHandler extends BaseIPCHandler {
     this.handle("documento-persona-actualizar-comentario", this.documentoPersonaController, "actualizarComentario");
     this.handle("documento-persona-estadisticas", this.documentoPersonaController, "obtenerEstadisticas");
 
-    // Operaciones de personas
+    // Operaciones de personas (mantener aquí por ahora)
     this.handle("personas-obtener-con-documentos", this.documentoPersonaController, "obtenerPersonasConDocumentos");
     this.handle("personas-buscar", this.documentoPersonaController, "buscarPersonas");
+    this.handle("personas-crear", this.documentoPersonaController, "crearPersona");
+    this.handle("personas-actualizar", this.documentoPersonaController, "actualizarPersona");
+    this.handle("personas-eliminar", this.documentoPersonaController, "eliminarPersona");
 
     // Handler especial para seleccionar archivo
     this.handle("documento-persona-seleccionar-archivo", this, "seleccionarArchivo");
