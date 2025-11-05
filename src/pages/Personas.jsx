@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaUsers, FaSearch, FaIdCard, FaFileAlt, FaFolderOpen,
-  FaCalendarAlt, FaEye, FaUser
+  FaCalendarAlt, FaEye, FaUser, FaEdit, FaTrash, FaPlus
 } from 'react-icons/fa';
-import { mostrarError } from '../utils/alertas';
+import { mostrarError, mostrarExito } from '../utils/alertas';
 
 function Personas() {
   const [personas, setPersonas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [personaEditando, setPersonaEditando] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,6 +74,23 @@ function Personas() {
     }
   };
 
+  const eliminarPersona = async (id) => {
+    const confirmado = confirm('¿Estás seguro de eliminar esta persona? Esta acción no se puede deshacer.');
+    if (!confirmado) return;
+
+    try {
+      const response = await window.electronAPI?.personas.eliminar(id);
+      if (response?.success) {
+        mostrarExito('Persona eliminada correctamente');
+        cargarPersonas();
+      } else {
+        mostrarError('Error', response?.error || 'No se pudo eliminar la persona');
+      }
+    } catch (error) {
+      mostrarError('Error de conexión', 'No se pudo eliminar la persona');
+    }
+  };
+
   if (cargando) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -93,6 +112,13 @@ function Personas() {
             Administra la información y documentos de las personas registradas
           </p>
         </div>
+        <button
+          onClick={() => setMostrarFormulario(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+        >
+          <FaPlus />
+          Nueva Persona
+        </button>
       </div>
 
       {/* Estadísticas */}
@@ -230,16 +256,39 @@ function Personas() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/persona/${persona.id}`);
-                        }}
-                        className="text-blue-600 hover:text-blue-900 font-medium inline-flex items-center gap-1"
-                      >
-                        <FaEye />
-                        Ver Detalle
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/persona/${persona.id}`);
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Ver detalle"
+                        >
+                          <FaEye />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPersonaEditando(persona);
+                            setMostrarFormulario(true);
+                          }}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            eliminarPersona(persona.id);
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

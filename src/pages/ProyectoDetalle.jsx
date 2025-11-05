@@ -109,31 +109,30 @@ function ProyectoDetalle() {
 
   const cargarEstadisticas = async () => {
     try {
-      // Calcular estadísticas desde los registros reales
-      const activos = registros.length;
-      const papeleria = registrosEliminados.length;
-      const total = activos + papeleria;
-
-      // Encontrar la última actualización
-      let ultimaActualizacion = null;
-      if (registros.length > 0) {
-        const fechas = registros.map(r => new Date(r.fecha_registro || r.fecha_creacion || Date.now()));
-        ultimaActualizacion = new Date(Math.max(...fechas)).toISOString();
-      }
+      // Calcular estadísticas por estado desde los registros reales
+      const recibidos = registros.filter(r => r.estado === 'Recibido').length;
+      const enCaja = registros.filter(r => r.estado === 'En Caja').length;
+      const entregados = registros.filter(r => r.estado === 'Entregado').length;
+      const tesoreria = registros.filter(r => r.estado === 'Tesoreria').length;
+      const total = registros.length;
 
       setEstadisticas({
-        activos,
-        papeleria,
+        recibidos,
+        enCaja,
+        entregados,
+        tesoreria,
         total,
-        ultima_actualizacion: ultimaActualizacion
+        pendientes: recibidos // Pendientes = los que están en estado "Recibido"
       });
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
       setEstadisticas({
-        activos: 0,
-        papeleria: 0,
+        recibidos: 0,
+        enCaja: 0,
+        entregados: 0,
+        tesoreria: 0,
         total: 0,
-        ultima_actualizacion: null
+        pendientes: 0
       });
     }
   };
@@ -759,78 +758,73 @@ function ProyectoDetalle() {
 
           {tabActiva === 'estadisticas' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900">Estadísticas del Proyecto</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-gray-900">Resumen General</h3>
+                <div className="flex items-center space-x-3">
+                  <select className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option>Fecha de Registro</option>
+                    <option>Fecha en Caja</option>
+                  </select>
+                  <select className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option>Todo</option>
+                    <option>Última semana</option>
+                    <option>Último mes</option>
+                  </select>
+                </div>
+              </div>
 
+              {/* Tarjetas de estadísticas */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <FaFileAlt className="text-blue-600 text-2xl mr-3" />
-                    <div>
-                      <p className="text-sm text-blue-600">Total Registros</p>
-                      <p className="text-2xl font-bold text-blue-800">{estadisticas?.total || 0}</p>
-                    </div>
-                  </div>
+                <div className="bg-yellow-500 p-6 rounded-lg shadow">
+                  <p className="text-white text-sm font-medium mb-1">Recibidos</p>
+                  <p className="text-white text-4xl font-bold">{estadisticas?.recibidos || 0}</p>
                 </div>
 
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <FaFileAlt className="text-green-600 text-2xl mr-3" />
-                    <div>
-                      <p className="text-sm text-green-600">Registros Activos</p>
-                      <p className="text-2xl font-bold text-green-800">{estadisticas?.activos || 0}</p>
-                    </div>
-                  </div>
+                <div className="bg-blue-500 p-6 rounded-lg shadow">
+                  <p className="text-white text-sm font-medium mb-1">En Caja</p>
+                  <p className="text-white text-4xl font-bold">{estadisticas?.enCaja || 0}</p>
                 </div>
 
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <FaFileAlt className="text-orange-600 text-2xl mr-3" />
-                    <div>
-                      <p className="text-sm text-orange-600">En Papelería</p>
-                      <p className="text-2xl font-bold text-orange-800">{estadisticas?.papeleria || 0}</p>
-                    </div>
-                  </div>
+                <div className="bg-green-600 p-6 rounded-lg shadow">
+                  <p className="text-white text-sm font-medium mb-1">Entregados</p>
+                  <p className="text-white text-4xl font-bold">{estadisticas?.entregados || 0}</p>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <FaCalendarAlt className="text-gray-600 text-2xl mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600">Última Actualización</p>
-                      <p className="text-sm font-medium text-gray-800">
-                        {estadisticas?.ultima_actualizacion
-                          ? new Date(estadisticas.ultima_actualizacion).toLocaleDateString()
-                          : 'Sin actividad'
-                        }
-                      </p>
-                    </div>
-                  </div>
+                <div className="bg-purple-600 p-6 rounded-lg shadow">
+                  <p className="text-white text-sm font-medium mb-1">Tesorería</p>
+                  <p className="text-white text-4xl font-bold">{estadisticas?.tesoreria || 0}</p>
                 </div>
               </div>
 
               {/* Gráficos */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Gráfico de Dona - Distribución */}
+                {/* Gráfico de Dona - Distribución por Estado */}
                 <div className="bg-white border rounded-lg p-6">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <FaChartBar className="text-blue-600" />
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      Distribución de Registros
-                    </h4>
-                  </div>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    Distribución por Estado
+                  </h4>
                   <div className="h-64 flex items-center justify-center">
                     <Doughnut
                       data={{
-                        labels: ['Registros Activos', 'En Papelería'],
+                        labels: ['Recibido', 'En Caja', 'Entregado', 'Tesorería'],
                         datasets: [{
-                          data: [estadisticas?.activos || 0, estadisticas?.papeleria || 0],
+                          data: [
+                            estadisticas?.recibidos || 0,
+                            estadisticas?.enCaja || 0,
+                            estadisticas?.entregados || 0,
+                            estadisticas?.tesoreria || 0
+                          ],
                           backgroundColor: [
-                            'rgba(34, 197, 94, 0.8)',
-                            'rgba(251, 146, 60, 0.8)'
+                            'rgb(234, 179, 8)',
+                            'rgb(59, 130, 246)',
+                            'rgb(22, 163, 74)',
+                            'rgb(147, 51, 234)'
                           ],
                           borderColor: [
-                            'rgb(34, 197, 94)',
-                            'rgb(251, 146, 60)'
+                            'rgb(234, 179, 8)',
+                            'rgb(59, 130, 246)',
+                            'rgb(22, 163, 74)',
+                            'rgb(147, 51, 234)'
                           ],
                           borderWidth: 2
                         }]
@@ -854,9 +848,7 @@ function ProyectoDetalle() {
                               label: function(context) {
                                 const label = context.label || '';
                                 const value = context.parsed || 0;
-                                const total = estadisticas?.total || 0;
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                return `${label}: ${value} (${percentage}%)`;
+                                return `${label}\n■ Total: ${value}`;
                               }
                             }
                           }
@@ -866,31 +858,20 @@ function ProyectoDetalle() {
                   </div>
                 </div>
 
-                {/* Gráfico de Barras - Comparación */}
+                {/* Gráfico de Barras - Pendientes por llegar a caja */}
                 <div className="bg-white border rounded-lg p-6">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <FaChartBar className="text-blue-600" />
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      Comparación Visual
-                    </h4>
-                  </div>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    Pendientes por llegar a caja
+                  </h4>
                   <div className="h-64">
                     <Bar
                       data={{
-                        labels: ['Total Registros', 'Registros Activos', 'En Papelería'],
+                        labels: ['Por llegar a caja'],
                         datasets: [{
-                          label: 'Cantidad',
-                          data: [estadisticas?.total || 0, estadisticas?.activos || 0, estadisticas?.papeleria || 0],
-                          backgroundColor: [
-                            'rgba(59, 130, 246, 0.7)',
-                            'rgba(34, 197, 94, 0.7)',
-                            'rgba(251, 146, 60, 0.7)'
-                          ],
-                          borderColor: [
-                            'rgb(59, 130, 246)',
-                            'rgb(34, 197, 94)',
-                            'rgb(251, 146, 60)'
-                          ],
+                          label: 'Pendientes',
+                          data: [estadisticas?.pendientes || 0],
+                          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                          borderColor: 'rgb(239, 68, 68)',
                           borderWidth: 2,
                           borderRadius: 6
                         }]
@@ -900,12 +881,18 @@ function ProyectoDetalle() {
                         maintainAspectRatio: false,
                         plugins: {
                           legend: {
-                            display: false
+                            position: 'top',
+                            labels: {
+                              usePointStyle: true,
+                              font: {
+                                size: 12
+                              }
+                            }
                           },
                           tooltip: {
                             callbacks: {
                               label: function(context) {
-                                return context.label + ': ' + context.parsed.y + ' registros';
+                                return 'Pendientes: ' + context.parsed.y + ' registros';
                               }
                             }
                           }
@@ -914,7 +901,7 @@ function ProyectoDetalle() {
                           y: {
                             beginAtZero: true,
                             ticks: {
-                              stepSize: 1,
+                              stepSize: 2,
                               font: {
                                 size: 11
                               }
@@ -932,14 +919,6 @@ function ProyectoDetalle() {
                     />
                   </div>
                 </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>Resumen:</strong> Este proyecto contiene {estadisticas?.total || 0} registros documentales,
-                  con {estadisticas?.activos || 0} registros activos ({estadisticas?.total > 0 ? ((estadisticas.activos / estadisticas.total) * 100).toFixed(1) : 0}%)
-                  y {estadisticas?.papeleria || 0} en papelería ({estadisticas?.total > 0 ? ((estadisticas.papeleria / estadisticas.total) * 100).toFixed(1) : 0}%).
-                </p>
               </div>
             </div>
           )}
