@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   FaUsers, FaSearch, FaIdCard, FaFileAlt, FaFolderOpen,
   FaCalendarAlt, FaEye, FaUser, FaEdit, FaTrash, FaPlus
@@ -13,6 +14,7 @@ function Personas() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [personaEditando, setPersonaEditando] = useState(null);
   const navigate = useNavigate();
+  const { esAdministrador, usuario } = useAuth();
 
   useEffect(() => {
     cargarPersonas();
@@ -79,7 +81,7 @@ function Personas() {
     if (!confirmado) return;
 
     try {
-      const response = await window.electronAPI?.personas.eliminar(id);
+      const response = await window.electronAPI?.personas.eliminar(id, usuario);
       if (response?.success) {
         mostrarExito('Persona eliminada correctamente');
         cargarPersonas();
@@ -278,6 +280,7 @@ function Personas() {
                         >
                           <FaEdit />
                         </button>
+                        {esAdministrador() && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -288,6 +291,7 @@ function Personas() {
                         >
                           <FaTrash />
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>

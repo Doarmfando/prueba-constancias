@@ -103,9 +103,18 @@ class PersonaController extends BaseController {
   }
 
   // Eliminar persona
-  async eliminar(id) {
+  async eliminar(payload) {
     try {
+      // Compatibilidad: aceptar id directo o { id, usuario }
+      const id = typeof payload === 'object' ? payload.id : payload;
+      const usuario = typeof payload === 'object' ? payload.usuario : null;
+
       this.validateRequired({ id }, ['id']);
+
+      // Validar rol administrador
+      if (!usuario || usuario.rol !== 'administrador') {
+        throw new Error('Solo administradores pueden eliminar personas');
+      }
 
       // Verificar si tiene registros asociados
       const tieneRegistros = await this.personaModel.tieneRegistros(id);

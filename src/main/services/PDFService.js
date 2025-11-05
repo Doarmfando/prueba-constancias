@@ -48,22 +48,26 @@ class PDFService {
     try {
       const {
         titulo = proyecto.nombre,
+        // Ignorado: no se mostrará papelería en el PDF
         incluirEliminados = false,
-        registrosEliminados = []
+        registrosEliminados = [],
+        // Opcional: permitir pasar una fecha de exportación (Date|string)
+        fechaExportacion = null
       } = opciones;
 
-      const fechaActual = new Date().toLocaleDateString('es-ES', {
+      const fechaReferencia = fechaExportacion ? new Date(fechaExportacion) : new Date();
+      const fechaActual = fechaReferencia.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        year: 'numeric'
       });
 
-      // Estadísticas
-      const activos = registros.length;
-      const eliminados = registrosEliminados.length;
-      const total = activos + eliminados;
+      // Helper local para formatear fechas de filas
+      const formatearFecha = (valor) => {
+        if (!valor || valor === 'No entregado') return valor || '---';
+        const d = new Date(valor);
+        return isNaN(d.getTime()) ? '---' : d.toLocaleDateString('es-ES');
+      };
 
       // Definición del documento
       const docDefinition = {
@@ -80,7 +84,7 @@ class PDFService {
               alignment: 'left'
             },
             {
-              text: fechaActual,
+              text: `Fecha de exportación: ${fechaActual}`,
               style: 'subheader',
               alignment: 'right'
             }
@@ -106,67 +110,30 @@ class PDFService {
         },
 
         content: [
-          // Título principal
-          {
-            text: titulo,
-            style: 'title',
-            margin: [0, 0, 0, 10]
-          },
-
-          // Información del proyecto
-          {
-            columns: [
-              {
-                width: '50%',
-                stack: [
-                  { text: 'Información del Proyecto', style: 'sectionHeader', margin: [0, 10, 0, 5] },
-                  { text: `Nombre: ${proyecto.nombre}`, style: 'info' },
-                  { text: `Descripción: ${proyecto.descripcion || 'Sin descripción'}`, style: 'info' },
-                  { text: `Creador: ${proyecto.nombre_creador || 'Desconocido'}`, style: 'info' },
-                  { text: `Fecha de creación: ${new Date(proyecto.fecha_creacion).toLocaleDateString('es-ES')}`, style: 'info' }
-                ]
-              },
-              {
-                width: '50%',
-                stack: [
-                  { text: 'Estadísticas', style: 'sectionHeader', margin: [0, 10, 0, 5] },
-                  { text: `Total de registros: ${total}`, style: 'info' },
-                  { text: `Registros activos: ${activos}`, style: 'info', color: '#10b981' },
-                  { text: `En papelería: ${eliminados}`, style: 'info', color: '#ef4444' },
-                  { text: `Visibilidad: ${proyecto.es_publico ? 'Público' : 'Privado'}`, style: 'info' }
-                ]
-              }
-            ]
-          },
-
-          // Separador
-          { canvas: [{ type: 'line', x1: 0, y1: 10, x2: 515, y2: 10, lineWidth: 1, lineColor: '#e5e7eb' }] },
-
-          // Registros activos
-          { text: 'Registros Activos', style: 'sectionHeader', margin: [0, 15, 0, 10] },
-
           registros.length > 0 ? {
             table: {
               headerRows: 1,
-              widths: ['20%', '15%', '20%', '15%', '15%', '15%'],
+              widths: ['18%', '12%', '18%', '12%', '14%', '12%', '14%'],
               body: [
-                // Encabezados
+                // Encabezados (orden solicitado)
                 [
                   { text: 'Nombre', style: 'tableHeader' },
                   { text: 'DNI', style: 'tableHeader' },
                   { text: 'Expediente', style: 'tableHeader' },
                   { text: 'Número', style: 'tableHeader' },
+                  { text: 'Fecha Registro', style: 'tableHeader' },
                   { text: 'Estado', style: 'tableHeader' },
-                  { text: 'Fecha', style: 'tableHeader' }
+                  { text: 'Fecha en Caja', style: 'tableHeader' }
                 ],
-                // Datos
+                // Datos (con formateo de fechas)
                 ...registros.map(r => [
                   { text: r.nombre || `${r.nombres || ''} ${r.apellidos || ''}`.trim() || '---', style: 'tableCell' },
                   { text: r.dni || '---', style: 'tableCell' },
                   { text: r.expediente || r.codigo || '---', style: 'tableCell' },
                   { text: r.numero || '---', style: 'tableCell' },
+                  { text: formatearFecha(r.fecha_registro), style: 'tableCell' },
                   { text: r.estado || '---', style: 'tableCell' },
-                  { text: r.fecha_registro ? new Date(r.fecha_registro).toLocaleDateString('es-ES') : '---', style: 'tableCell' }
+                  { text: formatearFecha(r.fecha_en_caja), style: 'tableCell' }
                 ])
               ]
             },
@@ -191,7 +158,7 @@ class PDFService {
               paddingTop: function () { return 6; },
               paddingBottom: function () { return 6; }
             }
-          } : { text: 'No hay registros activos', style: 'info', italics: true, color: '#6b7280' }
+          } : { text: 'No hay registros', style: 'info', italics: true, color: '#6b7280' }
         ],
 
         styles: {
@@ -241,66 +208,7 @@ class PDFService {
         }
       };
 
-      // Si se incluyen registros eliminados
-      if (incluirEliminados && registrosEliminados.length > 0) {
-        docDefinition.content.push(
-          // Separador
-          { text: '', pageBreak: 'before' },
-
-          // Registros eliminados
-          { text: 'Registros en Papelería', style: 'sectionHeader', margin: [0, 0, 0, 10] },
-
-          {
-            table: {
-              headerRows: 1,
-              widths: ['18%', '13%', '18%', '13%', '13%', '12%', '13%'],
-              body: [
-                // Encabezados
-                [
-                  { text: 'Nombre', style: 'tableHeader' },
-                  { text: 'DNI', style: 'tableHeader' },
-                  { text: 'Expediente', style: 'tableHeader' },
-                  { text: 'Estado', style: 'tableHeader' },
-                  { text: 'Eliminado por', style: 'tableHeader' },
-                  { text: 'Fecha Elim.', style: 'tableHeader' },
-                  { text: 'Motivo', style: 'tableHeader' }
-                ],
-                // Datos
-                ...registrosEliminados.map(r => [
-                  { text: r.nombre || `${r.nombres || ''} ${r.apellidos || ''}`.trim() || '---', style: 'tableCell' },
-                  { text: r.dni || '---', style: 'tableCell' },
-                  { text: r.expediente || r.codigo || '---', style: 'tableCell' },
-                  { text: r.estado || '---', style: 'tableCell' },
-                  { text: r.eliminado_por || '---', style: 'tableCell', fontSize: 8 },
-                  { text: r.fecha_eliminacion ? new Date(r.fecha_eliminacion).toLocaleDateString('es-ES') : '---', style: 'tableCell', fontSize: 8 },
-                  { text: r.motivo || 'Sin motivo', style: 'tableCell', fontSize: 8 }
-                ])
-              ]
-            },
-            layout: {
-              fillColor: function (rowIndex) {
-                return (rowIndex === 0) ? '#ef4444' : (rowIndex % 2 === 0 ? '#fef2f2' : null);
-              },
-              hLineWidth: function (i, node) {
-                return (i === 0 || i === node.table.body.length) ? 1 : 0.5;
-              },
-              vLineWidth: function () {
-                return 0.5;
-              },
-              hLineColor: function () {
-                return '#e5e7eb';
-              },
-              vLineColor: function () {
-                return '#e5e7eb';
-              },
-              paddingLeft: function () { return 6; },
-              paddingRight: function () { return 6; },
-              paddingTop: function () { return 5; },
-              paddingBottom: function () { return 5; }
-            }
-          }
-        );
-      }
+      // Se elimina la inclusión de registros eliminados (Papelería) de forma fija
 
       // Crear el PDF
       const pdfDoc = this.printer.createPdfKitDocument(docDefinition);

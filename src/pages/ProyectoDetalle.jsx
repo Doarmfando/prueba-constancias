@@ -412,7 +412,7 @@ function ProyectoDetalle() {
           <button
             onClick={exportarDatos}
             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            title="Exportar a Excel"
+            title="Exportar a PDF"
           >
             <FaDownload />
           </button>
@@ -1013,22 +1013,7 @@ function ProyectoDetalle() {
                 </p>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={incluirEliminadosEnPDF}
-                    onChange={(e) => setIncluirEliminadosEnPDF(e.target.checked)}
-                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="ml-3 text-sm font-medium text-gray-700">
-                    Incluir registros en papelería ({registrosEliminados.length})
-                  </span>
-                </label>
-                <p className="ml-8 mt-1 text-xs text-gray-500">
-                  Se agregará una sección adicional con los registros eliminados
-                </p>
-              </div>
+
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
@@ -1135,8 +1120,10 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
         const persona = response.persona;
         const registros = response.registros || [];
 
-        // Construir nombre completo desde nombres y apellidos
-        const nombreCompleto = `${persona.nombres || ''} ${persona.apellidos || ''}`.trim();
+        // Preferir nombre completo si viene; si no, construir desde nombres y apellidos
+        const nombreCompleto = (persona.nombre && persona.nombre.trim())
+          ? persona.nombre.trim()
+          : `${persona.nombres || ''} ${persona.apellidos || ''}`.trim();
 
         // Obtener número del primer registro si existe
         const numeroRegistro = registros.length > 0 && registros[0].numero ? registros[0].numero : '';
@@ -1150,11 +1137,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
         console.log('   - Número (del primer registro):', numeroRegistro);
 
         // Guardar persona con nombre completo y número para uso posterior
-        const personaConNombreCompleto = {
-          ...persona,
-          nombre: nombreCompleto,
-          numero: numeroRegistro
-        };
+        const personaConNombreCompleto = { ...persona, nombre: nombreCompleto, numero: numeroRegistro };
 
         setPersonaEncontrada(personaConNombreCompleto);
 
@@ -1366,6 +1349,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   name="nombre"
                   value={formData.nombre}
                   onChange={handleInputChange}
+                  disabled={!!personaEncontrada && !registro}
                   placeholder="Ej: Juan Pérez García"
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errores.nombre ? 'border-red-500' : 'border-gray-300'
@@ -1429,6 +1413,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave }) {
                   name="numero"
                   value={formData.numero}
                   onChange={handleInputChange}
+                  disabled={!!personaEncontrada && !registro}
                   placeholder="Ej: 001-2024"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />

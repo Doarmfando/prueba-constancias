@@ -282,6 +282,21 @@ class InformacionController extends BaseController {
       const registros = await this.registroModel.buscarPorDni(dniLimpio);
 
       if (registros.length === 0) {
+        // Fallback: si no hay registros, intentar encontrar a la persona directamente
+        const personaDb = await this.personaModel.buscarPorDni(dniLimpio);
+        if (personaDb) {
+          return {
+            success: true,
+            persona: {
+              id: personaDb.id,
+              dni: personaDb.dni,
+              nombre: personaDb.nombre,
+              numero: personaDb.numero
+            },
+            registros: [],
+            message: "Persona encontrada sin registros"
+          };
+        }
         return {
           success: true,
           persona: null,
@@ -292,10 +307,26 @@ class InformacionController extends BaseController {
 
       // Obtener datos de persona (del primer registro)
       const primerRegistro = registros[0];
+      const nombreCompleto = (primerRegistro.nombre || '').trim();
+      const partes = nombreCompleto.split(' ').filter(Boolean);
+      let nombres = '';
+      let apellidos = '';
+      if (partes.length >= 3) {
+        nombres = partes.slice(0, -2).join(' ');
+        apellidos = partes.slice(-2).join(' ');
+      } else if (partes.length === 2) {
+        nombres = partes[0];
+        apellidos = partes[1];
+      } else if (partes.length === 1) {
+        nombres = partes[0];
+        apellidos = '';
+      }
       const persona = {
+        id: primerRegistro.persona_id,
         dni: primerRegistro.dni,
-        nombres: primerRegistro.nombre ? primerRegistro.nombre.split(' ').slice(0, -2).join(' ') : '',
-        apellidos: primerRegistro.nombre ? primerRegistro.nombre.split(' ').slice(-2).join(' ') : primerRegistro.nombre,
+        nombre: nombreCompleto,
+        nombres,
+        apellidos,
         telefono: primerRegistro.telefono || 'No registrado',
         email: primerRegistro.email || 'No registrado',
         fecha_nacimiento: primerRegistro.fecha_nacimiento || '2000-01-01',

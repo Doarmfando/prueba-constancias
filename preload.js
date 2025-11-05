@@ -173,7 +173,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     buscar: (termino) => ipcRenderer.invoke("personas-buscar", termino),
     crear: (datos) => ipcRenderer.invoke("personas-crear", datos),
     actualizar: (datos) => ipcRenderer.invoke("personas-actualizar", datos),
-    eliminar: (id) => ipcRenderer.invoke("personas-eliminar", id)
+    eliminar: (id, usuario) => ipcRenderer.invoke("personas-eliminar", { id, usuario })
   },
 
   // API de Documentos de Persona

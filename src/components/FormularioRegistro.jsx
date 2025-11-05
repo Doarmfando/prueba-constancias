@@ -56,14 +56,17 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
       const response = await window.electronAPI?.informacion.buscarPersonaPorDni(dni);
 
       if (response?.success && response.persona) {
-        setPersonaEncontrada(response.persona);
+        const nombreAuto = response.persona.nombre || [response.persona.nombres, response.persona.apellidos].filter(Boolean).join(' ');
+        const numeroAuto = response.persona.numero || (Array.isArray(response.registros) && response.registros[0]?.numero) || '';
+
+        setPersonaEncontrada({ ...response.persona });
 
         // Autocompletar solo si no estamos editando
         if (!registroEditar) {
           setFormData(prev => ({
             ...prev,
-            nombre: response.persona.nombre || '',
-            numero: response.persona.numero || ''
+            nombre: nombreAuto || '',
+            numero: numeroAuto || ''
           }));
           setDatosAutocompletados(true);
         }
@@ -181,6 +184,7 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
               name="nombre"
               value={formData.nombre}
               onChange={handleInputChange}
+              disabled={!!personaEncontrada && !registroEditar}
               required
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
               placeholder="Ej: Juan Pérez García"
@@ -236,6 +240,7 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
                 name="numero"
                 value={formData.numero}
                 onChange={handleInputChange}
+                disabled={!!personaEncontrada && !registroEditar}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
                 placeholder="Ej: 001-2024"
               />
