@@ -20,8 +20,8 @@ class AuthController extends BaseController {
         usuario: {
           id: usuario.id,
           nombre: usuario.nombre,
-          nombre_usuario: usuario.email,
-          email: usuario.email,
+          nombre_usuario: usuario.nombre_usuario,
+          email: usuario.email || usuario.nombre_usuario,
           rol: usuario.rol
         }
       };
@@ -259,8 +259,8 @@ class AuthController extends BaseController {
         usuario: {
           id: usuario.id,
           nombre: usuario.nombre,
-          nombre_usuario: usuario.email,
-          email: usuario.email,
+          nombre_usuario: usuario.nombre_usuario,
+          email: usuario.email || usuario.nombre_usuario,
           rol: usuario.rol
         }
       };

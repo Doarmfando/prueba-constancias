@@ -630,7 +630,6 @@ function ProyectoDetalle() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Persona</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expediente</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Observación</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Registro</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha en Caja</th>
@@ -659,13 +658,6 @@ function ProyectoDetalle() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <code className="bg-gray-100 px-2 py-1 rounded text-xs">{registro.expediente || '---'}</code>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-700 max-w-xs">
-                            {registro.Observación ? (
-                              <div className="whitespace-normal break-words max-h-24 overflow-auto pr-2">
-                                {registro.Observación}
-                              </div>
-                            ) : '---'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}

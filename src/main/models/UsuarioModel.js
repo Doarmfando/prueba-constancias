@@ -40,7 +40,7 @@ class UsuarioModel extends BaseModel {
   // Autenticar usuario
   async autenticar(nombre_usuario, password) {
     const sql = `
-      SELECT id, nombre, nombre_usuario, rol, activo
+      SELECT id, nombre, nombre_usuario, email, rol, activo
       FROM usuarios
       WHERE nombre_usuario = ? AND activo = 1
     `;
@@ -70,7 +70,7 @@ class UsuarioModel extends BaseModel {
   // Obtener usuario por ID
   async obtenerPorId(id) {
     const sql = `
-      SELECT id, nombre, nombre_usuario, rol, activo, fecha_creacion, ultimo_acceso
+      SELECT id, nombre, nombre_usuario, email, rol, activo, fecha_creacion, ultimo_acceso
       FROM usuarios
       WHERE id = ?
     `;
@@ -80,7 +80,7 @@ class UsuarioModel extends BaseModel {
   // Listar todos los usuarios (solo admin)
   async listarTodos() {
     const sql = `
-      SELECT id, nombre, nombre_usuario, rol, activo, fecha_creacion, ultimo_acceso
+      SELECT id, nombre, nombre_usuario, email, rol, activo, fecha_creacion, ultimo_acceso
       FROM usuarios
       ORDER BY fecha_creacion DESC
     `;
@@ -89,7 +89,7 @@ class UsuarioModel extends BaseModel {
 
   // Actualizar usuario
   async actualizar(id, datos) {
-    const camposPermitidos = ['nombre', 'nombre_usuario', 'rol', 'activo'];
+    const camposPermitidos = ['nombre', 'nombre_usuario', 'email', 'rol', 'activo'];
     const campos = [];
     const valores = [];
 
