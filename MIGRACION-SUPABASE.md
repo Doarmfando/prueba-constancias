@@ -37,8 +37,15 @@ Esta guía te ayudará a migrar tu aplicación desde SQLite a Supabase (PostgreS
 1. Una vez creado el proyecto, ve a **Settings** > **API**
 2. Encontrarás:
    - **Project URL**: Tu URL de Supabase
-   - **anon/public key**: Tu clave pública (API Key)
+   - **service_role key**: Tu clave de servicio (**¡IMPORTANTE!** Esta la usaremos)
+   - ~~anon/public key~~: No la usaremos (tu app tiene su propia autenticación)
 3. Copia estos valores, los necesitarás en el siguiente paso
+
+**⚠️ IMPORTANTE:** Usa la **service_role** key porque:
+- Tu aplicación maneja su propia autenticación (tabla `usuarios`)
+- Bypasea las políticas RLS de Supabase
+- Permite que 10+ usuarios trabajen simultáneamente sin conflictos
+- La seguridad la controla tu aplicación (como ahora con SQLite)
 
 ---
 
@@ -78,9 +85,11 @@ Esta guía te ayudará a migrar tu aplicación desde SQLite a Supabase (PostgreS
 
 ```env
 SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_ANON_KEY=tu-clave-anon-key-aqui
+SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key-aqui
 NODE_ENV=development
 ```
+
+**⚠️ Usa SERVICE_ROLE_KEY, NO anon key** para aplicaciones con múltiples usuarios simultáneos
 
 ### 2. Instalar Dependencias
 

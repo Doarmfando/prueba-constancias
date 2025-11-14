@@ -237,101 +237,43 @@ ALTER TABLE registros ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documentos_persona ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auditoria ENABLE ROW LEVEL SECURITY;
 
--- Políticas básicas (puedes ajustarlas según tus necesidades)
--- Por ahora, permitir todo para usuarios autenticados
+-- Políticas simplificadas para desarrollo
+-- NOTA: Por ahora permitimos acceso completo. Puedes ajustar según tus necesidades.
+
+-- Para desarrollo, permitir acceso completo a usuarios autenticados
+-- Esto es temporal y deberás ajustarlo en producción
 
 -- Usuarios
-CREATE POLICY "Usuarios pueden ver todos los usuarios" ON usuarios
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Solo administradores pueden insertar usuarios" ON usuarios
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios pueden actualizar su propio perfil" ON usuarios
-  FOR UPDATE USING (auth.uid()::text = id::text OR auth.role() = 'authenticated');
+CREATE POLICY "Permitir acceso completo a usuarios" ON usuarios
+  FOR ALL USING (true);
 
 -- Personas
-CREATE POLICY "Usuarios autenticados pueden ver personas" ON personas
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden crear personas" ON personas
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden actualizar personas" ON personas
-  FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden eliminar personas" ON personas
-  FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Permitir acceso completo a personas" ON personas
+  FOR ALL USING (true);
 
 -- Estados
-CREATE POLICY "Usuarios autenticados pueden ver estados" ON estados
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Solo administradores pueden modificar estados" ON estados
-  FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Permitir acceso completo a estados" ON estados
+  FOR ALL USING (true);
 
 -- Expedientes
-CREATE POLICY "Usuarios autenticados pueden ver expedientes" ON expedientes
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden crear expedientes" ON expedientes
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden actualizar expedientes" ON expedientes
-  FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden eliminar expedientes" ON expedientes
-  FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Permitir acceso completo a expedientes" ON expedientes
+  FOR ALL USING (true);
 
 -- Proyectos
-CREATE POLICY "Usuarios pueden ver proyectos públicos o propios" ON proyectos_registros
-  FOR SELECT USING (
-    es_publico = true OR
-    usuario_creador_id = auth.uid()::bigint OR
-    auth.role() = 'authenticated'
-  );
-
-CREATE POLICY "Usuarios autenticados pueden crear proyectos" ON proyectos_registros
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Creadores pueden actualizar sus proyectos" ON proyectos_registros
-  FOR UPDATE USING (
-    usuario_creador_id = auth.uid()::bigint OR
-    auth.role() = 'authenticated'
-  );
+CREATE POLICY "Permitir acceso completo a proyectos" ON proyectos_registros
+  FOR ALL USING (true);
 
 -- Registros
-CREATE POLICY "Usuarios autenticados pueden ver registros" ON registros
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden crear registros" ON registros
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden actualizar registros" ON registros
-  FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden eliminar registros" ON registros
-  FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Permitir acceso completo a registros" ON registros
+  FOR ALL USING (true);
 
 -- Documentos
-CREATE POLICY "Usuarios autenticados pueden ver documentos" ON documentos_persona
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden crear documentos" ON documentos_persona
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden actualizar documentos" ON documentos_persona
-  FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden eliminar documentos" ON documentos_persona
-  FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Permitir acceso completo a documentos" ON documentos_persona
+  FOR ALL USING (true);
 
 -- Auditoría
-CREATE POLICY "Usuarios autenticados pueden ver auditoría" ON auditoria
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Usuarios autenticados pueden insertar en auditoría" ON auditoria
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Permitir acceso completo a auditoría" ON auditoria
+  FOR ALL USING (true);
 
 -- ================================================
 -- DATOS INICIALES
