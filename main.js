@@ -82,19 +82,20 @@ class Application {
   }
 
   async initializeServices() {
-    // Inicializar servicio de base de datos
+    // Inicializar servicio de base de datos (ahora con Supabase)
     this.services.database = new DatabaseService();
-    const db = await this.services.database.connect();
-    
+    const supabase = await this.services.database.connect();
+
     // Inicializar otros servicios
     this.services.excel = new ExcelService();
     this.services.file = new FileService();
-    
-    // Guardar referencia a la base de datos
-    this.db = db;
+
+    // Guardar referencia al cliente de Supabase
+    this.db = supabase;
   }
 
   initializeModels() {
+    // Todos los modelos ahora reciben el cliente de Supabase
     this.models.registro = new RegistroModel(this.db);
     this.models.persona = new PersonaModel(this.db);
     this.models.expediente = new ExpedienteModel(this.db);
