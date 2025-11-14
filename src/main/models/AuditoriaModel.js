@@ -32,6 +32,66 @@ class AuditoriaModel extends BaseModel {
     }
   }
 
+  // Métodos auxiliares específicos para acciones comunes
+
+  // Registrar acceso/login de usuario
+  async registrarAcceso(usuarioId) {
+    return this.registrarAccion({
+      usuario_id: usuarioId,
+      accion: 'login',
+      tabla_afectada: 'usuarios',
+      registro_id: usuarioId,
+      detalles: { fecha_acceso: new Date().toISOString() }
+    });
+  }
+
+  // Registrar creación de un registro
+  async registrarCreacion(usuarioId, tabla, registroId, proyectoId = null, detalles = null) {
+    return this.registrarAccion({
+      usuario_id: usuarioId,
+      accion: 'crear',
+      tabla_afectada: tabla,
+      registro_id: registroId,
+      proyecto_id: proyectoId,
+      detalles
+    });
+  }
+
+  // Registrar edición de un registro
+  async registrarEdicion(usuarioId, tabla, registroId, proyectoId = null, detalles = null) {
+    return this.registrarAccion({
+      usuario_id: usuarioId,
+      accion: 'editar',
+      tabla_afectada: tabla,
+      registro_id: registroId,
+      proyecto_id: proyectoId,
+      detalles
+    });
+  }
+
+  // Registrar eliminación de un registro
+  async registrarEliminacion(usuarioId, tabla, registroId, proyectoId = null, detalles = null) {
+    return this.registrarAccion({
+      usuario_id: usuarioId,
+      accion: 'eliminar',
+      tabla_afectada: tabla,
+      registro_id: registroId,
+      proyecto_id: proyectoId,
+      detalles
+    });
+  }
+
+  // Registrar cierre de sesión
+  async registrarCierreSesion(usuarioId) {
+    return this.registrarAccion({
+      usuario_id: usuarioId,
+      accion: 'logout',
+      tabla_afectada: 'usuarios',
+      registro_id: usuarioId,
+      detalles: { fecha_cierre: new Date().toISOString() }
+    });
+  }
+
   // Obtener historial con filtros
   async obtenerHistorial({ limite = 100, offset = 0, busqueda = null, usuario = null, accion = null }) {
     let query = this.db
