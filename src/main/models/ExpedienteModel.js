@@ -2,73 +2,100 @@
 const BaseModel = require('./BaseModel');
 
 class ExpedienteModel extends BaseModel {
+  constructor(supabaseClient) {
+    super(supabaseClient, 'expedientes');
+  }
+
   // Crear nuevo expediente
   async crear(personaId, codigo, fechaSolicitud = null, fechaEntrega = null, observacion = null) {
-    return this.executeRun(
-      `INSERT INTO expedientes (persona_id, codigo, fecha_solicitud, fecha_entrega, observacion) 
-       VALUES (?, NULLIF(?, ''), ?, ?, ?)`,
-      [personaId, codigo, fechaSolicitud, fechaEntrega, observacion]
-    );
+    const expediente = await this.create({
+      persona_id: personaId,
+      codigo: codigo || null,
+      fecha_solicitud: fechaSolicitud,
+      fecha_entrega: fechaEntrega,
+      observacion
+    });
+    return { lastID: expediente.id };
   }
 
   // Buscar expediente por código
   async buscarPorCodigo(codigo) {
-    return this.executeGet(
-      "SELECT * FROM expedientes WHERE codigo = ?",
-      [codigo]
-    );
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select('*')
+      .eq('codigo', codigo)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
   }
 
   // Buscar expediente por ID
   async buscarPorId(id) {
-    return this.executeGet(
-      "SELECT * FROM expedientes WHERE id = ?",
-      [id]
-    );
+    return await this.getById(id);
   }
 
   // Actualizar expediente
   async actualizar(id, datos) {
     const { codigo, fechaSolicitud, fechaEntrega, observacion } = datos;
-    return this.executeRun(
-      `UPDATE expedientes 
-       SET codigo = NULLIF(?, ''), fecha_solicitud = ?, fecha_entrega = ?, observacion = ?
-       WHERE id = ?`,
-      [codigo, fechaSolicitud, fechaEntrega, observacion, id]
-    );
+    await this.update(id, {
+      codigo: codigo || null,
+      fecha_solicitud: fechaSolicitud,
+      fecha_entrega: fechaEntrega,
+      observacion
+    });
+    return { changes: 1 };
   }
 
   // Actualizar información específica (para vista de información)
   async actualizarInformacion(id, datos) {
     const { observacion, fechaSolicitud, fechaEntrega } = datos;
-    return this.executeRun(
-      `UPDATE expedientes
-       SET observacion = ?, fecha_solicitud = ?, fecha_entrega = ?
-       WHERE id = ?`,
-      [observacion || null, fechaSolicitud || null, fechaEntrega || null, id]
-    );
+    await this.update(id, {
+      observacion: observacion || null,
+      fecha_solicitud: fechaSolicitud || null,
+      fecha_entrega: fechaEntrega || null
+    });
+    return { changes: 1 };
   }
 
   // Obtener expedientes por persona
   async obtenerPorPersona(personaId) {
-    return this.executeQuery(
-      `SELECT e.*, p.nombre, p.dni 
-       FROM expedientes e
-       JOIN personas p ON e.persona_id = p.id
-       WHERE e.persona_id = ?
-       ORDER BY e.id DESC`,
-      [personaId]
-    );
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        personas (nombre, dni)
+      `)
+      .eq('persona_id', personaId)
+      .order('id', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(e => ({
+      ...e,
+      nombre: e.personas?.nombre,
+      dni: e.personas?.dni
+    }));
   }
 
   // Obtener todos los expedientes con información de persona
   async obtenerTodos() {
-    return this.executeQuery(
-      `SELECT e.*, p.nombre, p.dni, p.numero
-       FROM expedientes e
-       JOIN personas p ON e.persona_id = p.id
-       ORDER BY e.id DESC`
-    );
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        personas (nombre, dni, numero)
+      `)
+      .order('id', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(e => ({
+      ...e,
+      nombre: e.personas?.nombre,
+      dni: e.personas?.dni,
+      numero: e.personas?.numero
+    }));
   }
 
   // Verificar si código ya existe
@@ -77,107 +104,140 @@ class ExpedienteModel extends BaseModel {
       return false;
     }
 
-    let query = "SELECT id FROM expedientes WHERE codigo = ?";
-    let params = [codigo];
+    let query = this.db
+      .from(this.tableName)
+      .select('id')
+      .eq('codigo', codigo);
 
     if (excludeId) {
-      query += " AND id != ?";
-      params.push(excludeId);
+      query = query.neq('id', excludeId);
     }
 
-    const result = await this.executeGet(query, params);
-    return !!result;
+    const { data, error } = await query.single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return !!data;
   }
 
   // Eliminar expediente (solo si no tiene registros)
   async eliminar(id) {
     // Verificar si tiene registros asociados
-    const tieneRegistros = await this.contar("registros", "expediente_id = ?", [id]);
-    
+    const tieneRegistros = await this.contar({ expediente_id: id });
+
     if (tieneRegistros > 0) {
       throw new Error("No se puede eliminar el expediente porque tiene registros asociados");
     }
 
-    const result = await this.executeRun(
-      "DELETE FROM expedientes WHERE id = ?",
-      [id]
-    );
-
-    if (result.changes === 0) {
-      throw new Error("Expediente no encontrado");
-    }
-
+    await this.delete(id);
     return { success: true };
   }
 
   // Buscar expedientes por rango de fechas
   async buscarPorFecha(fechaInicio, fechaFin, tipofecha = 'solicitud') {
     const campoFecha = tipofecha === 'entrega' ? 'fecha_entrega' : 'fecha_solicitud';
-    
-    return this.executeQuery(
-      `SELECT e.*, p.nombre, p.dni
-       FROM expedientes e
-       JOIN personas p ON e.persona_id = p.id
-       WHERE ${campoFecha} BETWEEN ? AND ?
-       ORDER BY ${campoFecha} DESC`,
-      [fechaInicio, fechaFin]
-    );
+
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        personas (nombre, dni)
+      `)
+      .gte(campoFecha, fechaInicio)
+      .lte(campoFecha, fechaFin)
+      .order(campoFecha, { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(e => ({
+      ...e,
+      nombre: e.personas?.nombre,
+      dni: e.personas?.dni
+    }));
   }
 
   // Obtener expedientes entregados
   async obtenerEntregados() {
-    return this.executeQuery(
-      `SELECT e.*, p.nombre, p.dni
-       FROM expedientes e
-       JOIN personas p ON e.persona_id = p.id
-       WHERE e.fecha_entrega IS NOT NULL
-       ORDER BY e.fecha_entrega DESC`
-    );
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        personas (nombre, dni)
+      `)
+      .not('fecha_entrega', 'is', null)
+      .order('fecha_entrega', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(e => ({
+      ...e,
+      nombre: e.personas?.nombre,
+      dni: e.personas?.dni
+    }));
   }
 
   // Obtener expedientes pendientes de entrega
   async obtenerPendientes() {
-    return this.executeQuery(
-      `SELECT e.*, p.nombre, p.dni
-       FROM expedientes e
-       JOIN personas p ON e.persona_id = p.id
-       WHERE e.fecha_entrega IS NULL
-       ORDER BY e.fecha_solicitud ASC`
-    );
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        personas (nombre, dni)
+      `)
+      .is('fecha_entrega', null)
+      .order('fecha_solicitud', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(e => ({
+      ...e,
+      nombre: e.personas?.nombre,
+      dni: e.personas?.dni
+    }));
   }
 
   // Marcar como entregado
   async marcarComoEntregado(id, fechaEntrega = null) {
     const fecha = fechaEntrega || this.getFechaLocal();
-    
-    return this.executeRun(
-      "UPDATE expedientes SET fecha_entrega = ? WHERE id = ?",
-      [fecha, id]
-    );
+
+    await this.update(id, { fecha_entrega: fecha });
+    return { changes: 1 };
   }
 
   // Obtener estadísticas de expedientes
   async obtenerEstadisticas() {
-    const total = await this.contar("expedientes");
-    const entregados = await this.contar("expedientes", "fecha_entrega IS NOT NULL");
-    const pendientes = total - entregados;
+    const total = await this.contar();
 
-    // Estadísticas por año
-    const porAnio = await this.executeQuery(`
-      SELECT 
-        strftime('%Y', fecha_solicitud) as anio,
-        COUNT(*) as total
-      FROM expedientes 
-      WHERE fecha_solicitud IS NOT NULL
-      GROUP BY strftime('%Y', fecha_solicitud)
-      ORDER BY anio DESC
-    `);
+    const { count: entregados, error } = await this.db
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .not('fecha_entrega', 'is', null);
+
+    if (error) throw error;
+
+    const pendientes = total - (entregados || 0);
+
+    // Estadísticas por año (simplificado en cliente)
+    const { data: expedientes } = await this.db
+      .from(this.tableName)
+      .select('fecha_solicitud')
+      .not('fecha_solicitud', 'is', null);
+
+    const porAnio = {};
+    (expedientes || []).forEach(e => {
+      const anio = new Date(e.fecha_solicitud).getFullYear();
+      porAnio[anio] = (porAnio[anio] || 0) + 1;
+    });
+
+    const porAnioArray = Object.entries(porAnio).map(([anio, total]) => ({
+      anio,
+      total
+    })).sort((a, b) => b.anio - a.anio);
 
     return {
       total,
-      entregados,
+      entregados: entregados || 0,
       pendientes,
-      porAnio
+      porAnio: porAnioArray
     };
   }
 

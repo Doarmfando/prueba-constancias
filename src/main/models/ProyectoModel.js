@@ -1,22 +1,24 @@
 const BaseModel = require('./BaseModel');
 
 class ProyectoModel extends BaseModel {
-  constructor(db) {
-    super(db);
+  constructor(supabaseClient) {
+    super(supabaseClient, 'proyectos_registros');
   }
 
   // Crear nuevo proyecto
   async crear(datos) {
-    const { nombre, descripcion, usuario_creador_id, es_publico = 0, permite_edicion = 1 } = datos;
-
-    const sql = `
-      INSERT INTO proyectos_registros (nombre, descripcion, usuario_creador_id, es_publico, permite_edicion)
-      VALUES (?, ?, ?, ?, ?)
-    `;
+    const { nombre, descripcion, usuario_creador_id, es_publico = false, permite_edicion = true } = datos;
 
     try {
-      const result = await this.executeRun(sql, [nombre, descripcion, usuario_creador_id, es_publico, permite_edicion]);
-      return result.lastID;
+      const proyecto = await this.create({
+        nombre,
+        descripcion,
+        usuario_creador_id,
+        es_publico,
+        permite_edicion,
+        activo: true
+      });
+      return proyecto.id;
     } catch (error) {
       throw new Error('Error al crear proyecto: ' + error.message);
     }
@@ -24,240 +26,184 @@ class ProyectoModel extends BaseModel {
 
   // Obtener proyecto por ID
   async obtenerPorId(id) {
-    const sql = `
-      SELECT p.*, u.nombre as nombre_creador
-      FROM proyectos_registros p
-      LEFT JOIN usuarios u ON p.usuario_creador_id = u.id
-      WHERE p.id = ? AND p.activo = 1
-    `;
-    return await this.executeGet(sql, [id]);
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre)
+      `)
+      .eq('id', id)
+      .eq('activo', true)
+      .single();
+
+    if (error) throw error;
+
+    return data ? {
+      ...data,
+      nombre_creador: data.usuarios?.nombre
+    } : null;
   }
 
   // Listar proyectos por usuario (solo sus propios proyectos)
   async listarPorUsuario(usuarioId) {
-    const sql = `
-      SELECT p.*, u.nombre as nombre_creador,
-        (SELECT COUNT(*) FROM registros r WHERE r.proyecto_id = p.id AND r.eliminado = 0) as total_registros
-      FROM proyectos_registros p
-      LEFT JOIN usuarios u ON p.usuario_creador_id = u.id
-      WHERE p.usuario_creador_id = ? AND p.activo = 1
-      ORDER BY p.fecha_creacion DESC
-    `;
-    return await this.executeQuery(sql, [usuarioId]);
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre),
+        registros (count)
+      `)
+      .eq('usuario_creador_id', usuarioId)
+      .eq('activo', true)
+      .order('fecha_creacion', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(p => ({
+      ...p,
+      nombre_creador: p.usuarios?.nombre,
+      total_registros: p.registros?.[0]?.count || 0
+    }));
   }
 
   // Listar proyectos accesibles por usuario (propios + públicos)
   async listarAccesiblesPorUsuario(usuarioId) {
-    const sql = `
-      SELECT p.*, u.nombre as nombre_creador,
-        (SELECT COUNT(*) FROM registros r WHERE r.proyecto_id = p.id AND r.eliminado = 0) as total_registros,
-        CASE
-          WHEN p.usuario_creador_id = ? THEN 'propio'
-          ELSE 'publico'
-        END as tipo_acceso
-      FROM proyectos_registros p
-      LEFT JOIN usuarios u ON p.usuario_creador_id = u.id
-      WHERE p.activo = 1 AND (p.usuario_creador_id = ? OR p.es_publico = 1)
-      ORDER BY
-        CASE WHEN p.usuario_creador_id = ? THEN 0 ELSE 1 END,
-        p.fecha_creacion DESC
-    `;
-    return await this.executeQuery(sql, [usuarioId, usuarioId, usuarioId]);
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre),
+        registros (count)
+      `)
+      .eq('activo', true)
+      .or(`usuario_creador_id.eq.${usuarioId},es_publico.eq.true`)
+      .order('fecha_creacion', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(p => ({
+      ...p,
+      nombre_creador: p.usuarios?.nombre,
+      total_registros: p.registros?.[0]?.count || 0,
+      tipo_acceso: p.usuario_creador_id === usuarioId ? 'propio' : 'publico'
+    }));
   }
 
   // Listar proyectos públicos
   async listarPublicos() {
-    const sql = `
-      SELECT p.*, u.nombre as nombre_creador,
-        (SELECT COUNT(*) FROM registros r WHERE r.proyecto_id = p.id AND r.eliminado = 0) as total_registros
-      FROM proyectos_registros p
-      LEFT JOIN usuarios u ON p.usuario_creador_id = u.id
-      WHERE p.es_publico = 1 AND p.activo = 1
-      ORDER BY p.fecha_publicacion DESC, p.fecha_creacion DESC
-    `;
-    return await this.executeQuery(sql);
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre),
+        registros (count)
+      `)
+      .eq('es_publico', true)
+      .eq('activo', true)
+      .order('fecha_publicacion', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(p => ({
+      ...p,
+      nombre_creador: p.usuarios?.nombre,
+      total_registros: p.registros?.[0]?.count || 0
+    }));
   }
 
   // Listar todos los proyectos (solo admin)
   async listarTodos() {
-    const sql = `
-      SELECT p.*, u.nombre as nombre_creador,
-        (SELECT COUNT(*) FROM registros r WHERE r.proyecto_id = p.id AND r.eliminado = 0) as total_registros
-      FROM proyectos_registros p
-      LEFT JOIN usuarios u ON p.usuario_creador_id = u.id
-      WHERE p.activo = 1
-      ORDER BY p.fecha_creacion DESC
-    `;
-    return await this.executeQuery(sql);
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre),
+        registros (count)
+      `)
+      .eq('activo', true)
+      .order('fecha_creacion', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(p => ({
+      ...p,
+      nombre_creador: p.usuarios?.nombre,
+      total_registros: p.registros?.[0]?.count || 0
+    }));
   }
 
   // Actualizar proyecto
   async actualizar(id, datos, usuarioId) {
-    // Verificar que el usuario sea el creador o admin
     const proyecto = await this.obtenerPorId(id);
     if (!proyecto) {
       throw new Error('Proyecto no encontrado');
     }
 
-    const camposPermitidos = ['nombre', 'descripcion', 'permite_edicion'];
-    const campos = [];
-    const valores = [];
-
-    for (const [key, value] of Object.entries(datos)) {
-      if (camposPermitidos.includes(key)) {
-        campos.push(`${key} = ?`);
-        valores.push(value);
-      }
-    }
-
-    if (campos.length === 0) {
-      throw new Error('No hay campos válidos para actualizar');
-    }
-
-    valores.push(id);
-    const sql = `UPDATE proyectos_registros SET ${campos.join(', ')} WHERE id = ?`;
-
-    await this.executeRun(sql, valores);
-    return await this.obtenerPorId(id);
+    const { nombre, descripcion, permite_edicion } = datos;
+    await this.update(id, { nombre, descripcion, permite_edicion });
+    return { success: true };
   }
 
-  // Hacer público un proyecto
-  async hacerPublico(id, usuarioId) {
+  // Publicar proyecto
+  async publicar(id, usuarioId) {
     const proyecto = await this.obtenerPorId(id);
     if (!proyecto) {
       throw new Error('Proyecto no encontrado');
     }
 
-    if (proyecto.usuario_creador_id !== usuarioId) {
-      throw new Error('Solo el creador puede hacer público el proyecto');
-    }
-
-    const sql = `
-      UPDATE proyectos_registros
-      SET es_publico = 1, fecha_publicacion = datetime('now')
-      WHERE id = ?
-    `;
-
-    await this.executeRun(sql, [id]);
-    return await this.obtenerPorId(id);
+    await this.update(id, {
+      es_publico: true,
+      fecha_publicacion: new Date().toISOString()
+    });
+    return { success: true };
   }
 
-  // Hacer privado un proyecto
-  async hacerPrivado(id, usuarioId) {
+  // Despublicar proyecto
+  async despublicar(id, usuarioId) {
     const proyecto = await this.obtenerPorId(id);
     if (!proyecto) {
       throw new Error('Proyecto no encontrado');
     }
 
-    if (proyecto.usuario_creador_id !== usuarioId) {
-      throw new Error('Solo el creador puede hacer privado el proyecto');
-    }
-
-    const sql = `
-      UPDATE proyectos_registros
-      SET es_publico = 0, fecha_publicacion = NULL
-      WHERE id = ?
-    `;
-
-    await this.executeRun(sql, [id]);
-    return await this.obtenerPorId(id);
+    await this.update(id, { es_publico: false });
+    return { success: true };
   }
 
-  // Eliminar proyecto (lógico)
+  // Eliminar proyecto (eliminación lógica)
   async eliminar(id, usuarioId) {
     const proyecto = await this.obtenerPorId(id);
     if (!proyecto) {
       throw new Error('Proyecto no encontrado');
     }
 
-    if (proyecto.usuario_creador_id !== usuarioId) {
-      throw new Error('Solo el creador puede eliminar el proyecto');
-    }
-
-    await this.executeRun(
-      `UPDATE proyectos_registros SET activo = 0 WHERE id = ?`,
-      [id]
-    );
-    return true;
+    await this.update(id, { activo: false });
+    return { success: true };
   }
 
   // Verificar permisos de acceso
-  async verificarAcceso(proyectoId, usuarioId, tipoAcceso = 'ver') {
-    const proyecto = await this.obtenerPorId(proyectoId);
-    if (!proyecto) {
-      return false;
-    }
+  async tieneAcceso(proyectoId, usuarioId) {
+    const { data, error} = await this.db
+      .from(this.tableName)
+      .select('usuario_creador_id, es_publico')
+      .eq('id', proyectoId)
+      .eq('activo', true)
+      .single();
 
-    // El creador siempre tiene acceso total
-    if (proyecto.usuario_creador_id === usuarioId) {
-      return true;
-    }
-
-    // Si es público, verificar permisos
-    if (proyecto.es_publico) {
-      if (tipoAcceso === 'ver') {
-        return true; // Cualquiera puede ver proyectos públicos
-      }
-      if (tipoAcceso === 'editar') {
-        return proyecto.permite_edicion === 1;
-      }
-    }
-
-    return false; // Proyecto privado, sin acceso
+    if (error || !data) return false;
+    return data.usuario_creador_id === usuarioId || data.es_publico;
   }
 
-  // Obtener estadísticas de proyectos
-  async obtenerEstadisticas(usuarioId = null) {
-    let whereClause = 'WHERE p.activo = 1';
-    let params = [];
+  // Obtener estadísticas del proyecto
+  async obtenerEstadisticas(proyectoId) {
+    const { count: totalRegistros } = await this.db
+      .from('registros')
+      .select('*', { count: 'exact', head: true })
+      .eq('proyecto_id', proyectoId)
+      .eq('eliminado', false);
 
-    if (usuarioId) {
-      whereClause += ' AND p.usuario_creador_id = ?';
-      params.push(usuarioId);
-    }
-
-    const sql = `
-      SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN p.es_publico = 1 THEN 1 ELSE 0 END) as publicos,
-        SUM(CASE WHEN p.es_publico = 0 THEN 1 ELSE 0 END) as privados,
-        (SELECT COUNT(*) FROM registros r
-         JOIN proyectos_registros pr ON r.proyecto_id = pr.id
-         WHERE pr.activo = 1 AND r.eliminado = 0
-         ${usuarioId ? 'AND pr.usuario_creador_id = ?' : ''}) as total_registros
-      FROM proyectos_registros p
-      ${whereClause}
-    `;
-
-    if (usuarioId) {
-      params.push(usuarioId);
-    }
-
-    return await this.executeGet(sql, params);
-  }
-
-  // Buscar proyectos
-  async buscar(termino, usuarioId = null) {
-    let whereClause = 'WHERE p.activo = 1 AND (p.nombre LIKE ? OR p.descripcion LIKE ?)';
-    let params = [`%${termino}%`, `%${termino}%`];
-
-    if (usuarioId) {
-      whereClause += ' AND (p.es_publico = 1 OR p.usuario_creador_id = ?)';
-      params.push(usuarioId);
-    } else {
-      whereClause += ' AND p.es_publico = 1';
-    }
-
-    const sql = `
-      SELECT p.*, u.nombre as nombre_creador,
-        (SELECT COUNT(*) FROM registros r WHERE r.proyecto_id = p.id AND r.eliminado = 0) as total_registros
-      FROM proyectos_registros p
-      LEFT JOIN usuarios u ON p.usuario_creador_id = u.id
-      ${whereClause}
-      ORDER BY p.fecha_creacion DESC
-    `;
-
-    return await this.executeQuery(sql, params);
+    return {
+      total_registros: totalRegistros || 0
+    };
   }
 }
 

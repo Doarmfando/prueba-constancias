@@ -1,8 +1,8 @@
 const BaseModel = require('./BaseModel');
 
 class AuditoriaModel extends BaseModel {
-  constructor(db) {
-    super(db);
+  constructor(supabaseClient) {
+    super(supabaseClient, 'auditoria');
   }
 
   // Registrar una acción en la auditoría
@@ -16,349 +16,147 @@ class AuditoriaModel extends BaseModel {
       detalles = null
     } = datos;
 
-    const sql = `
-      INSERT INTO auditoria (usuario_id, accion, tabla_afectada, registro_id, proyecto_id, detalles)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-
     try {
-      const result = await this.executeRun(sql, [
+      const auditoria = await this.create({
         usuario_id,
         accion,
         tabla_afectada,
         registro_id,
         proyecto_id,
-        typeof detalles === 'object' ? JSON.stringify(detalles) : detalles
-      ]);
-      return result.lastID;
+        detalles: typeof detalles === 'object' ? JSON.stringify(detalles) : detalles
+      });
+      return auditoria.id;
     } catch (error) {
       console.error('Error al registrar auditoría:', error);
-      // No lanzar error para no afectar el flujo principal
       return null;
     }
   }
 
   // Obtener historial con filtros
   async obtenerHistorial({ limite = 100, offset = 0, busqueda = null, usuario = null, accion = null }) {
-    let whereClause = '';
-    let params = [];
-
-    const conditions = [];
+    let query = this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre_usuario)
+      `)
+      .order('fecha', { ascending: false })
+      .range(offset, offset + limite - 1);
 
     if (busqueda) {
-      conditions.push('(a.accion LIKE ? OR a.tabla_afectada LIKE ? OR u.nombre_usuario LIKE ? OR a.detalles LIKE ?)');
-      params.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
+      query = query.or(`accion.ilike.%${busqueda}%,tabla_afectada.ilike.%${busqueda}%,detalles.ilike.%${busqueda}%`);
     }
 
     if (usuario) {
-      conditions.push('u.nombre_usuario = ?');
-      params.push(usuario);
+      query = query.eq('usuario_id', usuario);
     }
 
     if (accion) {
-      conditions.push('a.accion = ?');
-      params.push(accion);
+      query = query.eq('accion', accion);
     }
 
-    if (conditions.length > 0) {
-      whereClause = 'WHERE ' + conditions.join(' AND ');
-    }
+    const { data, error } = await query;
 
-    const sql = `
-      SELECT a.*, u.nombre_usuario as nombre_usuario,
-        p.nombre as nombre_proyecto
-      FROM auditoria a
-      LEFT JOIN usuarios u ON a.usuario_id = u.id
-      LEFT JOIN proyectos_registros p ON a.proyecto_id = p.id
-      ${whereClause}
-      ORDER BY a.fecha DESC
-      LIMIT ? OFFSET ?
-    `;
+    if (error) throw error;
 
-    params.push(limite, offset);
-    return await this.executeQuery(sql, params);
-  }
-
-  // Contar total con filtros
-  async contarTotal({ busqueda = null, usuario = null, accion = null }) {
-    let whereClause = '';
-    let params = [];
-
-    const conditions = [];
-
-    if (busqueda) {
-      conditions.push('(a.accion LIKE ? OR a.tabla_afectada LIKE ? OR u.nombre_usuario LIKE ? OR a.detalles LIKE ?)');
-      params.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
-    }
-
-    if (usuario) {
-      conditions.push('u.nombre_usuario = ?');
-      params.push(usuario);
-    }
-
-    if (accion) {
-      conditions.push('a.accion = ?');
-      params.push(accion);
-    }
-
-    if (conditions.length > 0) {
-      whereClause = 'WHERE ' + conditions.join(' AND ');
-    }
-
-    const sql = `
-      SELECT COUNT(*) as total
-      FROM auditoria a
-      LEFT JOIN usuarios u ON a.usuario_id = u.id
-      LEFT JOIN proyectos_registros p ON a.proyecto_id = p.id
-      ${whereClause}
-    `;
-
-    const result = await this.executeGet(sql, params);
-    return result ? result.total : 0;
-  }
-
-  // Obtener historial completo (solo admin)
-  async obtenerHistorialCompleto(filtros = {}) {
-    const { busqueda, usuario, accion } = filtros;
-    let whereClause = '';
-    let params = [];
-
-    const conditions = [];
-
-    if (busqueda) {
-      conditions.push('(a.accion LIKE ? OR a.tabla_afectada LIKE ? OR u.nombre_usuario LIKE ? OR a.detalles LIKE ?)');
-      params.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
-    }
-
-    if (usuario) {
-      conditions.push('u.nombre_usuario = ?');
-      params.push(usuario);
-    }
-
-    if (accion) {
-      conditions.push('a.accion = ?');
-      params.push(accion);
-    }
-
-    if (conditions.length > 0) {
-      whereClause = 'WHERE ' + conditions.join(' AND ');
-    }
-
-    const sql = `
-      SELECT a.*, u.nombre_usuario as nombre_usuario,
-        p.nombre as nombre_proyecto
-      FROM auditoria a
-      LEFT JOIN usuarios u ON a.usuario_id = u.id
-      LEFT JOIN proyectos_registros p ON a.proyecto_id = p.id
-      ${whereClause}
-      ORDER BY a.fecha DESC
-      LIMIT 10000
-    `;
-
-    return await this.executeQuery(sql, params);
-  }
-
-  // Obtener estadísticas
-  async obtenerEstadisticas() {
-    const sql = `
-      SELECT
-        COUNT(*) as total_acciones,
-        COUNT(DISTINCT a.usuario_id) as usuarios_activos,
-        COUNT(DISTINCT a.proyecto_id) as proyectos_afectados,
-        SUM(CASE WHEN a.accion = 'crear' THEN 1 ELSE 0 END) as creaciones,
-        SUM(CASE WHEN a.accion = 'editar' THEN 1 ELSE 0 END) as ediciones,
-        SUM(CASE WHEN a.accion = 'eliminar' THEN 1 ELSE 0 END) as eliminaciones,
-        SUM(CASE WHEN a.accion = 'publicar' THEN 1 ELSE 0 END) as publicaciones,
-        SUM(CASE WHEN a.accion = 'acceso' THEN 1 ELSE 0 END) as accesos
-      FROM auditoria a
-    `;
-
-    return await this.executeGet(sql);
-  }
-
-  // Limpiar historial antiguo
-  async limpiarHistorialAntiguo(diasAntiguedad = 365) {
-    try {
-      const sql = `
-        DELETE FROM auditoria
-        WHERE fecha < datetime('now', '-${diasAntiguedad} days')
-      `;
-
-      const result = await this.executeRun(sql);
-
-      return {
-        success: true,
-        registrosEliminados: result.changes,
-        message: `Se eliminaron ${result.changes} registros anteriores a ${diasAntiguedad} días`
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Obtener historial por usuario
-  async obtenerHistorialPorUsuario(usuarioId, limite = 50, offset = 0) {
-    const sql = `
-      SELECT a.*, u.nombre_usuario as nombre_usuario,
-        p.nombre as nombre_proyecto
-      FROM auditoria a
-      LEFT JOIN usuarios u ON a.usuario_id = u.id
-      LEFT JOIN proyectos_registros p ON a.proyecto_id = p.id
-      WHERE a.usuario_id = ?
-      ORDER BY a.fecha DESC
-      LIMIT ? OFFSET ?
-    `;
-    return await this.executeQuery(sql, [usuarioId, limite, offset]);
+    return (data || []).map(a => ({
+      ...a,
+      nombre_usuario: a.usuarios?.nombre_usuario
+    }));
   }
 
   // Obtener historial por proyecto
-  async obtenerHistorialPorProyecto(proyectoId, limite = 50, offset = 0) {
-    const sql = `
-      SELECT a.*, u.nombre_usuario as nombre_usuario, u.email
-      FROM auditoria a
-      LEFT JOIN usuarios u ON a.usuario_id = u.id
-      WHERE a.proyecto_id = ?
-      ORDER BY a.fecha DESC
-      LIMIT ? OFFSET ?
-    `;
-    return await this.executeQuery(sql, [proyectoId, limite, offset]);
+  async obtenerPorProyecto(proyectoId, limite = 50) {
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre_usuario)
+      `)
+      .eq('proyecto_id', proyectoId)
+      .order('fecha', { ascending: false })
+      .limit(limite);
+
+    if (error) throw error;
+
+    return (data || []).map(a => ({
+      ...a,
+      nombre_usuario: a.usuarios?.nombre_usuario
+    }));
   }
 
-  // Obtener estadísticas de actividad
-  async obtenerEstadisticasActividad(fechaInicio = null, fechaFin = null) {
-    let whereClause = '';
-    let params = [];
+  // Obtener historial por registro
+  async obtenerPorRegistro(registroId, limite = 20) {
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre_usuario)
+      `)
+      .eq('registro_id', registroId)
+      .order('fecha', { ascending: false })
+      .limit(limite);
 
-    if (fechaInicio && fechaFin) {
-      whereClause = 'WHERE a.fecha BETWEEN ? AND ?';
-      params = [fechaInicio, fechaFin];
-    }
+    if (error) throw error;
 
-    const sql = `
-      SELECT
-        COUNT(*) as total_acciones,
-        COUNT(DISTINCT a.usuario_id) as usuarios_activos,
-        COUNT(DISTINCT a.proyecto_id) as proyectos_afectados,
-        SUM(CASE WHEN a.accion = 'crear' THEN 1 ELSE 0 END) as creaciones,
-        SUM(CASE WHEN a.accion = 'editar' THEN 1 ELSE 0 END) as ediciones,
-        SUM(CASE WHEN a.accion = 'eliminar' THEN 1 ELSE 0 END) as eliminaciones,
-        SUM(CASE WHEN a.accion = 'publicar' THEN 1 ELSE 0 END) as publicaciones
-      FROM auditoria a
-      ${whereClause}
-    `;
-
-    return await this.executeGet(sql, params);
+    return (data || []).map(a => ({
+      ...a,
+      nombre_usuario: a.usuarios?.nombre_usuario
+    }));
   }
 
-  // Obtener actividad reciente por usuario
-  async obtenerActividadReciente(usuarioId, limite = 10) {
-    const sql = `
-      SELECT a.accion, a.tabla_afectada, a.fecha,
-        p.nombre as nombre_proyecto
-      FROM auditoria a
-      LEFT JOIN proyectos_registros p ON a.proyecto_id = p.id
-      WHERE a.usuario_id = ?
-      ORDER BY a.fecha DESC
-      LIMIT ?
-    `;
-    return await this.executeQuery(sql, [usuarioId, limite]);
+  // Obtener historial por usuario
+  async obtenerPorUsuario(usuarioId, limite = 50) {
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select('*')
+      .eq('usuario_id', usuarioId)
+      .order('fecha', { ascending: false })
+      .limit(limite);
+
+    if (error) throw error;
+    return data || [];
   }
 
-  // Buscar en auditoría
-  async buscar(termino, usuarioId = null, proyectoId = null) {
-    let whereClause = 'WHERE (a.accion LIKE ? OR a.tabla_afectada LIKE ? OR a.detalles LIKE ?)';
-    let params = [`%${termino}%`, `%${termino}%`, `%${termino}%`];
+  // Obtener estadísticas de auditoría
+  async obtenerEstadisticas() {
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select('accion, tabla_afectada, usuario_id');
 
-    if (usuarioId) {
-      whereClause += ' AND a.usuario_id = ?';
-      params.push(usuarioId);
-    }
+    if (error) throw error;
 
-    if (proyectoId) {
-      whereClause += ' AND a.proyecto_id = ?';
-      params.push(proyectoId);
-    }
+    const total = data.length;
+    const porAccion = {};
+    const porTabla = {};
+    const usuariosActivos = new Set();
 
-    const sql = `
-      SELECT a.*, u.nombre_usuario as nombre_usuario,
-        p.nombre as nombre_proyecto
-      FROM auditoria a
-      LEFT JOIN usuarios u ON a.usuario_id = u.id
-      LEFT JOIN proyectos_registros p ON a.proyecto_id = p.id
-      ${whereClause}
-      ORDER BY a.fecha DESC
-      LIMIT 100
-    `;
-
-    return await this.executeQuery(sql, params);
-  }
-
-  // Limpiar auditoría antigua (mantener solo últimos N días)
-  async limpiarAuditoria(diasAMantener = 90) {
-    const sql = `
-      DELETE FROM auditoria
-      WHERE fecha < datetime('now', '-${diasAMantener} days')
-    `;
-
-    const result = await this.executeRun(sql);
-    return result.changes;
-  }
-
-  // Métodos de conveniencia para acciones comunes
-  async registrarCreacion(usuarioId, tabla, registroId, proyectoId = null, detalles = null) {
-    return await this.registrarAccion({
-      usuario_id: usuarioId,
-      accion: 'crear',
-      tabla_afectada: tabla,
-      registro_id: registroId,
-      proyecto_id: proyectoId,
-      detalles: detalles
+    data.forEach(a => {
+      porAccion[a.accion] = (porAccion[a.accion] || 0) + 1;
+      porTabla[a.tabla_afectada] = (porTabla[a.tabla_afectada] || 0) + 1;
+      usuariosActivos.add(a.usuario_id);
     });
+
+    return {
+      total,
+      porAccion: Object.entries(porAccion).map(([accion, cantidad]) => ({ accion, cantidad })),
+      porTabla: Object.entries(porTabla).map(([tabla, cantidad]) => ({ tabla, cantidad })),
+      usuarios_activos: usuariosActivos.size
+    };
   }
 
-  async registrarEdicion(usuarioId, tabla, registroId, proyectoId = null, detalles = null) {
-    return await this.registrarAccion({
-      usuario_id: usuarioId,
-      accion: 'editar',
-      tabla_afectada: tabla,
-      registro_id: registroId,
-      proyecto_id: proyectoId,
-      detalles: detalles
-    });
-  }
+  // Limpiar auditoría antigua
+  async limpiarAntiguos(dias = 90) {
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() - dias);
 
-  async registrarEliminacion(usuarioId, tabla, registroId, proyectoId = null, detalles = null) {
-    return await this.registrarAccion({
-      usuario_id: usuarioId,
-      accion: 'eliminar',
-      tabla_afectada: tabla,
-      registro_id: registroId,
-      proyecto_id: proyectoId,
-      detalles: detalles
-    });
-  }
+    const { error } = await this.db
+      .from(this.tableName)
+      .delete()
+      .lt('fecha', fechaLimite.toISOString());
 
-  async registrarPublicacion(usuarioId, proyectoId, detalles = null) {
-    return await this.registrarAccion({
-      usuario_id: usuarioId,
-      accion: 'publicar',
-      tabla_afectada: 'proyectos_registros',
-      registro_id: proyectoId,
-      proyecto_id: proyectoId,
-      detalles: detalles
-    });
-  }
-
-  async registrarAcceso(usuarioId, proyectoId = null) {
-    return await this.registrarAccion({
-      usuario_id: usuarioId,
-      accion: 'acceso',
-      tabla_afectada: 'sistema',
-      proyecto_id: proyectoId
-    });
+    if (error) throw error;
+    return { success: true };
   }
 }
 

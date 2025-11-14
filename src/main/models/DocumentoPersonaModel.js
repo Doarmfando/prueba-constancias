@@ -2,97 +2,112 @@
 const BaseModel = require('./BaseModel');
 
 class DocumentoPersonaModel extends BaseModel {
-  constructor(db) {
-    super(db, 'documentos_persona');
+  constructor(supabaseClient) {
+    super(supabaseClient, 'documentos_persona');
   }
 
   // Crear documento
   async crear(datos) {
     const { persona_id, nombre_archivo, ruta_archivo, tipo_archivo, comentario, usuario_carga_id, tamaño_bytes } = datos;
 
-    const query = `
-      INSERT INTO documentos_persona
-      (persona_id, nombre_archivo, ruta_archivo, tipo_archivo, comentario, fecha_carga, usuario_carga_id, tamaño_bytes)
-      VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?)
-    `;
-
-    const result = await this.executeRun(query, [
+    const documento = await this.create({
       persona_id,
       nombre_archivo,
       ruta_archivo,
-      tipo_archivo || this.obtenerTipoArchivo(nombre_archivo),
-      comentario || '',
-      usuario_carga_id || null,
-      tamaño_bytes || 0
-    ]);
+      tipo_archivo: tipo_archivo || this.obtenerTipoArchivo(nombre_archivo),
+      comentario: comentario || '',
+      usuario_carga_id: usuario_carga_id || null,
+      tamaño_bytes: tamaño_bytes || 0
+    });
 
-    return { id: result.lastID };
+    return { id: documento.id };
   }
 
   // Obtener documentos por persona_id
   async obtenerPorPersona(persona_id) {
-    const query = `
-      SELECT
-        d.*,
-        u.nombre_usuario as usuario_carga_nombre
-      FROM documentos_persona d
-      LEFT JOIN usuarios u ON d.usuario_carga_id = u.id
-      WHERE d.persona_id = ?
-      ORDER BY d.fecha_carga DESC
-    `;
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre_usuario)
+      `)
+      .eq('persona_id', persona_id)
+      .order('fecha_carga', { ascending: false });
 
-    return this.executeQuery(query, [persona_id]);
+    if (error) throw error;
+
+    return (data || []).map(d => ({
+      ...d,
+      usuario_carga_nombre: d.usuarios?.nombre_usuario
+    }));
   }
 
   // Obtener documento por ID
   async obtenerPorId(id) {
-    const query = `
-      SELECT
-        d.*,
-        u.nombre_usuario as usuario_carga_nombre,
-        p.nombre as persona_nombre,
-        p.dni as persona_dni
-      FROM documentos_persona d
-      LEFT JOIN usuarios u ON d.usuario_carga_id = u.id
-      LEFT JOIN personas p ON d.persona_id = p.id
-      WHERE d.id = ?
-    `;
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre_usuario),
+        personas (nombre, dni)
+      `)
+      .eq('id', id)
+      .single();
 
-    return this.executeGet(query, [id]);
+    if (error) throw error;
+
+    return data ? {
+      ...data,
+      usuario_carga_nombre: data.usuarios?.nombre_usuario,
+      persona_nombre: data.personas?.nombre,
+      persona_dni: data.personas?.dni
+    } : null;
   }
 
   // Eliminar documento
   async eliminar(id) {
-    const query = 'DELETE FROM documentos_persona WHERE id = ?';
-    return this.executeRun(query, [id]);
+    await this.delete(id);
+    return { changes: 1 };
   }
 
   // Actualizar comentario
   async actualizarComentario(id, comentario) {
-    const query = 'UPDATE documentos_persona SET comentario = ? WHERE id = ?';
-    return this.executeRun(query, [comentario, id]);
+    await this.update(id, { comentario });
+    return { changes: 1 };
   }
 
   // Contar documentos por persona
   async contarPorPersona(persona_id) {
-    const query = 'SELECT COUNT(*) as total FROM documentos_persona WHERE persona_id = ?';
-    const result = await this.executeGet(query, [persona_id]);
-    return result ? result.total : 0;
+    const count = await this.contar({ persona_id });
+    return count;
   }
 
   // Obtener estadísticas de documentos
   async obtenerEstadisticas() {
-    const query = `
-      SELECT
-        COUNT(*) as total_documentos,
-        COUNT(DISTINCT persona_id) as personas_con_documentos,
-        tipo_archivo,
-        COUNT(*) as cantidad
-      FROM documentos_persona
-      GROUP BY tipo_archivo
-    `;
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select('tipo_archivo, persona_id');
 
-    return this.executeQuery(query);
+    if (error) throw error;
+
+    const total_documentos = data.length;
+    const personas_con_documentos = new Set(data.map(d => d.persona_id)).size;
+
+    const porTipo = {};
+    data.forEach(d => {
+      porTipo[d.tipo_archivo] = (porTipo[d.tipo_archivo] || 0) + 1;
+    });
+
+    const estadisticas = Object.entries(porTipo).map(([tipo_archivo, cantidad]) => ({
+      tipo_archivo,
+      cantidad
+    }));
+
+    return [{
+      total_documentos,
+      personas_con_documentos,
+      estadisticas
+    }];
   }
 
   // Método auxiliar para obtener tipo de archivo por extensión
