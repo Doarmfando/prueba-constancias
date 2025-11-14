@@ -1,5 +1,6 @@
 // src/config/supabase.js
 const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
 
 // Configuración de Supabase
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -7,8 +8,36 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 
 // Validar que existan las credenciales
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ ERROR: Faltan credenciales de Supabase');
-  console.error('Por favor configura SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY en tu archivo .env');
+  console.error('╔════════════════════════════════════════════════════════════════╗');
+  console.error('║  ❌ ERROR: Faltan credenciales de Supabase                    ║');
+  console.error('╚════════════════════════════════════════════════════════════════╝');
+  console.error('');
+  console.error('📋 INSTRUCCIONES PARA CONFIGURAR:');
+  console.error('');
+  console.error('1. Crea un archivo .env en la raíz del proyecto');
+  console.error('2. Agrega las siguientes variables:');
+  console.error('');
+  console.error('   SUPABASE_URL=https://tu-proyecto.supabase.co');
+  console.error('   SUPABASE_SERVICE_ROLE_KEY=tu-clave-service-role');
+  console.error('');
+  console.error('3. Obtén tus credenciales desde:');
+  console.error('   https://app.supabase.com/project/_/settings/api');
+  console.error('');
+  console.error('📁 Ubicaciones buscadas para .env:');
+  if (process.env.NODE_ENV === 'production' || require('electron').app.isPackaged) {
+    const { app } = require('electron');
+    console.error(`   - ${path.join(process.resourcesPath, '.env')}`);
+    console.error(`   - ${path.join(process.resourcesPath, 'extraResources', '.env')}`);
+    console.error(`   - ${path.join(app.getPath('userData'), '.env')}`);
+    console.error(`   - ${path.join(process.cwd(), '.env')}`);
+  } else {
+    console.error(`   - ${path.join(process.cwd(), '.env')}`);
+  }
+  console.error('');
+  console.error('Variables de entorno encontradas:');
+  console.error(`   SUPABASE_URL: ${supabaseUrl ? '✓ (configurada pero vacía)' : '✗ (no configurada)'}`);
+  console.error(`   SUPABASE_SERVICE_ROLE_KEY: ${supabaseKey ? '✓ (configurada pero vacía)' : '✗ (no configurada)'}`);
+  console.error('');
 }
 
 // Crear cliente de Supabase con Service Role (bypasea RLS)

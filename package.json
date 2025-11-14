@@ -101,6 +101,11 @@
       {
         "from": "./sqlite3.dll",
         "to": "sqlite3.dll"
+      },
+      {
+        "from": "./.env",
+        "to": ".env",
+        "filter": ["**/*"]
       }
     ],
     "directories": {

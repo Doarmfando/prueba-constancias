@@ -1,5 +1,52 @@
 // main.js - Refactorizado usando arquitectura MVC
 const { app, BrowserWindow, dialog } = require("electron");
+const path = require("path");
+const fs = require("fs");
+
+// Cargar variables de entorno desde múltiples ubicaciones
+// Esto es necesario para que funcione tanto en desarrollo como en producción
+function loadEnvironment() {
+  const isDev = !app.isPackaged;
+  const envPaths = [];
+
+  if (isDev) {
+    // En desarrollo: buscar .env en la raíz del proyecto
+    envPaths.push(path.join(__dirname, '.env'));
+  } else {
+    // En producción: buscar .env en varios lugares
+    envPaths.push(
+      // Junto al ejecutable
+      path.join(process.resourcesPath, '.env'),
+      // En extraResources
+      path.join(process.resourcesPath, 'extraResources', '.env'),
+      // En el directorio de la aplicación
+      path.join(app.getPath('userData'), '.env'),
+      // En el directorio actual
+      path.join(process.cwd(), '.env')
+    );
+  }
+
+  // Intentar cargar desde cada ubicación
+  let loaded = false;
+  for (const envPath of envPaths) {
+    if (fs.existsSync(envPath)) {
+      console.log(`✅ Cargando variables de entorno desde: ${envPath}`);
+      require('dotenv').config({ path: envPath });
+      loaded = true;
+      break;
+    }
+  }
+
+  if (!loaded) {
+    console.warn('⚠️ No se encontró archivo .env en ninguna ubicación:');
+    envPaths.forEach(p => console.warn(`   - ${p}`));
+  }
+
+  return loaded;
+}
+
+// Cargar variables de entorno antes de cualquier otra importación
+loadEnvironment();
 
 // Importar servicios
 const DatabaseService = require("./src/main/services/DatabaseService");
