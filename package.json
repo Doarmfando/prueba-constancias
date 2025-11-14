@@ -22,6 +22,7 @@
     "@electron/remote": "^2.1.2",
     "@floating-ui/react": "^0.27.7",
     "@floating-ui/react-dom": "^2.1.2",
+    "@supabase/supabase-js": "^2.81.1",
     "autoprefixer": "^10.4.16",
     "chart.js": "^4.4.9",
     "cors": "^2.8.5",

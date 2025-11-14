@@ -1,153 +1,137 @@
 // src/main/services/DatabaseService.js
-const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
-const { app } = require("electron");
-const fs = require("fs");
+const { supabase, verificarConexion } = require('../../config/supabase');
 
 class DatabaseService {
   constructor() {
-    this.db = null;
-  }
-
-  getDatabasePath() {
-    // Si la app NO está empaquetada, usar siempre la BD de desarrollo
-    if (!app.isPackaged) {
-      return path.join(__dirname, "../../../database.sqlite");
-    }
-
-    // Solo cuando está empaquetada (instalador), usar userData
-    const userDataPath = app.getPath('userData');
-    return path.join(userDataPath, 'database.sqlite');
-  }
-
-  async ensureDatabaseExists(dbPath) {
-    // Si no existe la base de datos en userData, copiar desde recursos
-    if (!fs.existsSync(dbPath)) {
-      const resourceDbPath = path.join(process.resourcesPath, 'database.sqlite');
-
-      // Si existe en resources, copiar
-      if (fs.existsSync(resourceDbPath)) {
-        console.log(`📋 Copiando base de datos desde: ${resourceDbPath}`);
-        fs.copyFileSync(resourceDbPath, dbPath);
-        console.log(`✅ Base de datos copiada a: ${dbPath}`);
-      } else {
-        // Si no existe, crear una nueva
-        console.log(`📋 Creando nueva base de datos en: ${dbPath}`);
-      }
-    }
+    this.supabase = supabase;
+    this.connected = false;
   }
 
   async connect() {
-    const dbPath = this.getDatabasePath();
+    console.log('🔄 Conectando a Supabase...');
+    console.log('🔄 Entorno:', process.env.NODE_ENV || 'development');
 
-    // Asegurar que el directorio existe
-    const dbDir = path.dirname(dbPath);
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    try {
+      // Verificar la conexión
+      const isConnected = await verificarConexion();
+
+      if (isConnected) {
+        this.connected = true;
+        console.log('✅ Conectado a Supabase exitosamente');
+        await this.verificarEsquema();
+        return this.supabase;
+      } else {
+        throw new Error('No se pudo establecer conexión con Supabase');
+      }
+    } catch (error) {
+      console.error('❌ Error al conectar a Supabase:', error.message);
+      throw error;
     }
-
-    // Asegurar que la base de datos existe
-    await this.ensureDatabaseExists(dbPath);
-
-    console.log(`🔄 Intentando conectar a base de datos en: ${dbPath}`);
-    console.log(`🔄 Entorno: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔄 Existe archivo: ${fs.existsSync(dbPath)}`);
-
-    return new Promise((resolve, reject) => {
-      this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
-        if (err) {
-          console.error("❌ Error al conectar BD:", err.message);
-          return reject(err);
-        }
-
-        this.configurePragmas();
-        console.log("✅ Conectado a SQLite en", dbPath);
-
-        // Verificar que la base de datos tiene las tablas correctas
-        this.verificarEsquema();
-
-        resolve(this.db);
-      });
-    });
-  }
-
-  configurePragmas() {
-    this.db.run("PRAGMA foreign_keys = ON;");
-    this.db.run("PRAGMA journal_mode = WAL;");
-    this.db.run("PRAGMA synchronous = NORMAL;");
   }
 
   getDatabase() {
-    return this.db;
+    return this.supabase;
   }
 
-  verificarEsquema() {
-    console.log("🔍 Verificando esquema de base de datos...");
+  async verificarEsquema() {
+    console.log('🔍 Verificando esquema de base de datos...');
 
-    // Usar promesa para verificación más segura
-    const verificarTablas = new Promise((resolve, reject) => {
-      this.db.all("SELECT name FROM sqlite_master WHERE type='table'", [], (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+    try {
+      const tablasEsperadas = [
+        'registros',
+        'personas',
+        'expedientes',
+        'estados',
+        'usuarios',
+        'proyectos_registros',
+        'documentos_persona',
+        'auditoria'
+      ];
 
-    verificarTablas
-      .then(rows => {
-        const tablas = rows.map(row => row.name);
-        console.log("📋 Tablas encontradas:", tablas);
+      // Verificar cada tabla
+      const verificaciones = await Promise.all(
+        tablasEsperadas.map(async (tabla) => {
+          const { count, error } = await this.supabase
+            .from(tabla)
+            .select('*', { count: 'exact', head: true });
 
-        const tablasEsperadas = ['registros', 'personas', 'expedientes', 'estados', 'usuarios'];
-        const faltantes = tablasEsperadas.filter(tabla => !tablas.includes(tabla));
+          return {
+            tabla,
+            existe: !error,
+            error: error?.message
+          };
+        })
+      );
 
-        if (faltantes.length > 0) {
-          console.warn("⚠️ Tablas faltantes:", faltantes);
-        } else {
-          console.log("✅ Todas las tablas principales encontradas");
-        }
-      })
-      .catch(err => {
-        console.error("❌ Error verificando esquema:", err.message);
-      });
-  }
+      const tablasExistentes = verificaciones.filter(v => v.existe).map(v => v.tabla);
+      const tablasFaltantes = verificaciones.filter(v => !v.existe);
 
-  close() {
-    if (this.db) {
-      this.db.close((err) => {
-        if (err) {
-          console.error("Error al cerrar la base de datos:", err.message);
-        } else {
-          console.log("Conexión a la base de datos cerrada.");
-        }
-      });
+      console.log('📋 Tablas encontradas:', tablasExistentes);
+
+      if (tablasFaltantes.length > 0) {
+        console.warn('⚠️ Tablas faltantes o con errores:');
+        tablasFaltantes.forEach(t => {
+          console.warn(`   - ${t.tabla}: ${t.error}`);
+        });
+      } else {
+        console.log('✅ Todas las tablas principales encontradas');
+      }
+
+      return {
+        existentes: tablasExistentes,
+        faltantes: tablasFaltantes.map(t => t.tabla)
+      };
+    } catch (error) {
+      console.error('❌ Error verificando esquema:', error.message);
+      return {
+        existentes: [],
+        faltantes: []
+      };
     }
   }
 
+  close() {
+    // Supabase maneja las conexiones automáticamente
+    console.log('ℹ️ Supabase maneja las conexiones automáticamente');
+    this.connected = false;
+  }
+
   // Método utilitario para transacciones
+  // Nota: Supabase no soporta transacciones directamente desde el cliente
+  // Para transacciones complejas, se debe usar PostgreSQL Functions o RPC
   async runTransaction(operations) {
-    return new Promise((resolve, reject) => {
-      this.db.serialize(() => {
-        this.db.run("BEGIN TRANSACTION");
-        
-        Promise.all(operations)
-          .then(results => {
-            this.db.run("COMMIT", (err) => {
-              if (err) {
-                this.db.run("ROLLBACK");
-                return reject(err);
-              }
-              resolve(results);
-            });
-          })
-          .catch(error => {
-            this.db.run("ROLLBACK");
-            reject(error);
-          });
-      });
-    });
+    console.warn('⚠️ Las transacciones en Supabase requieren PostgreSQL Functions');
+    console.warn('Ejecutando operaciones secuencialmente sin transacción...');
+
+    try {
+      const results = [];
+      for (const operation of operations) {
+        const result = await operation;
+        results.push(result);
+      }
+      return results;
+    } catch (error) {
+      console.error('❌ Error en operaciones:', error);
+      throw error;
+    }
+  }
+
+  // Nuevo método helper para ejecutar RPC (Remote Procedure Call)
+  async executeRPC(functionName, params = {}) {
+    try {
+      const { data, error } = await this.supabase
+        .rpc(functionName, params);
+
+      if (error) {
+        console.error(`❌ Error ejecutando RPC ${functionName}:`, error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`❌ Error en RPC ${functionName}:`, error);
+      throw error;
+    }
   }
 }
 
