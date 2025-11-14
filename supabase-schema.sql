@@ -11,19 +11,21 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ================================================
 CREATE TABLE IF NOT EXISTS usuarios (
   id BIGSERIAL PRIMARY KEY,
+  auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   nombre TEXT NOT NULL,
   nombre_usuario TEXT,
   email TEXT UNIQUE,
-  password_hash TEXT NOT NULL,
   rol TEXT CHECK(rol IN ('administrador', 'trabajador')) DEFAULT 'trabajador',
   activo BOOLEAN DEFAULT true,
   fecha_creacion TIMESTAMPTZ DEFAULT NOW(),
   ultimo_acceso TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(auth_id)
 );
 
 -- Índices para usuarios
+CREATE INDEX IF NOT EXISTS idx_usuarios_auth_id ON usuarios(auth_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
 CREATE INDEX IF NOT EXISTS idx_usuarios_nombre_usuario ON usuarios(nombre_usuario);
 CREATE INDEX IF NOT EXISTS idx_usuarios_rol ON usuarios(rol);
@@ -222,6 +224,49 @@ CREATE TRIGGER update_documentos_updated_at
   BEFORE UPDATE ON documentos_persona
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- ================================================
+-- SINCRONIZACIÓN CON SUPABASE AUTH
+-- ================================================
+
+-- Función para crear usuario en tabla usuarios cuando se registra en auth.users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.usuarios (auth_id, nombre, email, nombre_usuario, rol, activo)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'nombre', NEW.email),
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'nombre_usuario', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'rol', 'trabajador'),
+    true
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger para sincronizar nuevos usuarios
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- Función para obtener el usuario actual desde auth.uid()
+CREATE OR REPLACE FUNCTION public.get_current_user_id()
+RETURNS BIGINT AS $$
+  SELECT id FROM public.usuarios WHERE auth_id = auth.uid();
+$$ LANGUAGE SQL STABLE SECURITY DEFINER;
+
+-- Función para verificar si el usuario es administrador
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuarios
+    WHERE auth_id = auth.uid() AND rol = 'administrador' AND activo = true
+  );
+$$ LANGUAGE SQL STABLE SECURITY DEFINER;
 
 -- ================================================
 -- ROW LEVEL SECURITY (RLS)
