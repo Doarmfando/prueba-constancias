@@ -7,10 +7,10 @@ class AuthController extends BaseController {
     this.auditoriaModel = auditoriaModel;
   }
 
-  // Iniciar sesión
-  async login(nombre_usuario, password) {
+  // Iniciar sesión con Supabase Auth
+  async login(email, password) {
     try {
-      const usuario = await this.usuarioModel.autenticar(nombre_usuario, password);
+      const usuario = await this.usuarioModel.autenticar(email, password);
 
       // Registrar acceso en auditoría
       await this.auditoriaModel.registrarAcceso(usuario.id);
@@ -21,8 +21,9 @@ class AuthController extends BaseController {
           id: usuario.id,
           nombre: usuario.nombre,
           nombre_usuario: usuario.nombre_usuario,
-          email: usuario.email || usuario.nombre_usuario,
-          rol: usuario.rol
+          email: usuario.email,
+          rol: usuario.rol,
+          auth_id: usuario.auth_id
         }
       };
     } catch (error) {
@@ -125,8 +126,8 @@ class AuthController extends BaseController {
     }
   }
 
-  // Cambiar contraseña
-  async cambiarPassword(id, passwordAnterior, passwordNuevo, usuarioActual) {
+  // Cambiar contraseña con Supabase Auth
+  async cambiarPassword(id, passwordNuevo, usuarioActual) {
     try {
       // Solo admin puede cambiar passwords de otros, o el usuario puede cambiar la suya
       const puedeCambiar = usuarioActual.rol === 'administrador' || usuarioActual.id === parseInt(id);
@@ -135,18 +136,8 @@ class AuthController extends BaseController {
         throw new Error('No tienes permisos para cambiar esta contraseña');
       }
 
-      // Si es admin cambiando password de otro, no requiere password anterior
-      if (usuarioActual.rol === 'administrador' && usuarioActual.id !== parseInt(id)) {
-        // Admin cambiando password de otro usuario
-        const nuevoHash = this.usuarioModel.hashPassword(passwordNuevo);
-        await this.usuarioModel.ejecutar(
-          'UPDATE usuarios SET password_hash = ? WHERE id = ?',
-          [nuevoHash, id]
-        );
-      } else {
-        // Usuario cambiando su propia password
-        await this.usuarioModel.cambiarPassword(id, passwordAnterior, passwordNuevo);
-      }
+      // Cambiar password usando Supabase Auth (funciona tanto para admin como para el mismo usuario)
+      await this.usuarioModel.cambiarPassword(id, passwordNuevo);
 
       // Registrar acción en auditoría
       await this.auditoriaModel.registrarEdicion(
