@@ -19,10 +19,8 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 try {
-  ReactDOM.render(
-    <App />,
-    document.getElementById('root')
-  );
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App />);
   console.log('✅ React montado correctamente');
 } catch (error) {
   console.error('❌ Error al montar React:', error);
