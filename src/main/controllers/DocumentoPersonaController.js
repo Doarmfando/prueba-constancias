@@ -308,17 +308,7 @@ class DocumentoPersonaController extends BaseController {
   // Obtener todas las personas con contador de documentos
   async obtenerPersonasConDocumentos() {
     try {
-      const query = `
-        SELECT
-          p.*,
-          COUNT(d.id) as total_documentos
-        FROM personas p
-        LEFT JOIN documentos_persona d ON p.id = d.persona_id
-        GROUP BY p.id
-        ORDER BY p.nombre ASC
-      `;
-
-      const personas = await this.personaModel.executeQuery(query);
+      const personas = await this.personaModel.obtenerConDocumentos();
 
       return {
         success: true,
@@ -333,21 +323,7 @@ class DocumentoPersonaController extends BaseController {
   // Buscar personas por DNI o nombre
   async buscarPersonas(termino) {
     try {
-      const query = `
-        SELECT
-          p.*,
-          COUNT(d.id) as total_documentos,
-          COUNT(r.id) as total_registros
-        FROM personas p
-        LEFT JOIN documentos_persona d ON p.id = d.persona_id
-        LEFT JOIN registros r ON p.id = r.persona_id AND r.eliminado = 0
-        WHERE p.dni LIKE ? OR p.nombre LIKE ?
-        GROUP BY p.id
-        ORDER BY p.nombre ASC
-      `;
-
-      const pattern = `%${termino}%`;
-      const personas = await this.personaModel.executeQuery(query, [pattern, pattern]);
+      const personas = await this.personaModel.buscar(termino);
 
       return {
         success: true,

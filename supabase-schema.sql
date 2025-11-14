@@ -279,18 +279,13 @@ CREATE POLICY "Permitir acceso completo a auditoría" ON auditoria
 -- DATOS INICIALES
 -- ================================================
 
--- Insertar estados REALES del sistema (si no existen)
+-- Insertar estados por defecto (si no existen)
 INSERT INTO estados (nombre) VALUES
   ('Recibido'),
   ('En Caja'),
   ('Entregado'),
   ('Tesoreria')
 ON CONFLICT (nombre) DO NOTHING;
-
--- Insertar proyecto base del sistema (si no existe)
-INSERT INTO proyectos_registros (id, nombre, descripcion, usuario_creador_id, es_publico, permite_edicion, activo)
-VALUES (1, 'Sistema de Constancias', 'Proyecto base del sistema', 1, true, true, true)
-ON CONFLICT (id) DO NOTHING;
 
 -- ================================================
 -- COMENTARIOS EN TABLAS
