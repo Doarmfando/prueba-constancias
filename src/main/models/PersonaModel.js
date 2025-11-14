@@ -2,75 +2,80 @@
 const BaseModel = require('./BaseModel');
 
 class PersonaModel extends BaseModel {
+  constructor(supabaseClient) {
+    super(supabaseClient, 'personas');
+  }
+
   // Crear nueva persona
   async crear(nombre, dni, numero) {
-    return this.executeRun(
-      "INSERT INTO personas (nombre, dni, numero) VALUES (?, ?, ?)",
-      [nombre, dni, numero]
-    );
+    const persona = await this.create({ nombre, dni, numero });
+    return { lastID: persona.id };
   }
 
   // Buscar persona por DNI
   async buscarPorDni(dni) {
-    return this.executeGet(
-      "SELECT * FROM personas WHERE dni = ?",
-      [dni]
-    );
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select('*')
+      .eq('dni', dni)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
   }
 
   // Buscar persona por ID
   async buscarPorId(id) {
-    return this.executeGet(
-      "SELECT * FROM personas WHERE id = ?",
-      [id]
-    );
+    return await this.getById(id);
   }
 
   // Actualizar datos de persona
   async actualizar(id, datos) {
     const { nombre, numero, dni } = datos;
-    return this.executeRun(
-      "UPDATE personas SET nombre = ?, numero = ?, dni = ? WHERE id = ?",
-      [nombre, numero, dni, id]
-    );
+    await this.update(id, { nombre, numero, dni });
+    return { changes: 1 };
   }
 
   // Obtener todas las personas
   async obtenerTodas() {
-    return this.executeQuery(
-      "SELECT * FROM personas ORDER BY nombre ASC"
-    );
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select('*')
+      .order('nombre', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
   }
 
   // Verificar si DNI ya existe
   async dniExiste(dni, excludeId = null) {
-    let query = "SELECT id FROM personas WHERE dni = ?";
-    let params = [dni];
+    let query = this.db
+      .from(this.tableName)
+      .select('id')
+      .eq('dni', dni);
 
     if (excludeId) {
-      query += " AND id != ?";
-      params.push(excludeId);
+      query = query.neq('id', excludeId);
     }
 
-    const result = await this.executeGet(query, params);
-    return !!result;
+    const { data, error } = await query.single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return !!data;
   }
 
   // Eliminar persona (solo si no tiene registros)
   async eliminar(id) {
     // Verificar si tiene registros asociados
-    const tieneRegistros = await this.contar("registros", "persona_id = ?", [id]);
-    
+    const tieneRegistros = await this.contar({ persona_id: id });
+
     if (tieneRegistros > 0) {
       throw new Error("No se puede eliminar la persona porque tiene registros asociados");
     }
 
-    const result = await this.executeRun(
-      "DELETE FROM personas WHERE id = ?",
-      [id]
-    );
+    const { error } = await this.delete(id);
 
-    if (result.changes === 0) {
+    if (error) {
       throw new Error("Persona no encontrada");
     }
 
@@ -79,69 +84,83 @@ class PersonaModel extends BaseModel {
 
   // Buscar personas por nombre (búsqueda parcial)
   async buscarPorNombre(nombre) {
-    return this.executeQuery(
-      "SELECT * FROM personas WHERE nombre LIKE ? ORDER BY nombre ASC",
-      [`%${nombre}%`]
-    );
+    return await this.search('nombre', nombre, '*');
   }
 
   // Obtener estadísticas de personas
   async obtenerEstadisticas() {
-    const total = await this.contar("personas");
-    const conRegistros = await this.executeGet(`
-      SELECT COUNT(DISTINCT persona_id) as total
-      FROM registros
-      WHERE eliminado = 0
-    `);
+    const total = await this.contar();
+
+    const { data: registros, error } = await this.db
+      .from('registros')
+      .select('persona_id')
+      .eq('eliminado', false);
+
+    if (error) throw error;
+
+    const personasUnicas = new Set(registros.map(r => r.persona_id));
+    const conRegistros = personasUnicas.size;
 
     return {
       total,
-      conRegistros: conRegistros.total,
-      sinRegistros: total - conRegistros.total
+      conRegistros,
+      sinRegistros: total - conRegistros
     };
   }
 
   // Verificar si tiene registros asociados
   async tieneRegistros(personaId) {
-    const count = await this.contar("registros", "persona_id = ?", [personaId]);
+    const count = await this.contar({ persona_id: personaId });
     return count > 0;
   }
 
   // Obtener personas con conteo de documentos y registros
   async obtenerConDocumentos() {
-    return this.executeQuery(`
-      SELECT
-        p.id,
-        p.nombre,
-        p.dni,
-        p.numero,
-        COUNT(DISTINCT r.id) as total_registros,
-        COUNT(DISTINCT d.id) as total_documentos
-      FROM personas p
-      LEFT JOIN registros r ON p.id = r.persona_id AND r.eliminado = 0
-      LEFT JOIN documentos_persona d ON p.id = d.persona_id
-      GROUP BY p.id, p.nombre, p.dni, p.numero
-      ORDER BY p.nombre ASC
-    `);
+    // Nota: Supabase no soporta GROUP BY directamente en el cliente
+    // Usaremos una aproximación alternativa
+    const { data: personas, error: errorPersonas } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        registros(count),
+        documentos_persona(count)
+      `)
+      .order('nombre', { ascending: true });
+
+    if (errorPersonas) throw errorPersonas;
+
+    return (personas || []).map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      dni: p.dni,
+      numero: p.numero,
+      total_registros: p.registros?.[0]?.count || 0,
+      total_documentos: p.documentos_persona?.[0]?.count || 0
+    }));
   }
 
   // Buscar personas por término (DNI o nombre)
   async buscar(termino) {
-    return this.executeQuery(`
-      SELECT
-        p.id,
-        p.nombre,
-        p.dni,
-        p.numero,
-        COUNT(DISTINCT r.id) as total_registros,
-        COUNT(DISTINCT d.id) as total_documentos
-      FROM personas p
-      LEFT JOIN registros r ON p.id = r.persona_id AND r.eliminado = 0
-      LEFT JOIN documentos_persona d ON p.id = d.persona_id
-      WHERE p.dni LIKE ? OR p.nombre LIKE ?
-      GROUP BY p.id, p.nombre, p.dni, p.numero
-      ORDER BY p.nombre ASC
-    `, [`%${termino}%`, `%${termino}%`]);
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        registros!inner(count),
+        documentos_persona(count)
+      `)
+      .or(`dni.ilike.%${termino}%,nombre.ilike.%${termino}%`)
+      .order('nombre', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      dni: p.dni,
+      numero: p.numero,
+      total_registros: p.registros?.[0]?.count || 0,
+      total_documentos: p.documentos_persona?.[0]?.count || 0
+    }));
   }
 }
 

@@ -2,8 +2,8 @@ const BaseModel = require('./BaseModel');
 const crypto = require('crypto');
 
 class UsuarioModel extends BaseModel {
-  constructor(db) {
-    super(db);
+  constructor(supabaseClient) {
+    super(supabaseClient, 'usuarios');
   }
 
   // Crear hash de password
@@ -18,19 +18,23 @@ class UsuarioModel extends BaseModel {
 
   // Crear nuevo usuario
   async crear(datos) {
-    const { nombre, nombre_usuario, password, rol = 'trabajador' } = datos;
+    const { nombre, nombre_usuario, email, password, rol = 'trabajador' } = datos;
     const passwordHash = this.hashPassword(password);
 
-    const sql = `
-      INSERT INTO usuarios (nombre, nombre_usuario, password_hash, rol)
-      VALUES (?, ?, ?, ?)
-    `;
-
     try {
-      const result = await this.executeRun(sql, [nombre, nombre_usuario, passwordHash, rol]);
-      return result.lastID;
+      const nuevoUsuario = {
+        nombre,
+        nombre_usuario,
+        email,
+        password_hash: passwordHash,
+        rol,
+        activo: true
+      };
+
+      const usuario = await this.create(nuevoUsuario);
+      return usuario.id;
     } catch (error) {
-      if (error.message.includes('UNIQUE constraint failed')) {
+      if (error.code === '23505') {
         throw new Error('El nombre de usuario ya está en uso');
       }
       throw error;
@@ -39,79 +43,79 @@ class UsuarioModel extends BaseModel {
 
   // Autenticar usuario
   async autenticar(nombre_usuario, password) {
-    const sql = `
-      SELECT id, nombre, nombre_usuario, email, rol, activo
-      FROM usuarios
-      WHERE nombre_usuario = ? AND activo = 1
-    `;
+    try {
+      // Buscar usuario activo por nombre_usuario
+      const { data: usuarios, error } = await this.db
+        .from(this.tableName)
+        .select('*')
+        .eq('nombre_usuario', nombre_usuario)
+        .eq('activo', true)
+        .limit(1);
 
-    const usuario = await this.executeGet(sql, [nombre_usuario]);
+      if (error) throw error;
 
-    if (!usuario) {
-      throw new Error('Usuario no encontrado');
+      if (!usuarios || usuarios.length === 0) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      const usuario = usuarios[0];
+
+      // Verificar password
+      if (!this.verificarPassword(password, usuario.password_hash)) {
+        throw new Error('Contraseña incorrecta');
+      }
+
+      // Actualizar último acceso
+      await this.db
+        .from(this.tableName)
+        .update({ ultimo_acceso: new Date().toISOString() })
+        .eq('id', usuario.id);
+
+      // Retornar usuario sin password_hash
+      const { password_hash, ...usuarioSinPassword } = usuario;
+      return usuarioSinPassword;
+    } catch (error) {
+      throw error;
     }
-
-    const sqlPassword = `SELECT password_hash FROM usuarios WHERE id = ?`;
-    const result = await this.executeGet(sqlPassword, [usuario.id]);
-
-    if (!this.verificarPassword(password, result.password_hash)) {
-      throw new Error('Contraseña incorrecta');
-    }
-
-    // Actualizar último acceso
-    await this.executeRun(
-      `UPDATE usuarios SET ultimo_acceso = datetime('now') WHERE id = ?`,
-      [usuario.id]
-    );
-
-    return usuario;
   }
 
   // Obtener usuario por ID
   async obtenerPorId(id) {
-    const sql = `
-      SELECT id, nombre, nombre_usuario, email, rol, activo, fecha_creacion, ultimo_acceso
-      FROM usuarios
-      WHERE id = ?
-    `;
-    return await this.executeGet(sql, [id]);
+    const columnas = 'id, nombre, nombre_usuario, email, rol, activo, fecha_creacion, ultimo_acceso';
+    return await this.getById(id, columnas);
   }
 
   // Listar todos los usuarios (solo admin)
   async listarTodos() {
-    const sql = `
-      SELECT id, nombre, nombre_usuario, email, rol, activo, fecha_creacion, ultimo_acceso
-      FROM usuarios
-      ORDER BY fecha_creacion DESC
-    `;
-    return await this.executeQuery(sql);
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select('id, nombre, nombre_usuario, email, rol, activo, fecha_creacion, ultimo_acceso')
+      .order('fecha_creacion', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 
   // Actualizar usuario
   async actualizar(id, datos) {
     const camposPermitidos = ['nombre', 'nombre_usuario', 'email', 'rol', 'activo'];
-    const campos = [];
-    const valores = [];
+    const datosActualizar = {};
 
     for (const [key, value] of Object.entries(datos)) {
       if (camposPermitidos.includes(key)) {
-        campos.push(`${key} = ?`);
-        valores.push(value);
+        datosActualizar[key] = value;
       }
     }
 
-    if (campos.length === 0) {
+    if (Object.keys(datosActualizar).length === 0) {
       throw new Error('No hay campos válidos para actualizar');
     }
 
-    valores.push(id);
-    const sql = `UPDATE usuarios SET ${campos.join(', ')} WHERE id = ?`;
-
     try {
-      await this.executeRun(sql, valores);
+      await this.update(id, datosActualizar);
       return await this.obtenerPorId(id);
     } catch (error) {
-      if (error.message.includes('UNIQUE constraint failed')) {
+      if (error.code === '23505') {
         throw new Error('El nombre de usuario ya está en uso');
       }
       throw error;
@@ -120,46 +124,48 @@ class UsuarioModel extends BaseModel {
 
   // Cambiar contraseña
   async cambiarPassword(id, passwordAnterior, passwordNuevo) {
-    const sqlPassword = `SELECT password_hash FROM usuarios WHERE id = ?`;
-    const result = await this.executeGet(sqlPassword, [id]);
+    const { data: usuario, error } = await this.db
+      .from(this.tableName)
+      .select('password_hash')
+      .eq('id', id)
+      .single();
 
-    if (!result) {
+    if (error || !usuario) {
       throw new Error('Usuario no encontrado');
     }
 
-    if (!this.verificarPassword(passwordAnterior, result.password_hash)) {
+    if (!this.verificarPassword(passwordAnterior, usuario.password_hash)) {
       throw new Error('Contraseña anterior incorrecta');
     }
 
     const nuevoHash = this.hashPassword(passwordNuevo);
-    await this.executeRun(
-      `UPDATE usuarios SET password_hash = ? WHERE id = ?`,
-      [nuevoHash, id]
-    );
+    await this.update(id, { password_hash: nuevoHash });
 
     return true;
   }
 
   // Desactivar usuario (eliminación lógica)
   async desactivar(id) {
-    await this.executeRun(
-      `UPDATE usuarios SET activo = 0 WHERE id = ?`,
-      [id]
-    );
+    await this.update(id, { activo: false });
     return true;
   }
 
   // Obtener estadísticas de usuarios
   async obtenerEstadisticas() {
-    const sql = `
-      SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN activo = 1 THEN 1 ELSE 0 END) as activos,
-        SUM(CASE WHEN rol = 'administrador' THEN 1 ELSE 0 END) as administradores,
-        SUM(CASE WHEN rol = 'trabajador' THEN 1 ELSE 0 END) as trabajadores
-      FROM usuarios
-    `;
-    return await this.executeGet(sql);
+    const { data: usuarios, error } = await this.db
+      .from(this.tableName)
+      .select('rol, activo');
+
+    if (error) throw error;
+
+    const stats = {
+      total: usuarios.length,
+      activos: usuarios.filter(u => u.activo).length,
+      administradores: usuarios.filter(u => u.rol === 'administrador').length,
+      trabajadores: usuarios.filter(u => u.rol === 'trabajador').length
+    };
+
+    return stats;
   }
 }
 
