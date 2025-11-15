@@ -72,6 +72,13 @@ function ProyectoDetalle() {
   const navigate = useNavigate();
   const usuario = getUsuarioActual();
 
+  // Helper para convertir fechas ISO a formato yyyy-MM-dd
+  const convertirFechaISO = (fecha) => {
+    if (!fecha || fecha === '---') return '';
+    // Extraer solo la parte de fecha (primeros 10 caracteres)
+    return fecha.split('T')[0];
+  };
+
   // Si no hay usuario, mostrar loading (se redirigirÃ¡ al login)
   if (!usuario) {
     return (
@@ -274,12 +281,44 @@ function ProyectoDetalle() {
     return (
       usuario.rol === 'administrador' ||
       proyecto.usuario_creador_id === usuario.id ||
-      proyecto.es_publico === true  // Proyectos públicos: todos pueden editar
+      (proyecto.es_publico === true && (proyecto.permite_edicion === true || proyecto.permite_edicion === 1))
     );
   };
 
   const puedeEliminar = () => {
     return puedeEditar();
+  };
+
+  const cambiarEstadoRegistro = async (registroId, nuevoEstadoId) => {
+    try {
+      const response = await window.electronAPI?.registros.cambiarEstado(
+        registroId,
+        parseInt(nuevoEstadoId, 10),
+        usuario
+      );
+
+      if (response?.success) {
+        // Actualizar el estado del registro en la lista local
+        setRegistros(prev => prev.map(r => {
+          if (r.id === registroId) {
+            const estadosMap = {
+              1: 'Recibido',
+              2: 'En Caja',
+              3: 'Entregado',
+              4: 'Tesoreria'
+            };
+            return { ...r, estado: estadosMap[nuevoEstadoId], estado_id: nuevoEstadoId };
+          }
+          return r;
+        }));
+        mostrarExito('Estado actualizado correctamente');
+      } else {
+        mostrarError('Error al cambiar estado', response?.error || 'Error de conexión');
+      }
+    } catch (error) {
+      console.error('Error al cambiar estado:', error);
+      mostrarError('Error al cambiar estado', 'Error de conexión');
+    }
   };
 
   const registrosFiltrados = registros.filter(registro =>
@@ -663,16 +702,34 @@ function ProyectoDetalle() {
                             {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              registro.estado === 'Vigente' ? 'bg-green-100 text-green-800' :
-                              registro.estado === 'En Proceso' ? 'bg-yellow-100 text-yellow-800' :
-                              registro.estado === 'Recibido' ? 'bg-blue-100 text-blue-800' :
-                              registro.estado === 'En Caja' ? 'bg-purple-100 text-purple-800' :
-                              registro.estado === 'Entregado' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {registro.estado || '---'}
-                            </span>
+                            {puedeEditar() ? (
+                              <select
+                                value={registro.estado_id || 1}
+                                onChange={(e) => cambiarEstadoRegistro(registro.id, e.target.value)}
+                                className={`px-2 py-1 text-xs rounded border cursor-pointer ${
+                                  registro.estado === 'Recibido' ? 'bg-blue-50 text-blue-800 border-blue-300' :
+                                  registro.estado === 'En Caja' ? 'bg-purple-50 text-purple-800 border-purple-300' :
+                                  registro.estado === 'Entregado' ? 'bg-green-50 text-green-800 border-green-300' :
+                                  registro.estado === 'Tesoreria' ? 'bg-yellow-50 text-yellow-800 border-yellow-300' :
+                                  'bg-gray-50 text-gray-800 border-gray-300'
+                                }`}
+                              >
+                                <option value={1}>Recibido</option>
+                                <option value={2}>En Caja</option>
+                                <option value={3}>Entregado</option>
+                                <option value={4}>Tesorería</option>
+                              </select>
+                            ) : (
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                registro.estado === 'Recibido' ? 'bg-blue-100 text-blue-800' :
+                                registro.estado === 'En Caja' ? 'bg-purple-100 text-purple-800' :
+                                registro.estado === 'Entregado' ? 'bg-green-100 text-green-800' :
+                                registro.estado === 'Tesoreria' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {registro.estado || '---'}
+                              </span>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {registro.estado === 'Recibido'
@@ -1147,9 +1204,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
         dni: registro.dni || '',
         numero: registro.numero || '',
         expediente_codigo: registro.expediente || '',
-        fecha_solicitud: (registro.fecha_registro && registro.fecha_registro !== '---') ? registro.fecha_registro : '',
+        fecha_solicitud: convertirFechaISO(registro.fecha_registro),
         Observación: registro.Observación || '',
-        fecha_entrega: (registro.fecha_en_caja && registro.fecha_en_caja !== '---') ? registro.fecha_en_caja : '',
+        fecha_entrega: convertirFechaISO(registro.fecha_en_caja),
         estado_id: estadosInversoMap[registro.estado] || 1,
         persona_id: registro.persona_id || null,
         expediente_id: registro.expediente_id || null

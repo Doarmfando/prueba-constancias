@@ -7,6 +7,7 @@ const allowedChannels = new Set([
   "obtener-registros-proyecto",
   "agregar-registro",
   "actualizar-registro",
+  "cambiar-estado-registro",
   "actualizar-informacion", // ← ✅ AGREGA ESTA LÍNEA
   "editar-registro",
   "mover-a-papelera",
@@ -100,6 +101,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     obtenerPorProyecto: (proyectoId) => ipcRenderer.invoke("obtener-registros-proyecto", proyectoId),
     agregar: (datos, usuario) => ipcRenderer.invoke("agregar-registro", { datos, usuario }),
     actualizar: (datos, usuario) => ipcRenderer.invoke("actualizar-registro", { datos, usuario }),
+    cambiarEstado: (id, estado_id, usuario) => ipcRenderer.invoke("cambiar-estado-registro", { datos: { id, estado_id }, usuario }),
     editar: (datos, usuario) => ipcRenderer.invoke("editar-registro", { datos, usuario }),
     moverAPapelera: (id, usuario) => ipcRenderer.invoke("mover-a-papelera", { id, usuario }),
     restaurar: (id, usuario) => ipcRenderer.invoke("restaurar-registro", { id, usuario }),

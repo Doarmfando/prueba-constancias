@@ -14,6 +14,7 @@ class RegistroIPCHandler extends BaseIPCHandler {
     this.handle("obtener-registros-proyecto", this.registroController, "obtenerRegistrosPorProyecto");
     this.handle("agregar-registro", this.registroController, "agregarRegistro");
     this.handle("actualizar-registro", this.registroController, "actualizarRegistro");
+    this.handle("cambiar-estado-registro", this.registroController, "cambiarEstado");
 
     // Operaciones de papelera
     this.handle("mover-a-papelera", this.registroController, "moverAPapelera");

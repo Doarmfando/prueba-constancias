@@ -3,6 +3,13 @@ import { FaSave, FaTimes, FaSearch, FaCheckCircle, FaExclamationTriangle } from 
 import { mostrarExito, mostrarError } from '../utils/alertas';
 
 function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEditar = null }) {
+  // Helper para convertir fechas ISO a formato yyyy-MM-dd
+  const convertirFechaISO = (fecha) => {
+    if (!fecha) return '';
+    // Extraer solo la parte de fecha (primeros 10 caracteres)
+    return fecha.split('T')[0];
+  };
+
   const [formData, setFormData] = useState({
     nombre: '',
     dni: '',
@@ -27,8 +34,8 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
         numero: registroEditar.numero || '',
         expediente: registroEditar.expediente || registroEditar.codigo || '',
         estado: registroEditar.estado || 'Recibido',
-        fecha_registro: registroEditar.fecha_registro || new Date().toISOString().split('T')[0],
-        fecha_en_caja: registroEditar.fecha_en_caja || ''
+        fecha_registro: convertirFechaISO(registroEditar.fecha_registro) || new Date().toISOString().split('T')[0],
+        fecha_en_caja: convertirFechaISO(registroEditar.fecha_en_caja) || ''
       });
     } else {
       // Limpiar formulario para nuevo registro

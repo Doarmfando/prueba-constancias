@@ -31,13 +31,23 @@ class RegistroController extends BaseController {
         throw new Error('Proyecto no encontrado');
       }
 
-      // Proyectos públicos: todos los usuarios pueden editar
+      // Normalizar usuario ID
+      const usuarioId = typeof usuario.id === 'string' ? parseInt(usuario.id, 10) : usuario.id;
+
+      // Proyectos públicos: verificar si permite edición
       if (proyecto.es_publico === true) {
-        return true;
+        // Si el proyecto permite edición, todos pueden editar
+        if (proyecto.permite_edicion === true || proyecto.permite_edicion === 1) {
+          return true;
+        }
+        // Si no permite edición, solo el creador puede editar
+        if (proyecto.usuario_creador_id === usuarioId) {
+          return true;
+        }
+        throw new Error('Este proyecto público es de solo lectura. Solo el creador puede editar.');
       }
 
-      // Proyectos privados: solo el creador o admin
-      const usuarioId = typeof usuario.id === 'string' ? parseInt(usuario.id, 10) : usuario.id;
+      // Proyectos privados: solo el creador
       if (proyecto.usuario_creador_id === usuarioId) {
         return true;
       }
@@ -185,6 +195,46 @@ class RegistroController extends BaseController {
       };
     } catch (error) {
       this.handleError(error, "Error actualizando registro");
+    }
+  }
+
+  // Cambiar solo el estado de un registro
+  async cambiarEstado(payload) {
+    try {
+      const { id, estado_id } = payload?.datos || payload;
+      const usuario = payload?.usuario || null;
+
+      this.validateRequired({ id, estado_id }, ['id', 'estado_id']);
+
+      // Validar que el estado_id sea válido (1-4)
+      const estadoIdNum = parseInt(estado_id, 10);
+      if (isNaN(estadoIdNum) || estadoIdNum < 1 || estadoIdNum > 4) {
+        throw new Error('Estado inválido. Debe ser entre 1 y 4');
+      }
+
+      // Obtener el registro para verificar permisos
+      const reg = await this.model.getById(id);
+      if (!reg) {
+        throw new Error('Registro no encontrado');
+      }
+
+      if (reg?.proyecto_id) {
+        await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+      }
+
+      // Actualizar solo el estado
+      const resultado = await this.model.actualizarEstado(id, estadoIdNum, usuario?.id);
+
+      return {
+        success: true,
+        message: 'Estado actualizado correctamente',
+        changes: resultado?.changes || 1
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 
