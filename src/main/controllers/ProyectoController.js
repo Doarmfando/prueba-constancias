@@ -68,18 +68,26 @@ class ProyectoController extends BaseController {
         throw new Error('No tienes permisos para ver proyectos privados de otros usuarios');
       }
 
-      // Obtener todos los proyectos privados que NO sean del usuario actual
-      const proyectos = await this.proyectoModel.executeQuery(
-        `SELECT
-          p.*,
-          u.nombre as nombre_creador,
-          (SELECT COUNT(*) FROM registros r WHERE r.proyecto_id = p.id AND r.eliminado = 0) as total_registros
-        FROM proyectos_registros p
-        LEFT JOIN usuarios u ON p.usuario_creador_id = u.id
-        WHERE p.es_publico = 0 AND p.usuario_creador_id != ? AND p.activo = 1
-        ORDER BY p.fecha_creacion DESC`,
-        [usuarioActual.id]
-      );
+      // Obtener todos los proyectos privados que NO sean del usuario actual usando query builder
+      const { data, error } = await this.proyectoModel.db
+        .from('proyectos_registros')
+        .select(`
+          *,
+          usuarios!usuario_creador_id (nombre),
+          registros!inner (count)
+        `)
+        .eq('es_publico', false)
+        .neq('usuario_creador_id', usuarioActual.id)
+        .eq('activo', true)
+        .order('fecha_creacion', { ascending: false });
+
+      if (error) throw error;
+
+      const proyectos = (data || []).map(p => ({
+        ...p,
+        nombre_creador: p.usuarios?.nombre,
+        total_registros: p.registros?.[0]?.count || 0
+      }));
 
       return {
         success: true,
@@ -142,9 +150,11 @@ class ProyectoController extends BaseController {
       }
 
       // Verificar permisos de acceso
-      const tieneAcceso = usuarioActual.rol === 'administrador' ||
-                          proyecto.usuario_creador_id === usuarioActual.id ||
-                          proyecto.es_publico === 1;
+      // - Proyectos públicos: cualquier trabajador o administrador
+      // - Proyectos privados: solo administradores o el creador
+      const tieneAcceso = proyecto.es_publico === true || // Proyecto público (cualquiera puede ver)
+                          usuarioActual.rol === 'administrador' || // Admin puede todo
+                          proyecto.usuario_creador_id === usuarioActual.id; // Creador puede ver su proyecto
 
       if (!tieneAcceso) {
         throw new Error('No tienes permisos para acceder a este proyecto');
@@ -205,10 +215,18 @@ class ProyectoController extends BaseController {
   // Hacer público un proyecto
   async hacerPublico(id, usuarioActual) {
     try {
-      const proyecto = await this.proyectoModel.hacerPublico(id, usuarioActual.id);
+      await this.proyectoModel.publicar(id, usuarioActual.id);
 
       // Registrar en auditoría
-      await this.auditoriaModel.registrarPublicacion(usuarioActual.id, id);
+      await this.auditoriaModel.registrarAccion({
+        usuario_id: usuarioActual.id,
+        accion: 'publicar',
+        tabla_afectada: 'proyectos_registros',
+        registro_id: id,
+        proyecto_id: id
+      });
+
+      const proyecto = await this.proyectoModel.obtenerPorId(id);
 
       return {
         success: true,
@@ -225,7 +243,7 @@ class ProyectoController extends BaseController {
   // Hacer privado un proyecto
   async hacerPrivado(id, usuarioActual) {
     try {
-      const proyecto = await this.proyectoModel.hacerPrivado(id, usuarioActual.id);
+      await this.proyectoModel.despublicar(id, usuarioActual.id);
 
       // Registrar en auditoría
       await this.auditoriaModel.registrarAccion({
@@ -235,6 +253,8 @@ class ProyectoController extends BaseController {
         registro_id: id,
         proyecto_id: id
       });
+
+      const proyecto = await this.proyectoModel.obtenerPorId(id);
 
       return {
         success: true,
@@ -291,7 +311,7 @@ class ProyectoController extends BaseController {
   // Verificar permisos de acceso
   async verificarAcceso(proyectoId, usuarioId, tipoAcceso = 'ver') {
     try {
-      const acceso = await this.proyectoModel.verificarAcceso(proyectoId, usuarioId, tipoAcceso);
+      const acceso = await this.proyectoModel.tieneAcceso(proyectoId, usuarioId);
 
       return {
         success: true,
@@ -365,9 +385,9 @@ class ProyectoController extends BaseController {
       }
 
       // Verificar permisos de acceso al proyecto original
-      const tieneAcceso = usuarioActual.rol === 'administrador' ||
-                          proyectoOriginal.usuario_creador_id === usuarioActual.id ||
-                          proyectoOriginal.es_publico === 1;
+      const tieneAcceso = proyectoOriginal.es_publico === true ||
+                          usuarioActual.rol === 'administrador' ||
+                          proyectoOriginal.usuario_creador_id === usuarioActual.id;
 
       if (!tieneAcceso) {
         throw new Error('No tienes permisos para duplicar este proyecto');
@@ -378,7 +398,7 @@ class ProyectoController extends BaseController {
         nombre: nuevoNombre || `${proyectoOriginal.nombre} (Copia)`,
         descripcion: proyectoOriginal.descripcion,
         usuario_creador_id: usuarioActual.id,
-        es_publico: 0, // Siempre crear como privado
+        es_publico: false, // Siempre crear como privado
         permite_edicion: proyectoOriginal.permite_edicion
       };
 
@@ -419,9 +439,9 @@ class ProyectoController extends BaseController {
       }
 
       // Verificar permisos de acceso
-      const tieneAcceso = usuarioActual.rol === 'administrador' ||
-                          proyecto.usuario_creador_id === usuarioActual.id ||
-                          proyecto.es_publico === 1;
+      const tieneAcceso = proyecto.es_publico === true ||
+                          usuarioActual.rol === 'administrador' ||
+                          proyecto.usuario_creador_id === usuarioActual.id;
 
       if (!tieneAcceso) {
         throw new Error('No tienes permisos para exportar este proyecto');
