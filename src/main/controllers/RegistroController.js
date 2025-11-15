@@ -72,10 +72,40 @@ class RegistroController extends BaseController {
       const usuario = payload?.usuario || null;
       const datosSanitizados = this.sanitizeInput(datos);
 
-      if (datosSanitizados?.proyecto_id) {
-        await this.verificarPermisoEdicion(datosSanitizados.proyecto_id, usuario);
+      console.log('🔍 RegistroController.agregarRegistro - Datos sanitizados:', JSON.stringify(datosSanitizados, null, 2));
+
+      // Mapear nombres del frontend a nombres del backend
+      const datosMapeados = {
+        proyecto_id: datosSanitizados.proyecto_id,
+        nombre: datosSanitizados.nombre,
+        dni: datosSanitizados.dni,
+        numero: datosSanitizados.numero,
+        expediente_codigo: datosSanitizados.expediente || datosSanitizados.expediente_codigo || '',
+        fecha_solicitud: datosSanitizados.fecha_registro || datosSanitizados.fecha_solicitud,
+        fecha_entrega: datosSanitizados.fecha_entrega,
+        observacion: datosSanitizados.Observación || datosSanitizados.observacion || '',
+        estado_id: datosSanitizados.estado_id, // Será buscado si viene como string
+        usuario_creador_id: datosSanitizados.usuario_creador_id,
+        fecha_en_caja: datosSanitizados.fecha_en_caja
+      };
+
+      // Si estado viene como string (nombre), buscar el ID
+      if (!datosMapeados.estado_id && datosSanitizados.estado) {
+        // Obtener EstadoModel a través del controller
+        const EstadoModel = require('../models/EstadoModel');
+        const estadoModel = new EstadoModel(this.model.db);
+        const estadoEncontrado = await estadoModel.buscarPorNombre(datosSanitizados.estado);
+        if (estadoEncontrado) {
+          datosMapeados.estado_id = estadoEncontrado.id;
+        }
       }
-      const resultado = await this.model.agregar(datosSanitizados);
+
+      console.log('🔍 Datos mapeados:', JSON.stringify(datosMapeados, null, 2));
+
+      if (datosMapeados?.proyecto_id) {
+        await this.verificarPermisoEdicion(datosMapeados.proyecto_id, usuario);
+      }
+      const resultado = await this.model.agregar(datosMapeados);
 
       // Crear una respuesta serializable
       const respuesta = {
