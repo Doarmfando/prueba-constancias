@@ -100,8 +100,6 @@ class RegistroController extends BaseController {
         }
       }
 
-      console.log('🔍 Datos mapeados:', JSON.stringify(datosMapeados, null, 2));
-
       if (datosMapeados?.proyecto_id) {
         await this.verificarPermisoEdicion(datosMapeados.proyecto_id, usuario);
       }
