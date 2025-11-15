@@ -254,6 +254,108 @@ class RegistroModel extends BaseModel {
       estado_id: r.estado_id
     }));
   }
+
+  // Obtener todos los registros activos (no eliminados)
+  async obtenerTodos(proyectoId = null) {
+    let query = this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        personas (id, nombre, dni, numero),
+        expedientes (id, codigo, fecha_solicitud, fecha_entrega, observacion),
+        estados (nombre),
+        proyectos_registros (nombre),
+        usuarios (nombre_usuario, nombre)
+      `)
+      .eq('eliminado', false)
+      .order('fecha_registro', { ascending: false });
+
+    // Filtrar por proyecto si se especifica
+    if (proyectoId) {
+      query = query.eq('proyecto_id', proyectoId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return (data || []).map(r => ({
+      id: r.id,
+      proyecto_id: r.proyecto_id,
+      persona_id: r.persona_id,
+      expediente_id: r.expediente_id,
+      estado_id: r.estado_id,
+      usuario_creador_id: r.usuario_creador_id,
+      fecha_registro: r.fecha_registro,
+      fecha_en_caja: r.fecha_en_caja,
+      eliminado: r.eliminado,
+      // Datos de relaciones
+      nombre: r.personas?.nombre,
+      dni: r.personas?.dni,
+      numero: r.personas?.numero,
+      expediente: r.expedientes?.codigo,
+      codigo: r.expedientes?.codigo,
+      fecha_solicitud: r.expedientes?.fecha_solicitud,
+      fecha_entrega: r.expedientes?.fecha_entrega,
+      observacion: r.expedientes?.observacion,
+      estado: r.estados?.nombre,
+      estado_nombre: r.estados?.nombre,
+      proyecto_nombre: r.proyectos_registros?.nombre,
+      usuario_nombre: r.usuarios?.nombre,
+      usuario_nombre_usuario: r.usuarios?.nombre_usuario
+    }));
+  }
+
+  // Obtener todos los registros eliminados
+  async obtenerEliminados(proyectoId = null) {
+    let query = this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        personas (id, nombre, dni, numero),
+        expedientes (id, codigo, fecha_solicitud, fecha_entrega, observacion),
+        estados (nombre),
+        proyectos_registros (nombre),
+        usuarios (nombre_usuario, nombre)
+      `)
+      .eq('eliminado', true)
+      .order('fecha_registro', { ascending: false });
+
+    // Filtrar por proyecto si se especifica
+    if (proyectoId) {
+      query = query.eq('proyecto_id', proyectoId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return (data || []).map(r => ({
+      id: r.id,
+      proyecto_id: r.proyecto_id,
+      persona_id: r.persona_id,
+      expediente_id: r.expediente_id,
+      estado_id: r.estado_id,
+      usuario_creador_id: r.usuario_creador_id,
+      fecha_registro: r.fecha_registro,
+      fecha_en_caja: r.fecha_en_caja,
+      eliminado: r.eliminado,
+      // Datos de relaciones
+      nombre: r.personas?.nombre,
+      dni: r.personas?.dni,
+      numero: r.personas?.numero,
+      expediente: r.expedientes?.codigo,
+      codigo: r.expedientes?.codigo,
+      fecha_solicitud: r.expedientes?.fecha_solicitud,
+      fecha_entrega: r.expedientes?.fecha_entrega,
+      observacion: r.expedientes?.observacion,
+      estado: r.estados?.nombre,
+      estado_nombre: r.estados?.nombre,
+      proyecto_nombre: r.proyectos_registros?.nombre,
+      usuario_nombre: r.usuarios?.nombre,
+      usuario_nombre_usuario: r.usuarios?.nombre_usuario
+    }));
+  }
 }
 
 module.exports = RegistroModel;
