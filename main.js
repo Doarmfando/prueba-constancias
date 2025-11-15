@@ -144,14 +144,18 @@ class Application {
   }
 
   initializeModels() {
-    // La mayoría de modelos usan el cliente USER
-    this.models.registro = new RegistroModel(this.dbUser);
-    this.models.persona = new PersonaModel(this.dbUser);
-    this.models.expediente = new ExpedienteModel(this.dbUser);
-    this.models.estado = new EstadoModel(this.dbUser);
+    // Modelos de datos básicos usan cliente ADMIN (no requieren autenticación)
+    // Esto permite operaciones de sistema sin restricciones RLS
+    this.models.registro = new RegistroModel(this.dbAdmin);
+    this.models.persona = new PersonaModel(this.dbAdmin);
+    this.models.expediente = new ExpedienteModel(this.dbAdmin);
+    this.models.estado = new EstadoModel(this.dbAdmin);
+    this.models.documentoPersona = new DocumentoPersonaModel(this.dbAdmin);
+
+    // Modelos que requieren control de permisos usan cliente USER
+    // Esto respeta las políticas RLS basadas en autenticación
     this.models.proyecto = new ProyectoModel(this.dbUser);
     this.models.auditoria = new AuditoriaModel(this.dbUser);
-    this.models.documentoPersona = new DocumentoPersonaModel(this.dbUser);
 
     // UsuarioModel usa cliente USER pero necesita referencia a ADMIN
     this.models.usuario = new UsuarioModel(this.dbUser);

@@ -3,6 +3,17 @@
 -- ================================================
 -- Esta configuración usa auth.uid() de Supabase Auth
 -- Los usuarios se autentican con Supabase y se vinculan a la tabla usuarios
+--
+-- IMPORTANTE:
+-- - Las políticas RLS solo se aplican al cliente USER (anon key)
+-- - El Service Role Key (admin) BYPASEA automáticamente todas las políticas RLS
+-- - Por lo tanto, operaciones con dbAdmin no requieren auth.uid()
+-- - Operaciones con dbUser SÍ requieren auth.uid()
+--
+-- NOTA SOBRE WITH CHECK:
+-- - USING: condición para SELECT, UPDATE, DELETE
+-- - WITH CHECK: condición para INSERT y UPDATE (valores nuevos)
+-- - Ambas son necesarias para operaciones de escritura
 
 -- Primero, eliminar las políticas actuales
 DROP POLICY IF EXISTS "Permitir acceso completo a usuarios" ON usuarios;
@@ -49,7 +60,8 @@ CREATE POLICY "usuarios_delete_policy" ON usuarios
 
 -- Personas (todos los usuarios autenticados pueden gestionar)
 CREATE POLICY "personas_all_policy" ON personas
-  FOR ALL USING (auth.uid() IS NOT NULL);
+  FOR ALL USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Estados (solo lectura para trabajadores, todo para administradores)
 CREATE POLICY "estados_select_policy" ON estados
@@ -65,7 +77,8 @@ CREATE POLICY "estados_modify_policy" ON estados
 
 -- Expedientes (todos pueden gestionar)
 CREATE POLICY "expedientes_all_policy" ON expedientes
-  FOR ALL USING (auth.uid() IS NOT NULL);
+  FOR ALL USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Proyectos (ver públicos o propios, editar solo propios o si es admin)
 CREATE POLICY "proyectos_select_policy" ON proyectos_registros
@@ -107,11 +120,13 @@ CREATE POLICY "proyectos_delete_policy" ON proyectos_registros
 
 -- Registros (todos pueden gestionar)
 CREATE POLICY "registros_all_policy" ON registros
-  FOR ALL USING (auth.uid() IS NOT NULL);
+  FOR ALL USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Documentos (todos pueden gestionar)
 CREATE POLICY "documentos_all_policy" ON documentos_persona
-  FOR ALL USING (auth.uid() IS NOT NULL);
+  FOR ALL USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Auditoría (solo lectura para todos, inserción automática)
 CREATE POLICY "auditoria_select_policy" ON auditoria
