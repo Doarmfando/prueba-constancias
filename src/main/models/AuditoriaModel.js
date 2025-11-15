@@ -92,6 +92,31 @@ class AuditoriaModel extends BaseModel {
     });
   }
 
+  // Contar total de registros con filtros
+  async contarTotal({ busqueda = null, usuario = null, accion = null }) {
+    let query = this.db
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true });
+
+    if (busqueda) {
+      query = query.or(`accion.ilike.%${busqueda}%,tabla_afectada.ilike.%${busqueda}%,detalles.ilike.%${busqueda}%`);
+    }
+
+    if (usuario) {
+      query = query.eq('usuario_id', usuario);
+    }
+
+    if (accion) {
+      query = query.eq('accion', accion);
+    }
+
+    const { count, error } = await query;
+
+    if (error) throw error;
+
+    return count || 0;
+  }
+
   // Obtener historial con filtros
   async obtenerHistorial({ limite = 100, offset = 0, busqueda = null, usuario = null, accion = null }) {
     let query = this.db
@@ -217,6 +242,64 @@ class AuditoriaModel extends BaseModel {
 
     if (error) throw error;
     return { success: true };
+  }
+
+  // Alias para compatibilidad con el controlador
+  async limpiarHistorialAntiguo(diasAntiguedad = 365) {
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() - diasAntiguedad);
+
+    // Contar registros a eliminar
+    const { count } = await this.db
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .lt('fecha', fechaLimite.toISOString());
+
+    const { error } = await this.db
+      .from(this.tableName)
+      .delete()
+      .lt('fecha', fechaLimite.toISOString());
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      registrosEliminados: count || 0
+    };
+  }
+
+  // Obtener historial completo sin paginación (para exportación)
+  async obtenerHistorialCompleto(filtros = {}) {
+    const { busqueda = null, usuario = null, accion = null } = filtros;
+
+    let query = this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre_usuario)
+      `)
+      .order('fecha', { ascending: false });
+
+    if (busqueda) {
+      query = query.or(`accion.ilike.%${busqueda}%,tabla_afectada.ilike.%${busqueda}%,detalles.ilike.%${busqueda}%`);
+    }
+
+    if (usuario) {
+      query = query.eq('usuario_id', usuario);
+    }
+
+    if (accion) {
+      query = query.eq('accion', accion);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return (data || []).map(a => ({
+      ...a,
+      nombre_usuario: a.usuarios?.nombre_usuario
+    }));
   }
 }
 
