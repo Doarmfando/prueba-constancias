@@ -86,3 +86,30 @@ export const mostrarCargando = (mensaje = 'Procesando...') => {
 export const cerrarCargando = () => {
   Swal.close();
 };
+
+/**
+ * Formatea una fecha en formato yyyy-MM-dd a dd/MM/yyyy
+ * sin problemas de zona horaria
+ * @param {string} fechaStr - Fecha en formato yyyy-MM-dd
+ * @returns {string} Fecha formateada en dd/MM/yyyy o '---' si no hay fecha
+ */
+export const formatearFecha = (fechaStr) => {
+  if (!fechaStr || fechaStr === 'No entregado' || fechaStr === '---') {
+    return '---';
+  }
+
+  // Si viene en formato yyyy-MM-dd, convertir directamente sin Date
+  if (typeof fechaStr === 'string' && fechaStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = fechaStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  // Fallback: usar Date pero parseando manualmente para evitar zona horaria
+  try {
+    const [year, month, day] = fechaStr.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    return '---';
+  }
+};

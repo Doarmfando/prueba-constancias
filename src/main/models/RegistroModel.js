@@ -102,13 +102,19 @@ class RegistroModel extends BaseModel {
 
       if (!expediente) {
         // Crear nuevo expediente
+        // Asegurar que las fechas estén en formato yyyy-MM-dd
+        const fechaSolicitudFormateada = fecha_solicitud ?
+          (fecha_solicitud.includes('T') ? fecha_solicitud.split('T')[0] : fecha_solicitud) : null;
+        const fechaEntregaFormateada = fecha_entrega ?
+          (fecha_entrega.includes('T') ? fecha_entrega.split('T')[0] : fecha_entrega) : null;
+
         const { data: nuevoExpediente, error: errorCrearExpediente } = await this.db
           .from('expedientes')
           .insert({
             persona_id: persona.id,
             codigo: expediente_codigo || null,
-            fecha_solicitud,
-            fecha_entrega: fecha_entrega || null,
+            fecha_solicitud: fechaSolicitudFormateada,
+            fecha_entrega: fechaEntregaFormateada,
             observacion
           })
           .select()
@@ -119,6 +125,10 @@ class RegistroModel extends BaseModel {
       }
 
       // 3. Crear registro
+      // Asegurar que fecha_en_caja esté en formato yyyy-MM-dd
+      const fechaEnCajaFormateada = fecha_en_caja ?
+        (fecha_en_caja.includes('T') ? fecha_en_caja.split('T')[0] : fecha_en_caja) : null;
+
       const { data: nuevoRegistro, error: errorCrearRegistro } = await this.db
         .from(this.tableName)
         .insert({
@@ -127,7 +137,7 @@ class RegistroModel extends BaseModel {
           expediente_id: expediente.id,
           estado_id,
           usuario_creador_id,
-          fecha_en_caja,
+          fecha_en_caja: fechaEnCajaFormateada,
           eliminado: false
         })
         .select()
@@ -162,14 +172,22 @@ class RegistroModel extends BaseModel {
 
     if (error) throw error;
 
+    // Función auxiliar para convertir timestamp a yyyy-MM-dd
+    const formatearFecha = (fecha) => {
+      if (!fecha) return null;
+      return fecha.split('T')[0];
+    };
+
     return data ? {
       ...data,
+      fecha_registro: formatearFecha(data.fecha_registro),
+      fecha_en_caja: formatearFecha(data.fecha_en_caja),
       persona_nombre: data.personas?.nombre,
       persona_dni: data.personas?.dni,
       persona_numero: data.personas?.numero,
       expediente_codigo: data.expedientes?.codigo,
-      expediente_fecha_solicitud: data.expedientes?.fecha_solicitud,
-      expediente_fecha_entrega: data.expedientes?.fecha_entrega,
+      expediente_fecha_solicitud: formatearFecha(data.expedientes?.fecha_solicitud),
+      expediente_fecha_entrega: formatearFecha(data.expedientes?.fecha_entrega),
       expediente_observacion: data.expedientes?.observacion,
       estado_nombre: data.estados?.nombre,
       usuario_nombre: data.usuarios?.nombre,
@@ -210,8 +228,16 @@ class RegistroModel extends BaseModel {
 
     if (error) throw error;
 
+    // Función auxiliar para convertir timestamp a yyyy-MM-dd
+    const formatearFecha = (fecha) => {
+      if (!fecha) return null;
+      return fecha.split('T')[0];
+    };
+
     return (data || []).map(r => ({
       ...r,
+      fecha_registro: formatearFecha(r.fecha_registro),
+      fecha_en_caja: formatearFecha(r.fecha_en_caja),
       persona_nombre: r.personas?.nombre,
       persona_dni: r.personas?.dni,
       expediente_codigo: r.expedientes?.codigo,
@@ -229,17 +255,40 @@ class RegistroModel extends BaseModel {
         numero,
         expediente_codigo,
         fecha_solicitud,
+        fecha_registro, // Puede venir como fecha_registro del frontend
         fecha_entrega,
         observacion,
         estado_id,
         fecha_en_caja
       } = datos;
 
+      // Si viene fecha_registro en lugar de fecha_solicitud, usarla
+      const fechaSolicitudFinal = fecha_registro || fecha_solicitud;
+
+      console.log('🔄 [RegistroModel.actualizar] Datos recibidos:', {
+        id,
+        nombre,
+        dni,
+        numero,
+        expediente_codigo,
+        fecha_registro,
+        fecha_solicitud,
+        fechaSolicitudFinal,
+        estado_id,
+        fecha_en_caja
+      });
+
       // Obtener el registro actual
       const registroActual = await this.getById(id);
       if (!registroActual) {
         throw new Error('Registro no encontrado');
       }
+
+      console.log('📋 [RegistroModel.actualizar] Registro actual:', {
+        id: registroActual.id,
+        estado_id: registroActual.estado_id,
+        fecha_en_caja: registroActual.fecha_en_caja
+      });
 
       // Actualizar persona si hay cambios
       if (registroActual.persona_id && (nombre || dni !== undefined || numero !== undefined)) {
@@ -257,11 +306,19 @@ class RegistroModel extends BaseModel {
       }
 
       // Actualizar expediente si hay cambios
-      if (registroActual.expediente_id && (expediente_codigo !== undefined || fecha_solicitud || fecha_entrega !== undefined || observacion !== undefined)) {
+      if (registroActual.expediente_id && (expediente_codigo !== undefined || fechaSolicitudFinal || fecha_entrega !== undefined || observacion !== undefined)) {
         const datosExpediente = {};
         if (expediente_codigo !== undefined) datosExpediente.codigo = expediente_codigo || null;
-        if (fecha_solicitud) datosExpediente.fecha_solicitud = fecha_solicitud;
-        if (fecha_entrega !== undefined) datosExpediente.fecha_entrega = fecha_entrega || null;
+        if (fechaSolicitudFinal) {
+          // Asegurar formato yyyy-MM-dd
+          datosExpediente.fecha_solicitud = fechaSolicitudFinal.includes('T') ?
+            fechaSolicitudFinal.split('T')[0] : fechaSolicitudFinal;
+        }
+        if (fecha_entrega !== undefined) {
+          // Asegurar formato yyyy-MM-dd
+          datosExpediente.fecha_entrega = fecha_entrega ?
+            (fecha_entrega.includes('T') ? fecha_entrega.split('T')[0] : fecha_entrega) : null;
+        }
         if (observacion !== undefined) datosExpediente.observacion = observacion;
 
         if (Object.keys(datosExpediente).length > 0) {
@@ -275,10 +332,19 @@ class RegistroModel extends BaseModel {
       // Actualizar registro
       const datosRegistro = {};
       if (estado_id) datosRegistro.estado_id = estado_id;
-      if (fecha_en_caja !== undefined) datosRegistro.fecha_en_caja = fecha_en_caja;
+      if (fecha_en_caja !== undefined) {
+        // Asegurar formato yyyy-MM-dd o null
+        datosRegistro.fecha_en_caja = fecha_en_caja ?
+          (fecha_en_caja.includes('T') ? fecha_en_caja.split('T')[0] : fecha_en_caja) : null;
+      }
+
+      console.log('💾 [RegistroModel.actualizar] Datos a actualizar en registro:', datosRegistro);
 
       if (Object.keys(datosRegistro).length > 0) {
         await this.update(id, datosRegistro);
+        console.log('✅ [RegistroModel.actualizar] Registro actualizado exitosamente');
+      } else {
+        console.log('⚠️ [RegistroModel.actualizar] No hay datos de registro para actualizar');
       }
 
       // Obtener registro completo actualizado
@@ -384,8 +450,16 @@ class RegistroModel extends BaseModel {
       return textoCompleto.includes(termino.toLowerCase());
     });
 
+    // Función auxiliar para convertir timestamp a yyyy-MM-dd
+    const formatearFecha = (fecha) => {
+      if (!fecha) return null;
+      return fecha.split('T')[0];
+    };
+
     return resultados.map(r => ({
       ...r,
+      fecha_registro: formatearFecha(r.fecha_registro),
+      fecha_en_caja: formatearFecha(r.fecha_en_caja),
       persona_nombre: r.personas?.nombre,
       persona_dni: r.personas?.dni,
       expediente_codigo: r.expedientes?.codigo,
@@ -427,6 +501,12 @@ class RegistroModel extends BaseModel {
     // Filtrar por DNI (ya que no podemos hacer join directo en el where)
     const registrosFiltrados = (data || []).filter(r => r.personas?.dni === dni);
 
+    // Función auxiliar para convertir timestamp a yyyy-MM-dd
+    const formatearFecha = (fecha) => {
+      if (!fecha) return null;
+      return fecha.split('T')[0];
+    };
+
     return registrosFiltrados.map(r => ({
       registro_id: r.id,
       persona_id: r.personas?.id,
@@ -436,13 +516,13 @@ class RegistroModel extends BaseModel {
       numero: r.personas?.numero,
       codigo: r.expedientes?.codigo,
       expediente: r.expedientes?.codigo,
-      fecha_solicitud: r.expedientes?.fecha_solicitud,
-      fecha_entrega: r.expedientes?.fecha_entrega,
+      fecha_solicitud: formatearFecha(r.expedientes?.fecha_solicitud),
+      fecha_entrega: formatearFecha(r.expedientes?.fecha_entrega),
       observacion: r.expedientes?.observacion,
       estado_nombre: r.estados?.nombre,
       estado: r.estados?.nombre,
-      fecha_registro: r.fecha_registro,
-      fecha_en_caja: r.fecha_en_caja || 'No entregado',
+      fecha_registro: formatearFecha(r.fecha_registro),
+      fecha_en_caja: r.fecha_en_caja ? formatearFecha(r.fecha_en_caja) : 'No entregado',
       proyecto_nombre: r.proyectos_registros?.nombre,
       estado_id: r.estado_id
     }));
@@ -472,6 +552,12 @@ class RegistroModel extends BaseModel {
 
     if (error) throw error;
 
+    // Función auxiliar para convertir timestamp a yyyy-MM-dd
+    const formatearFecha = (fecha) => {
+      if (!fecha) return null;
+      return fecha.split('T')[0];
+    };
+
     return (data || []).map(r => ({
       id: r.id,
       proyecto_id: r.proyecto_id,
@@ -479,8 +565,8 @@ class RegistroModel extends BaseModel {
       expediente_id: r.expediente_id,
       estado_id: r.estado_id,
       usuario_creador_id: r.usuario_creador_id,
-      fecha_registro: r.fecha_registro,
-      fecha_en_caja: r.fecha_en_caja,
+      fecha_registro: formatearFecha(r.fecha_registro),
+      fecha_en_caja: formatearFecha(r.fecha_en_caja),
       eliminado: r.eliminado,
       // Datos de relaciones
       nombre: r.personas?.nombre,
@@ -488,8 +574,8 @@ class RegistroModel extends BaseModel {
       numero: r.personas?.numero,
       expediente: r.expedientes?.codigo,
       codigo: r.expedientes?.codigo,
-      fecha_solicitud: r.expedientes?.fecha_solicitud,
-      fecha_entrega: r.expedientes?.fecha_entrega,
+      fecha_solicitud: formatearFecha(r.expedientes?.fecha_solicitud),
+      fecha_entrega: formatearFecha(r.expedientes?.fecha_entrega),
       observacion: r.expedientes?.observacion,
       estado: r.estados?.nombre,
       estado_nombre: r.estados?.nombre,
@@ -523,6 +609,12 @@ class RegistroModel extends BaseModel {
 
     if (error) throw error;
 
+    // Función auxiliar para convertir timestamp a yyyy-MM-dd
+    const formatearFecha = (fecha) => {
+      if (!fecha) return null;
+      return fecha.split('T')[0];
+    };
+
     return (data || []).map(r => ({
       id: r.id,
       proyecto_id: r.proyecto_id,
@@ -530,8 +622,8 @@ class RegistroModel extends BaseModel {
       expediente_id: r.expediente_id,
       estado_id: r.estado_id,
       usuario_creador_id: r.usuario_creador_id,
-      fecha_registro: r.fecha_registro,
-      fecha_en_caja: r.fecha_en_caja,
+      fecha_registro: formatearFecha(r.fecha_registro),
+      fecha_en_caja: formatearFecha(r.fecha_en_caja),
       eliminado: r.eliminado,
       // Datos de relaciones
       nombre: r.personas?.nombre,
@@ -539,8 +631,8 @@ class RegistroModel extends BaseModel {
       numero: r.personas?.numero,
       expediente: r.expedientes?.codigo,
       codigo: r.expedientes?.codigo,
-      fecha_solicitud: r.expedientes?.fecha_solicitud,
-      fecha_entrega: r.expedientes?.fecha_entrega,
+      fecha_solicitud: formatearFecha(r.expedientes?.fecha_solicitud),
+      fecha_entrega: formatearFecha(r.expedientes?.fecha_entrega),
       observacion: r.expedientes?.observacion,
       estado: r.estados?.nombre,
       estado_nombre: r.estados?.nombre,

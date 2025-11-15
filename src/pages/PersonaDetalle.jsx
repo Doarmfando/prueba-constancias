@@ -6,7 +6,7 @@ import {
   FaPaperclip, FaFilePdf, FaFileExcel, FaFileImage, FaFileWord,
   FaFile, FaEye, FaInfoCircle
 } from 'react-icons/fa';
-import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
+import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
 import { useAuth } from '../context/AuthContext';
 
 function PersonaDetalle() {
@@ -281,7 +281,7 @@ function PersonaDetalle() {
               <p className="text-sm text-gray-600">Fecha Registro</p>
               <p className="text-sm font-medium text-gray-900">
                 {persona.fecha_registro
-                  ? new Date(persona.fecha_registro).toLocaleDateString()
+                  ? formatearFecha(persona.fecha_registro)
                   : 'No disponible'
                 }
               </p>
@@ -509,7 +509,7 @@ function PersonaDetalle() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
+                            {formatearFecha(registro.fecha_registro)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -526,7 +526,7 @@ function PersonaDetalle() {
                             {registro.estado === 'Recibido'
                               ? 'No entregado'
                               : registro.estado === 'En Caja'
-                              ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                              ? formatearFecha(registro.fecha_en_caja)
                               : '---'
                             }
                           </td>

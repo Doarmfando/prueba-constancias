@@ -84,10 +84,30 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
+
+    let newFormData = {
+      ...formData,
       [name]: value
-    }));
+    };
+
+    // Lógica automática de fecha_en_caja según el estado
+    if (name === 'estado') {
+      if (value === 'En Caja') {
+        // Cuando cambia a "En Caja", poner la fecha actual (editable)
+        newFormData.fecha_en_caja = new Date().toISOString().split('T')[0];
+      } else if (value === 'Entregado') {
+        // Cuando está "Entregado", dejarlo vacío (---)
+        newFormData.fecha_en_caja = '';
+      } else if (value === 'Recibido') {
+        // Cuando está "Recibido", dejarlo vacío (No entregado/---)
+        newFormData.fecha_en_caja = '';
+      } else if (value === 'Tesoreria') {
+        // Cuando está "Tesoreria", dejarlo vacío (---)
+        newFormData.fecha_en_caja = '';
+      }
+    }
+
+    setFormData(newFormData);
 
     // Si se modificó el DNI, buscar persona
     if (name === 'dni') {
@@ -296,7 +316,7 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Fecha en caja
+                Fecha en caja {formData.estado === 'En Caja' ? '(Automática, editable)' : ''}
               </label>
               <input
                 type="date"
@@ -305,6 +325,11 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900"
               />
+              {formData.estado === 'En Caja' && (
+                <p className="mt-1 text-sm text-gray-500">
+                  La fecha se establece automáticamente cuando el estado es "En Caja", pero puede editarla manualmente
+                </p>
+              )}
             </div>
           </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { FaSearch, FaUser, FaIdCard, FaPhone, FaEnvelope, FaMapMarkerAlt, FaCalendarAlt, FaFileAlt, FaEdit, FaTrash, FaEye, FaInfoCircle } from 'react-icons/fa';
 import { MdPersonSearch, MdHistory, MdPlace } from 'react-icons/md';
-import { mostrarError, mostrarExito } from '../utils/alertas';
+import { mostrarError, mostrarExito, formatearFecha } from '../utils/alertas';
 
 function Informacion() {
   const { dni: dniParam } = useParams();
@@ -307,7 +307,7 @@ function Informacion() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
+                              {formatearFecha(registro.fecha_registro)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -324,7 +324,7 @@ function Informacion() {
                               {registro.estado === 'Recibido'
                                 ? 'No entregado'
                                 : registro.estado === 'En Caja'
-                                ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                                ? formatearFecha(registro.fecha_en_caja)
                                 : '---'
                               }
                             </td>

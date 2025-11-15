@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaTrash, FaUndo, FaSearch, FaUser, FaCalendarAlt, FaFileAlt, FaExclamationTriangle } from 'react-icons/fa';
 import { MdRestore, MdDeleteForever } from 'react-icons/md';
-import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
+import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
 
 function Papeleria() {
   const [registrosEliminados, setRegistrosEliminados] = useState([]);
@@ -231,7 +231,7 @@ function Papeleria() {
                       </code>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
+                      {formatearFecha(registro.fecha_registro)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.estado || '---'}
@@ -240,7 +240,7 @@ function Papeleria() {
                       {registro.estado === 'Recibido'
                         ? 'No entregado'
                         : registro.estado === 'En Caja'
-                        ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                        ? formatearFecha(registro.fecha_en_caja)
                         : '---'
                       }
                     </td>

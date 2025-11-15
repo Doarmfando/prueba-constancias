@@ -6,7 +6,7 @@ import {
   FaCalendarAlt, FaUser, FaIdCard, FaFilter, FaPrint, FaCheckCircle
 } from 'react-icons/fa';
 import { MdPublic, MdPrivateConnectivity, MdRestore, MdDeleteForever } from 'react-icons/md';
-import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
+import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import Paginacion from '../components/Paginacion';
 import {
@@ -660,7 +660,7 @@ function ProyectoDetalle() {
                             <code className="bg-gray-100 px-2 py-1 rounded text-xs">{registro.expediente || '---'}</code>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : '---'}
+                            {formatearFecha(registro.fecha_registro)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs rounded-full ${
@@ -677,8 +677,8 @@ function ProyectoDetalle() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {registro.estado === 'Recibido'
                               ? 'No entregado'
-                              : registro.estado === 'En Caja'
-                              ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                              : registro.estado === 'En Caja' || registro.estado === 'Entregado'
+                              ? formatearFecha(registro.fecha_en_caja)
                               : '---'
                             }
                           </td>
@@ -1119,9 +1119,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
     dni: '',
     numero: '',
     expediente_codigo: '',
-    fecha_solicitud: new Date().toISOString().split('T')[0], // Fecha actual por defecto
+    fecha_registro: new Date().toISOString().split('T')[0], // Fecha actual por defecto
     Observación: '',
-    fecha_entrega: '',
+    fecha_en_caja: '',
     estado_id: 1,
     persona_id: null,
     expediente_id: null
@@ -1147,9 +1147,9 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
         dni: registro.dni || '',
         numero: registro.numero || '',
         expediente_codigo: registro.expediente || '',
-        fecha_solicitud: (registro.fecha_registro && registro.fecha_registro !== '---') ? registro.fecha_registro : '',
+        fecha_registro: (registro.fecha_registro && registro.fecha_registro !== '---') ? registro.fecha_registro : '',
         Observación: registro.Observación || '',
-        fecha_entrega: (registro.fecha_en_caja && registro.fecha_en_caja !== '---') ? registro.fecha_en_caja : '',
+        fecha_en_caja: (registro.fecha_en_caja && registro.fecha_en_caja !== '---' && registro.fecha_en_caja !== 'No entregado') ? registro.fecha_en_caja : '',
         estado_id: estadosInversoMap[registro.estado] || 1,
         persona_id: registro.persona_id || null,
         expediente_id: registro.expediente_id || null
@@ -1265,16 +1265,16 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
       [name]: value
     };
 
-    // LÃ³gica para fechas automÃ¡ticas segÃºn el estado
+    // Lógica automática de fecha_en_caja según el estado
     if (name === 'estado_id') {
       const estadoId = parseInt(value);
 
-      // Si cambia a "En Caja" (2) o "Entregado" (3), poner fecha de entrega automÃ¡tica
-      if (estadoId === 2 || estadoId === 3) {
-        newFormData.fecha_entrega = new Date().toISOString().split('T')[0];
-      } else {
-        // Si cambia a otro estado, quitar fecha de entrega
-        newFormData.fecha_entrega = '';
+      if (estadoId === 2) {
+        // Estado "En Caja" - poner fecha actual (editable)
+        newFormData.fecha_en_caja = new Date().toISOString().split('T')[0];
+      } else if (estadoId === 3 || estadoId === 1 || estadoId === 4) {
+        // Estados "Entregado", "Recibido", "Tesoreria" - dejar vacío (---)
+        newFormData.fecha_en_caja = '';
       }
     }
 
@@ -1339,8 +1339,8 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
         numero: formData.numero.trim() || null,
         expediente: formData.expediente_codigo.trim(), // RegistroModel espera 'expediente', no 'expediente_codigo'
         estado: estadosMap[parseInt(formData.estado_id)], // RegistroModel espera nombre del estado, no ID
-        fecha_registro: formData.fecha_solicitud || new Date().toISOString().split('T')[0],
-        fecha_en_caja: (parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? formData.fecha_entrega : null,
+        fecha_registro: formData.fecha_registro || new Date().toISOString().split('T')[0],
+        fecha_en_caja: formData.fecha_en_caja || null,
         usuario_creador_id: 1, // Usuario temporal
         persona_existente_id: personaEncontrada?.id || null, // Enviar ID de persona si existe
         Observación: formData.Observación?.trim() || ''
@@ -1520,34 +1520,34 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
               </div>
 
               <div>
-                <label htmlFor="fecha_solicitud" className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de Solicitud
+                <label htmlFor="fecha_registro" className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de Registro
                 </label>
                 <input
                   type="date"
-                  id="fecha_solicitud"
-                  name="fecha_solicitud"
-                  value={formData.fecha_solicitud}
+                  id="fecha_registro"
+                  name="fecha_registro"
+                  value={formData.fecha_registro}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label htmlFor="fecha_entrega" className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de Entrega {(parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) ? '(AutomÃ¡tica, editable)' : ''}
+                <label htmlFor="fecha_en_caja" className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha en Caja {parseInt(formData.estado_id) === 2 ? '(Automática, editable)' : ''}
                 </label>
                 <input
                   type="date"
-                  id="fecha_entrega"
-                  name="fecha_entrega"
-                  value={formData.fecha_entrega}
+                  id="fecha_en_caja"
+                  name="fecha_en_caja"
+                  value={formData.fecha_en_caja}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                {(parseInt(formData.estado_id) === 2 || parseInt(formData.estado_id) === 3) && (
+                {parseInt(formData.estado_id) === 2 && (
                   <p className="mt-1 text-sm text-gray-500">
-                    La fecha se establece automÃ¡ticamente cuando el estado es "En Caja" o "Entregado", pero puede editarla manualmente
+                    La fecha se establece automáticamente cuando el estado es "En Caja", pero puede editarla manualmente
                   </p>
                 )}
               </div>

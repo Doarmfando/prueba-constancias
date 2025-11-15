@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaSearch, FaFileAlt, FaEdit, FaTrash, FaFilePdf, FaCalendarAlt, FaUser, FaIdCard, FaFilter } from 'react-icons/fa';
 import { MdPersonAdd, MdFilterList, MdVisibility } from 'react-icons/md';
-import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
+import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
 import FormularioRegistro from '../components/FormularioRegistro';
 import Paginacion from '../components/Paginacion';
 
@@ -337,7 +337,7 @@ function Registros() {
                       </code>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {registro.fecha_registro ? new Date(registro.fecha_registro).toLocaleDateString() : 'Sin fecha'}
+                      {formatearFecha(registro.fecha_registro) || 'Sin fecha'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEstadoColor(registro.estado)}`}>
@@ -348,7 +348,7 @@ function Registros() {
                       {registro.estado === 'Recibido'
                         ? 'No entregado'
                         : registro.estado === 'En Caja'
-                        ? (registro.fecha_en_caja ? new Date(registro.fecha_en_caja).toLocaleDateString() : '---')
+                        ? formatearFecha(registro.fecha_en_caja)
                         : '---'
                       }
                     </td>

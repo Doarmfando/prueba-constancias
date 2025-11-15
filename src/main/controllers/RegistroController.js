@@ -100,18 +100,19 @@ class RegistroController extends BaseController {
 
 
       // Mapear nombres del frontend a nombres del backend
+      // fecha_registro del frontend -> fecha_solicitud del backend (expedientes)
       const datosMapeados = {
         proyecto_id: datosSanitizados.proyecto_id,
         nombre: datosSanitizados.nombre,
         dni: datosSanitizados.dni,
         numero: datosSanitizados.numero,
         expediente_codigo: datosSanitizados.expediente || datosSanitizados.expediente_codigo || '',
-        fecha_solicitud: datosSanitizados.fecha_registro || datosSanitizados.fecha_solicitud,
+        fecha_solicitud: datosSanitizados.fecha_registro || datosSanitizados.fecha_solicitud || new Date().toISOString().split('T')[0],
         fecha_entrega: datosSanitizados.fecha_entrega,
         observacion: datosSanitizados.Observación || datosSanitizados.observacion || '',
         estado_id: datosSanitizados.estado_id, // Será buscado si viene como string
         usuario_creador_id: datosSanitizados.usuario_creador_id,
-        fecha_en_caja: datosSanitizados.fecha_en_caja
+        fecha_en_caja: datosSanitizados.fecha_en_caja || null
       };
 
       // Si estado viene como string (nombre), buscar el ID
@@ -171,12 +172,47 @@ class RegistroController extends BaseController {
       this.validateRequired(datos, ['id']);
       const datosSanitizados = this.sanitizeInput(datos);
 
+      // Mapear datos del frontend al formato del backend
+      const datosMapeados = {
+        id: datosSanitizados.id,
+        nombre: datosSanitizados.nombre,
+        dni: datosSanitizados.dni,
+        numero: datosSanitizados.numero,
+        expediente_codigo: datosSanitizados.expediente || datosSanitizados.expediente_codigo,
+        fecha_registro: datosSanitizados.fecha_registro, // Para actualizar expediente.fecha_solicitud
+        observacion: datosSanitizados.Observación || datosSanitizados.observacion,
+        estado_id: datosSanitizados.estado_id,
+        fecha_en_caja: datosSanitizados.fecha_en_caja,
+        persona_id: datosSanitizados.persona_id,
+        expediente_id: datosSanitizados.expediente_id
+      };
+
+      console.log('📝 [RegistroController] Datos sanitizados recibidos:', JSON.stringify(datosSanitizados, null, 2));
+      console.log('📝 [RegistroController] Datos mapeados:', JSON.stringify(datosMapeados, null, 2));
+
+      // Si estado viene como string (nombre), buscar el ID
+      if (!datosMapeados.estado_id && datosSanitizados.estado) {
+        console.log('🔍 [RegistroController] Buscando estado por nombre:', datosSanitizados.estado);
+        const EstadoModel = require('../models/EstadoModel');
+        const estadoModel = new EstadoModel(this.model.db);
+        const estadoEncontrado = await estadoModel.buscarPorNombre(datosSanitizados.estado);
+        if (estadoEncontrado) {
+          console.log('✅ [RegistroController] Estado encontrado:', estadoEncontrado);
+          datosMapeados.estado_id = estadoEncontrado.id;
+        } else {
+          console.log('❌ [RegistroController] Estado NO encontrado');
+        }
+      } else {
+        console.log('ℹ️ [RegistroController] Estado ya viene como ID:', datosMapeados.estado_id);
+      }
+
       // Obtener el registro para verificar permisos
-      const reg = await this.model.getById(datosSanitizados.id);
+      const reg = await this.model.getById(datosMapeados.id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
-      const resultado = await this.model.actualizar(datosSanitizados);
+
+      const resultado = await this.model.actualizar(datosMapeados);
 
       // Retornar en el mismo formato que agregarRegistro
       return {
