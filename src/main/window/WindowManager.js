@@ -6,12 +6,13 @@ const waitOn = require("wait-on");
 class WindowManager {
   constructor() {
     this.mainWindow = null;
-    // Detectar modo: usa NODE_ENV si está definido, sino usa isPackaged
+    // Detectar modo: si está empaquetado, SIEMPRE es producción
     const isPackaged = require("electron").app.isPackaged;
     const nodeEnv = process.env.NODE_ENV;
 
-    // Si NODE_ENV está definido, úsalo; sino, usa isPackaged
-    this.isDev = nodeEnv ? nodeEnv === 'development' : !isPackaged;
+    // Si está empaquetado, SIEMPRE usar modo producción
+    // Si no está empaquetado, usar NODE_ENV (por defecto development)
+    this.isDev = !isPackaged && (nodeEnv !== 'production');
     this.serverURL = "http://localhost:8083";
 
     console.log("🔧 WindowManager inicializado:");
