@@ -32,8 +32,6 @@ class RegistroModel extends BaseModel {
   // Agregar nuevo registro (con lógica completa de persona y expediente)
   async agregar(datos) {
     try {
-      console.log('📝 RegistroModel.agregar - Datos recibidos:', JSON.stringify(datos, null, 2));
-
       const {
         nombre,
         dni,
@@ -47,11 +45,6 @@ class RegistroModel extends BaseModel {
         usuario_creador_id = 1,
         fecha_en_caja = null
       } = datos;
-
-      console.log('📝 Valores extraídos:');
-      console.log('  - estado_id:', estado_id, 'Tipo:', typeof estado_id);
-      console.log('  - proyecto_id:', proyecto_id);
-      console.log('  - usuario_creador_id:', usuario_creador_id);
 
       // Validar que estado_id exista
       if (!estado_id) {
