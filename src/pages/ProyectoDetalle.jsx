@@ -274,7 +274,7 @@ function ProyectoDetalle() {
     return (
       usuario.rol === 'administrador' ||
       proyecto.usuario_creador_id === usuario.id ||
-      (proyecto.es_publico === 1 && proyecto.permite_edicion === 1)
+      proyecto.es_publico === true  // Proyectos públicos: todos pueden editar
     );
   };
 

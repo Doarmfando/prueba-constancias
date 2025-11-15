@@ -132,9 +132,9 @@ function MisProyectos() {
 
     switch (filtro) {
       case 'privados':
-        return proyecto.es_publico === 0;
+        return proyecto.es_publico === false;
       case 'publicos':
-        return proyecto.es_publico === 1;
+        return proyecto.es_publico === true;
       default:
         return true;
     }
@@ -142,8 +142,8 @@ function MisProyectos() {
 
   const estadisticas = {
     total: proyectos.length,
-    privados: proyectos.filter(p => p.es_publico === 0).length,
-    publicos: proyectos.filter(p => p.es_publico === 1).length,
+    privados: proyectos.filter(p => p.es_publico === false).length,
+    publicos: proyectos.filter(p => p.es_publico === true).length,
     totalRegistros: proyectos.reduce((sum, p) => sum + (p.total_registros || 0), 0)
   };
 
