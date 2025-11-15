@@ -5,9 +5,10 @@ const fs = require('fs');
 const { app } = require('electron');
 
 class DocumentoPersonaController extends BaseController {
-  constructor(documentoPersonaModel, personaModel) {
+  constructor(documentoPersonaModel, personaModel, hybridStorageService = null) {
     super(documentoPersonaModel);
     this.personaModel = personaModel;
+    this.hybridStorage = hybridStorageService;
 
     // Definir la ruta base para documentos
     this.documentosBasePath = path.join(app.getPath('userData'), 'documentos', 'personas');
@@ -44,7 +45,7 @@ class DocumentoPersonaController extends BaseController {
     }
   }
 
-  // Subir documento
+  // Subir documento (usando HybridStorage si está disponible)
   async subirDocumento(datos) {
     try {
       this.validateRequired(datos, ['persona_id', 'archivo_origen', 'nombre_archivo']);
@@ -61,32 +62,71 @@ class DocumentoPersonaController extends BaseController {
         throw new Error('La persona no tiene DNI registrado');
       }
 
-      // Crear directorio para la persona si no existe
-      const dirPersona = this.asegurarDirectorioPersona(persona.dni);
+      // Leer archivo
+      const archivoBuffer = fs.readFileSync(archivo_origen);
+      const tamaño_bytes = archivoBuffer.length;
 
-      // Generar nombre único para evitar sobrescrituras
-      const timestamp = Date.now();
-      const extension = path.extname(nombre_archivo);
-      const nombreBase = path.basename(nombre_archivo, extension);
-      const nombreUnico = `${nombreBase}_${timestamp}${extension}`;
-      const rutaDestino = path.join(dirPersona, nombreUnico);
+      // Determinar content type
+      const contentType = this.obtenerContentType(nombre_archivo);
 
-      // Copiar archivo
-      fs.copyFileSync(archivo_origen, rutaDestino);
+      let rutaArchivo, urlArchivo, ubicacion, notificacion;
 
-      // Obtener tamaño del archivo
-      const stats = fs.statSync(rutaDestino);
-      const tamaño_bytes = stats.size;
+      // Si HybridStorage está disponible, usarlo
+      if (this.hybridStorage) {
+        console.log('📤 Usando HybridStorageService para subir documento...');
+
+        const resultadoUpload = await this.hybridStorage.subirArchivoConFallback(
+          archivoBuffer,
+          persona.dni,
+          nombre_archivo,
+          { contentType }
+        );
+
+        if (!resultadoUpload.success) {
+          throw new Error(resultadoUpload.error);
+        }
+
+        rutaArchivo = resultadoUpload.ruta;
+        urlArchivo = resultadoUpload.url || null;
+        ubicacion = resultadoUpload.ubicacion; // 'SUPABASE' o 'LOCAL'
+
+        // Si se guardó localmente, preparar notificación
+        if (resultadoUpload.advertencia) {
+          notificacion = {
+            tipo: resultadoUpload.tipoError,
+            mensaje: resultadoUpload.mensaje,
+            nombreArchivo: nombre_archivo,
+            enCola: resultadoUpload.enCola,
+            archivosEnCola: this.hybridStorage.obtenerEstadisticasCola().total
+          };
+        }
+      } else {
+        // Fallback: guardar solo localmente (legacy)
+        console.log('💾 HybridStorage no disponible, guardando solo localmente...');
+
+        const dirPersona = this.asegurarDirectorioPersona(persona.dni);
+        const timestamp = Date.now();
+        const extension = path.extname(nombre_archivo);
+        const nombreBase = path.basename(nombre_archivo, extension);
+        const nombreUnico = `${nombreBase}_${timestamp}${extension}`;
+        rutaArchivo = path.join(dirPersona, nombreUnico);
+
+        fs.writeFileSync(rutaArchivo, archivoBuffer);
+        urlArchivo = null;
+        ubicacion = 'LOCAL';
+      }
 
       // Guardar en base de datos
       const resultado = await this.model.crear({
         persona_id,
         nombre_archivo: nombre_archivo,
-        ruta_archivo: rutaDestino,
+        ruta_archivo: rutaArchivo,
+        url_archivo: urlArchivo,
         tipo_archivo: this.model.obtenerTipoArchivo(nombre_archivo),
         comentario: comentario || '',
         usuario_carga_id: usuario_carga_id || null,
-        tamaño_bytes
+        tamaño_bytes,
+        ubicacion_almacenamiento: ubicacion
       });
 
       // Obtener el documento recién creado
@@ -94,13 +134,39 @@ class DocumentoPersonaController extends BaseController {
 
       return {
         success: true,
-        message: 'Documento cargado exitosamente',
+        message: ubicacion === 'SUPABASE'
+          ? 'Documento cargado exitosamente en la nube'
+          : 'Documento guardado localmente',
         documento,
-        id: resultado.id
+        id: resultado.id,
+        ubicacion,
+        notificacion // Incluir notificación si hay
       };
     } catch (error) {
       this.handleError(error, 'Error subiendo documento');
     }
+  }
+
+  // Obtener Content-Type basado en la extensión del archivo
+  obtenerContentType(nombreArchivo) {
+    const extension = path.extname(nombreArchivo).toLowerCase().replace('.', '');
+    const tipos = {
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'bmp': 'image/bmp',
+      'txt': 'text/plain',
+      'zip': 'application/zip',
+      'rar': 'application/x-rar-compressed',
+      '7z': 'application/x-7z-compressed'
+    };
+    return tipos[extension] || 'application/octet-stream';
   }
 
   // Obtener documentos de una persona

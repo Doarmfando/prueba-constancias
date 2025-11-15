@@ -8,16 +8,28 @@ class DocumentoPersonaModel extends BaseModel {
 
   // Crear documento
   async crear(datos) {
-    const { persona_id, nombre_archivo, ruta_archivo, tipo_archivo, comentario, usuario_carga_id, tamaño_bytes } = datos;
+    const {
+      persona_id,
+      nombre_archivo,
+      ruta_archivo,
+      url_archivo,
+      tipo_archivo,
+      comentario,
+      usuario_carga_id,
+      tamaño_bytes,
+      ubicacion_almacenamiento
+    } = datos;
 
     const documento = await this.create({
       persona_id,
       nombre_archivo,
       ruta_archivo,
+      url_archivo: url_archivo || null,
       tipo_archivo: tipo_archivo || this.obtenerTipoArchivo(nombre_archivo),
       comentario: comentario || '',
       usuario_carga_id: usuario_carga_id || null,
-      tamaño_bytes: tamaño_bytes || 0
+      tamaño_bytes: tamaño_bytes || 0,
+      ubicacion_almacenamiento: ubicacion_almacenamiento || 'LOCAL'
     });
 
     return { id: documento.id };

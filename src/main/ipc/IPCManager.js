@@ -11,6 +11,7 @@ const ProyectoIPCHandler = require('./ProyectoIPCHandler');
 const AuditoriaIPCHandler = require('./AuditoriaIPCHandler');
 const PersonaIPCHandler = require('./PersonaIPCHandler');
 const DocumentoPersonaIPCHandler = require('./DocumentoPersonaIPCHandler');
+const StorageIPCHandler = require('./StorageIPCHandler');
 
 class IPCManager {
   constructor() {
@@ -39,6 +40,7 @@ class IPCManager {
       this.initializeAuditoriaHandlers(controllers.auditoria);
       // this.initializePersonaHandlers(controllers.persona); // Deshabilitado - usar DocumentoPersonaController
       this.initializeDocumentoPersonaHandlers(controllers.documentoPersona);
+      this.initializeStorageHandlers(services.hybridStorage);
 
       this.initialized = true;
       console.log("✅ IPCManager inicializado correctamente");
@@ -173,6 +175,18 @@ class IPCManager {
     documentoPersonaHandler.registerHandlers();
 
     this.handlers.set('documentoPersona', documentoPersonaHandler);
+  }
+
+  // Inicializar handlers de storage híbrido
+  initializeStorageHandlers(hybridStorageService) {
+    if (!hybridStorageService) {
+      throw new Error("HybridStorageService requerido");
+    }
+
+    const storageHandler = new StorageIPCHandler(hybridStorageService);
+    storageHandler.registerHandlers();
+
+    this.handlers.set('storage', storageHandler);
   }
 
   // Listar todos los handlers registrados

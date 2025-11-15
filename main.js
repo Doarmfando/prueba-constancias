@@ -52,6 +52,7 @@ loadEnvironment();
 const DatabaseService = require("./src/main/services/DatabaseService");
 const ExcelService = require("./src/main/services/ExcelService");
 const FileService = require("./src/main/services/FileService");
+const HybridStorageService = require("./src/main/services/HybridStorageService");
 
 // Importar modelos
 const RegistroModel = require("./src/main/models/RegistroModel");
@@ -137,6 +138,9 @@ class Application {
     this.services.excel = new ExcelService();
     this.services.file = new FileService();
 
+    // Inicializar servicio de almacenamiento híbrido (Supabase Storage + Local fallback)
+    this.services.hybridStorage = new HybridStorageService(clients.admin);
+
     // Guardar referencias a ambos clientes de Supabase
     this.dbUser = clients.user;     // Cliente para operaciones de usuarios autenticados
     this.dbAdmin = clients.admin;   // Cliente para operaciones administrativas
@@ -199,7 +203,8 @@ class Application {
     );
     this.controllers.documentoPersona = new DocumentoPersonaController(
       this.models.documentoPersona,
-      this.models.persona
+      this.models.persona,
+      this.services.hybridStorage
     );
   }
 

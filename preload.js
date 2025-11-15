@@ -74,7 +74,14 @@ const allowedChannels = new Set([
   "personas-buscar",
   "personas-crear",
   "personas-actualizar",
-  "personas-eliminar"
+  "personas-eliminar",
+  // Canales de storage híbrido
+  "storage:sincronizar",
+  "storage:estadisticas-cola",
+  "storage:subir-archivo",
+  "storage:descargar-archivo",
+  "storage:eliminar-archivo",
+  "storage:listar-archivos"
 ]);
 
 const isChannelAllowed = (channel) => allowedChannels.has(channel);
@@ -186,6 +193,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     descargar: (id) => ipcRenderer.invoke("documento-persona-descargar", { id }),
     actualizarComentario: (id, comentario) => ipcRenderer.invoke("documento-persona-actualizar-comentario", { id, comentario }),
     obtenerEstadisticas: () => ipcRenderer.invoke("documento-persona-estadisticas")
+  },
+
+  // API de Storage Híbrido
+  storage: {
+    sincronizar: () => ipcRenderer.invoke("storage:sincronizar"),
+    obtenerEstadisticasCola: () => ipcRenderer.invoke("storage:estadisticas-cola"),
+    subirArchivo: (datos) => ipcRenderer.invoke("storage:subir-archivo", datos),
+    descargarArchivo: (datos) => ipcRenderer.invoke("storage:descargar-archivo", datos),
+    eliminarArchivo: (datos) => ipcRenderer.invoke("storage:eliminar-archivo", datos),
+    listarArchivos: (datos) => ipcRenderer.invoke("storage:listar-archivos", datos)
   }
 });
 

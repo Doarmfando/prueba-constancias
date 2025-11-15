@@ -103,8 +103,8 @@ class BaseIPCHandler {
   listHandlers() {
     const handlerList = Array.from(this.handlers.entries()).map(([channel, info]) => ({
       channel,
-      controller: info.controller.constructor.name,
-      method: info.method,
+      controller: info.controller ? info.controller.constructor.name : (info.type === 'custom' ? 'CustomFunction' : 'Unknown'),
+      method: info.method || 'custom',
       type: info.type || 'handle'
     }));
 
