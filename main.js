@@ -131,26 +131,31 @@ class Application {
   async initializeServices() {
     // Inicializar servicio de base de datos (ahora con Supabase)
     this.services.database = new DatabaseService();
-    const supabase = await this.services.database.connect();
+    const clients = await this.services.database.connect();
 
     // Inicializar otros servicios
     this.services.excel = new ExcelService();
     this.services.file = new FileService();
 
-    // Guardar referencia al cliente de Supabase
-    this.db = supabase;
+    // Guardar referencias a ambos clientes de Supabase
+    this.dbUser = clients.user;     // Cliente para operaciones de usuarios autenticados
+    this.dbAdmin = clients.admin;   // Cliente para operaciones administrativas
+    this.db = clients.admin;        // Legacy (compatibilidad)
   }
 
   initializeModels() {
-    // Todos los modelos ahora reciben el cliente de Supabase
-    this.models.registro = new RegistroModel(this.db);
-    this.models.persona = new PersonaModel(this.db);
-    this.models.expediente = new ExpedienteModel(this.db);
-    this.models.estado = new EstadoModel(this.db);
-    this.models.usuario = new UsuarioModel(this.db);
-    this.models.proyecto = new ProyectoModel(this.db);
-    this.models.auditoria = new AuditoriaModel(this.db);
-    this.models.documentoPersona = new DocumentoPersonaModel(this.db);
+    // La mayoría de modelos usan el cliente USER
+    this.models.registro = new RegistroModel(this.dbUser);
+    this.models.persona = new PersonaModel(this.dbUser);
+    this.models.expediente = new ExpedienteModel(this.dbUser);
+    this.models.estado = new EstadoModel(this.dbUser);
+    this.models.proyecto = new ProyectoModel(this.dbUser);
+    this.models.auditoria = new AuditoriaModel(this.dbUser);
+    this.models.documentoPersona = new DocumentoPersonaModel(this.dbUser);
+
+    // UsuarioModel usa cliente USER pero necesita referencia a ADMIN
+    this.models.usuario = new UsuarioModel(this.dbUser);
+    this.models.usuario.setAdminClient(this.dbAdmin);
   }
 
   initializeControllers() {
@@ -158,7 +163,12 @@ class Application {
     this.controllers.excel = new ExcelController(
       this.services.excel,
       this.services.file,
-      this.db
+      {
+        persona: this.models.persona,
+        expediente: this.models.expediente,
+        registro: this.models.registro,
+        estado: this.models.estado
+      }
     );
     this.controllers.file = new FileController(this.services.file);
     this.controllers.informacion = new InformacionController(

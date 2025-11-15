@@ -214,6 +214,46 @@ class RegistroModel extends BaseModel {
     if (error && error.code !== 'PGRST116') throw error;
     return !!data;
   }
+
+  // Buscar registros por DNI de persona
+  async buscarPorDni(dni) {
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        personas (id, nombre, dni, numero),
+        expedientes (id, codigo, fecha_solicitud, fecha_entrega, observacion),
+        estados (nombre),
+        proyectos_registros (nombre)
+      `)
+      .eq('eliminado', false)
+      .order('fecha_registro', { ascending: false });
+
+    if (error) throw error;
+
+    // Filtrar por DNI (ya que no podemos hacer join directo en el where)
+    const registrosFiltrados = (data || []).filter(r => r.personas?.dni === dni);
+
+    return registrosFiltrados.map(r => ({
+      registro_id: r.id,
+      persona_id: r.personas?.id,
+      expediente_id: r.expedientes?.id,
+      nombre: r.personas?.nombre,
+      dni: r.personas?.dni,
+      numero: r.personas?.numero,
+      codigo: r.expedientes?.codigo,
+      expediente: r.expedientes?.codigo,
+      fecha_solicitud: r.expedientes?.fecha_solicitud,
+      fecha_entrega: r.expedientes?.fecha_entrega,
+      observacion: r.expedientes?.observacion,
+      estado_nombre: r.estados?.nombre,
+      estado: r.estados?.nombre,
+      fecha_registro: r.fecha_registro,
+      fecha_en_caja: r.fecha_en_caja || 'No entregado',
+      proyecto_nombre: r.proyectos_registros?.nombre,
+      estado_id: r.estado_id
+    }));
+  }
 }
 
 module.exports = RegistroModel;

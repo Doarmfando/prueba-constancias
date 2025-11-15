@@ -26,7 +26,7 @@ class WindowManager {
       height: 1000,
       minWidth: 1300,
       minHeight: 1000,
-      show: true,
+      show: false, // No mostrar hasta que esté listo
       icon: path.join(__dirname, "../../../public", "icono.ico"),
       backgroundColor: "#ffffff",
       webPreferences: {
@@ -36,9 +36,9 @@ class WindowManager {
       },
     });
 
-    await this.loadContent();
     this.setupWindowEvents();
-    
+    await this.loadContent();
+
     return this.mainWindow;
   }
 
@@ -105,17 +105,28 @@ class WindowManager {
       console.log(`[RENDERER ${levels[level]}] ${message}`);
     });
 
-    this.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error('❌ Error al cargar página:', errorCode, errorDescription);
+    this.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('❌ Error al cargar página:');
+      console.error('   - Error Code:', errorCode);
+      console.error('   - Description:', errorDescription);
+      console.error('   - URL:', validatedURL);
+    });
+
+    this.mainWindow.webContents.on('did-finish-load', () => {
+      console.log('✅ Página cargada exitosamente');
     });
 
     this.mainWindow.webContents.on('crashed', () => {
       console.error('❌ El renderer process crasheó');
     });
 
+    this.mainWindow.webContents.on('unresponsive', () => {
+      console.error('❌ El renderer process no responde');
+    });
+
     // Mostrar ventana cuando esté lista
     this.mainWindow.once("ready-to-show", () => {
-      console.log("Ventana lista para mostrar");
+      console.log("✅ Ventana lista para mostrar");
       this.mainWindow.show();
       this.mainWindow.focus();
       this.mainWindow.setAlwaysOnTop(true);

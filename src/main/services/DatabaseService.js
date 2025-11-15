@@ -1,9 +1,11 @@
 // src/main/services/DatabaseService.js
-const { supabase, verificarConexion } = require('../../config/supabase');
+const { supabase, supabaseUser, supabaseAdmin, verificarConexion } = require('../../config/supabase');
 
 class DatabaseService {
   constructor() {
-    this.supabase = supabase;
+    this.supabase = supabase; // Legacy (admin)
+    this.supabaseUser = supabaseUser;
+    this.supabaseAdmin = supabaseAdmin;
     this.connected = false;
   }
 
@@ -18,8 +20,13 @@ class DatabaseService {
       if (isConnected) {
         this.connected = true;
         console.log('✅ Conectado a Supabase exitosamente');
+        console.log('   - Cliente USER: Para operaciones de usuarios autenticados');
+        console.log('   - Cliente ADMIN: Para operaciones administrativas');
         await this.verificarEsquema();
-        return this.supabase;
+        return {
+          user: this.supabaseUser,
+          admin: this.supabaseAdmin
+        };
       } else {
         throw new Error('No se pudo establecer conexión con Supabase');
       }
@@ -31,6 +38,14 @@ class DatabaseService {
 
   getDatabase() {
     return this.supabase;
+  }
+
+  getUserClient() {
+    return this.supabaseUser;
+  }
+
+  getAdminClient() {
+    return this.supabaseAdmin;
   }
 
   async verificarEsquema() {

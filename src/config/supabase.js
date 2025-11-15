@@ -4,10 +4,11 @@ const path = require('path');
 
 // Configuración de Supabase
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Validar que existan las credenciales
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
   console.error('╔════════════════════════════════════════════════════════════════╗');
   console.error('║  ❌ ERROR: Faltan credenciales de Supabase                    ║');
   console.error('╚════════════════════════════════════════════════════════════════╝');
@@ -18,6 +19,7 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('2. Agrega las siguientes variables:');
   console.error('');
   console.error('   SUPABASE_URL=https://tu-proyecto.supabase.co');
+  console.error('   SUPABASE_ANON_KEY=tu-clave-anon');
   console.error('   SUPABASE_SERVICE_ROLE_KEY=tu-clave-service-role');
   console.error('');
   console.error('3. Obtén tus credenciales desde:');
@@ -35,13 +37,17 @@ if (!supabaseUrl || !supabaseKey) {
   }
   console.error('');
   console.error('Variables de entorno encontradas:');
-  console.error(`   SUPABASE_URL: ${supabaseUrl ? '✓ (configurada pero vacía)' : '✗ (no configurada)'}`);
-  console.error(`   SUPABASE_SERVICE_ROLE_KEY: ${supabaseKey ? '✓ (configurada pero vacía)' : '✗ (no configurada)'}`);
+  console.error(`   SUPABASE_URL: ${supabaseUrl ? '✓' : '✗'}`);
+  console.error(`   SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✓' : '✗'}`);
+  console.error(`   SUPABASE_SERVICE_ROLE_KEY: ${supabaseServiceKey ? '✓' : '✗'}`);
   console.error('');
 }
 
-// Crear cliente de Supabase con Service Role (bypasea RLS)
-const supabase = createClient(supabaseUrl, supabaseKey, {
+// ===============================================
+// CLIENTE USER - Para operaciones de usuarios autenticados
+// Usa ANON_KEY para respetar el contexto de autenticación
+// ===============================================
+const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -52,10 +58,32 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   },
   global: {
     headers: {
-      'x-application-name': 'sistema-constancias'
+      'x-application-name': 'sistema-constancias-user'
     }
   }
 });
+
+// ===============================================
+// CLIENTE ADMIN - Solo para operaciones administrativas
+// Usa SERVICE_ROLE_KEY para operaciones privilegiadas
+// ===============================================
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'x-application-name': 'sistema-constancias-admin'
+    }
+  }
+});
+
+// Legacy export (por compatibilidad temporal)
+const supabase = supabaseAdmin;
 
 // Función helper para verificar la conexión
 async function verificarConexion() {
@@ -97,7 +125,9 @@ function manejarErrorSupabase(error, contexto = '') {
 }
 
 module.exports = {
-  supabase,
+  supabase,           // Legacy (usa supabaseAdmin)
+  supabaseUser,       // Cliente para operaciones de usuarios autenticados
+  supabaseAdmin,      // Cliente para operaciones administrativas
   verificarConexion,
   manejarErrorSupabase
 };

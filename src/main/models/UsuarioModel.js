@@ -3,28 +3,38 @@ const BaseModel = require('./BaseModel');
 class UsuarioModel extends BaseModel {
   constructor(supabaseClient) {
     super(supabaseClient, 'usuarios');
+    // Guardar referencia al cliente admin para operaciones privilegiadas
+    this.adminClient = null;
   }
 
-  // Crear nuevo usuario con Supabase Auth
+  // Configurar cliente admin (se llama desde el controlador)
+  setAdminClient(adminClient) {
+    this.adminClient = adminClient;
+  }
+
+  // Crear nuevo usuario con Supabase Auth (requiere cliente admin)
   async crear(datos) {
     const { nombre, nombre_usuario, email, password, rol = 'trabajador' } = datos;
 
     try {
-      // 1. Crear usuario en Supabase Auth
-      const { data: authData, error: authError } = await this.db.auth.signUp({
+      if (!this.adminClient) {
+        throw new Error('Cliente admin no configurado. Operación no permitida.');
+      }
+
+      // 1. Crear usuario en Supabase Auth usando cliente ADMIN
+      const { data: authData, error: authError } = await this.adminClient.auth.admin.createUser({
         email,
         password,
-        options: {
-          data: {
-            nombre,
-            nombre_usuario,
-            rol
-          }
+        email_confirm: true, // Auto-confirmar email
+        user_metadata: {
+          nombre,
+          nombre_usuario,
+          rol
         }
       });
 
       if (authError) {
-        if (authError.message.includes('already registered')) {
+        if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
           throw new Error('El email ya está registrado');
         }
         throw authError;
@@ -38,7 +48,7 @@ class UsuarioModel extends BaseModel {
       // Esperamos un momento y obtenemos el usuario creado
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const { data: usuario, error: userError } = await this.db
+      const { data: usuario, error: userError } = await this.adminClient
         .from(this.tableName)
         .select('*')
         .eq('auth_id', authData.user.id)
@@ -57,17 +67,36 @@ class UsuarioModel extends BaseModel {
   }
 
   // Autenticar usuario con Supabase Auth
-  async autenticar(email, password) {
+  // Acepta email O nombre de usuario
+  async autenticar(usernameOrEmail, password) {
     try {
-      // 1. Autenticar con Supabase Auth
+      let email = usernameOrEmail;
+
+      // 1. Si no es un email, buscar el email por nombre de usuario
+      if (!usernameOrEmail.includes('@')) {
+        const { data: userData, error: lookupError } = await this.db
+          .from(this.tableName)
+          .select('email')
+          .eq('nombre_usuario', usernameOrEmail)
+          .eq('activo', true)
+          .single();
+
+        if (lookupError || !userData) {
+          throw new Error('Usuario no encontrado');
+        }
+
+        email = userData.email;
+      }
+
+      // 2. Autenticar con Supabase Auth usando el email
       const { data: authData, error: authError } = await this.db.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password
       });
 
       if (authError) {
         if (authError.message.includes('Invalid login credentials')) {
-          throw new Error('Email o contraseña incorrectos');
+          throw new Error('Credenciales incorrectas');
         }
         throw authError;
       }
@@ -76,7 +105,7 @@ class UsuarioModel extends BaseModel {
         throw new Error('Error al iniciar sesión');
       }
 
-      // 2. Obtener datos del usuario desde la tabla usuarios
+      // 3. Obtener datos del usuario desde la tabla usuarios
       const { data: usuario, error: userError } = await this.db
         .from(this.tableName)
         .select('*')
@@ -88,7 +117,7 @@ class UsuarioModel extends BaseModel {
         throw new Error('Usuario no encontrado o inactivo');
       }
 
-      // 3. Actualizar último acceso
+      // 4. Actualizar último acceso
       await this.db
         .from(this.tableName)
         .update({ ultimo_acceso: new Date().toISOString() })
@@ -144,11 +173,34 @@ class UsuarioModel extends BaseModel {
     }
   }
 
-  // Cambiar contraseña usando Supabase Auth
-  async cambiarPassword(id, passwordNuevo) {
+  // Cambiar contraseña del usuario autenticado (usuario normal)
+  async cambiarPasswordPropia(passwordNuevo) {
     try {
+      // Usa el cliente USER que tiene la sesión activa
+      const { error: updateError } = await this.db.auth.updateUser({
+        password: passwordNuevo
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error al cambiar contraseña propia:', error);
+      throw error;
+    }
+  }
+
+  // Cambiar contraseña de otro usuario (solo admin)
+  async cambiarPasswordAdmin(id, passwordNuevo) {
+    try {
+      if (!this.adminClient) {
+        throw new Error('Cliente admin no configurado. Operación no permitida.');
+      }
+
       // Obtener el auth_id del usuario
-      const { data: usuario, error: userError } = await this.db
+      const { data: usuario, error: userError } = await this.adminClient
         .from(this.tableName)
         .select('auth_id, email')
         .eq('id', id)
@@ -158,8 +210,8 @@ class UsuarioModel extends BaseModel {
         throw new Error('Usuario no encontrado');
       }
 
-      // Actualizar la contraseña en Supabase Auth
-      const { error: updateError } = await this.db.auth.admin.updateUserById(
+      // Actualizar la contraseña en Supabase Auth usando cliente ADMIN
+      const { error: updateError } = await this.adminClient.auth.admin.updateUserById(
         usuario.auth_id,
         { password: passwordNuevo }
       );
@@ -170,7 +222,7 @@ class UsuarioModel extends BaseModel {
 
       return true;
     } catch (error) {
-      console.error('Error al cambiar contraseña:', error);
+      console.error('Error al cambiar contraseña (admin):', error);
       throw error;
     }
   }

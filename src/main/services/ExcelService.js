@@ -7,71 +7,115 @@ const dayjs = require("dayjs");
 class ExcelService {
   constructor() {
     this.requiredSheets = ["personas", "expedientes", "registros"];
+    // Modelos se inyectarán desde el controlador
+    this.personaModel = null;
+    this.expedienteModel = null;
+    this.registroModel = null;
+    this.estadoModel = null;
+  }
+
+  // Configurar modelos (se llama desde ExcelController)
+  setModels(models) {
+    this.personaModel = models.persona;
+    this.expedienteModel = models.expediente;
+    this.registroModel = models.registro;
+    this.estadoModel = models.estado;
   }
 
   // Exportar base de datos completa a Excel
-  async exportarBaseDatos(db, filePath) {
-    const tablas = {
-      registros: `
-        SELECT 
-          r.id AS Registro_ID,
-          p.nombre AS Nombre,
-          p.numero AS Número,
-          p.dni AS DNI,
-          e.codigo AS Expediente,
-          r.fecha_registro AS "Fecha de Registro",
-          s.nombre AS Estado,
-          r.fecha_en_caja AS "Fecha en Caja",
-          r.eliminado AS Eliminado
-        FROM registros r
-        JOIN personas p ON r.persona_id = p.id
-        JOIN expedientes e ON r.expediente_id = e.id
-        JOIN estados s ON r.estado_id = s.id
-        ORDER BY r.id ASC
-      `,
-      personas: `
-        SELECT 
-          id AS Persona_ID,
-          nombre AS Nombre,
-          dni AS DNI,
-          numero AS Número
-        FROM personas
-        ORDER BY id ASC
-      `,
-      expedientes: `
-        SELECT 
-          id AS Expediente_ID,
-          persona_id AS Persona_ID,
-          codigo AS Código,
-          fecha_solicitud AS "Fecha de Solicitud",
-          fecha_entrega AS "Fecha de Entrega",
-          observacion AS Observación
-        FROM expedientes
-        ORDER BY id ASC
-      `,
-      estados: `
-        SELECT 
-          id AS Estado_ID,
-          nombre AS Nombre
-        FROM estados
-        ORDER BY id ASC
-      `
-    };
+  async exportarBaseDatos(filePath) {
+    if (!this.registroModel) {
+      throw new Error('Modelos no configurados. Llama a setModels() primero.');
+    }
 
     const workbook = XLSX.utils.book_new();
 
-    for (const [nombreHoja, sql] of Object.entries(tablas)) {
-      const rows = await this.executeQuery(db, sql);
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(workbook, worksheet, nombreHoja);
-    }
+    // REGISTROS con JOINs
+    const { data: registros } = await this.registroModel.db
+      .from('registros')
+      .select(`
+        id,
+        personas!inner (nombre, numero, dni),
+        expedientes!inner (codigo),
+        estados!inner (nombre),
+        fecha_registro,
+        fecha_en_caja,
+        eliminado
+      `)
+      .order('id', { ascending: true });
+
+    const registrosFormateados = (registros || []).map(r => ({
+      'Registro_ID': r.id,
+      'Nombre': r.personas?.nombre,
+      'Número': r.personas?.numero,
+      'DNI': r.personas?.dni,
+      'Expediente': r.expedientes?.codigo,
+      'Fecha de Registro': r.fecha_registro,
+      'Estado': r.estados?.nombre,
+      'Fecha en Caja': r.fecha_en_caja || 'No entregado',
+      'Eliminado': r.eliminado ? 1 : 0
+    }));
+
+    // PERSONAS
+    const { data: personas } = await this.personaModel.db
+      .from('personas')
+      .select('id, nombre, dni, numero')
+      .order('id', { ascending: true });
+
+    const personasFormateadas = (personas || []).map(p => ({
+      'Persona_ID': p.id,
+      'Nombre': p.nombre,
+      'DNI': p.dni,
+      'Número': p.numero
+    }));
+
+    // EXPEDIENTES
+    const { data: expedientes } = await this.expedienteModel.db
+      .from('expedientes')
+      .select('id, persona_id, codigo, fecha_solicitud, fecha_entrega, observacion')
+      .order('id', { ascending: true });
+
+    const expedientesFormateados = (expedientes || []).map(e => ({
+      'Expediente_ID': e.id,
+      'Persona_ID': e.persona_id,
+      'Código': e.codigo,
+      'Fecha de Solicitud': e.fecha_solicitud,
+      'Fecha de Entrega': e.fecha_entrega,
+      'Observación': e.observacion
+    }));
+
+    // ESTADOS
+    const { data: estados } = await this.estadoModel.db
+      .from('estados')
+      .select('id, nombre')
+      .order('id', { ascending: true });
+
+    const estadosFormateados = (estados || []).map(e => ({
+      'Estado_ID': e.id,
+      'Nombre': e.nombre
+    }));
+
+    // Crear hojas
+    const wsRegistros = XLSX.utils.json_to_sheet(registrosFormateados);
+    const wsPersonas = XLSX.utils.json_to_sheet(personasFormateadas);
+    const wsExpedientes = XLSX.utils.json_to_sheet(expedientesFormateados);
+    const wsEstados = XLSX.utils.json_to_sheet(estadosFormateados);
+
+    XLSX.utils.book_append_sheet(workbook, wsRegistros, 'registros');
+    XLSX.utils.book_append_sheet(workbook, wsPersonas, 'personas');
+    XLSX.utils.book_append_sheet(workbook, wsExpedientes, 'expedientes');
+    XLSX.utils.book_append_sheet(workbook, wsEstados, 'estados');
 
     XLSX.writeFile(workbook, filePath);
     return { success: true, filePath };
   }
 
   // Importar desde Excel
-  async importarDesdeExcel(filePath, db) {
+  async importarDesdeExcel(filePath) {
+    if (!this.registroModel) {
+      throw new Error('Modelos no configurados. Llama a setModels() primero.');
+    }
+
     const workbook = XLSX.readFile(filePath);
     const sheetNames = workbook.SheetNames;
 
@@ -88,18 +132,18 @@ class ExcelService {
     }
 
     // Procesar importación
-    const resultado = await this.procesarImportacion(datos, db);
-    
+    const resultado = await this.procesarImportacion(datos);
+
     // Guardar log
     const logFile = await this.crearArchivoLog(resultado, filePath);
-    
+
     return {
       ...resultado,
       logFile
     };
   }
 
-  async procesarImportacion(datos, db) {
+  async procesarImportacion(datos) {
     const logs = [];
     const ignorados = [];
     let totalImportados = 0;
@@ -110,19 +154,19 @@ class ExcelService {
 
       try {
         const registroData = this.prepararDatosRegistro(row, datos.expedientes);
-        
+
         // Validaciones
         if (!this.validarRegistro(registroData, fila, logs, ignorados)) {
           continue;
         }
 
         // Verificar duplicados
-        if (await this.verificarDuplicados(registroData, db, fila, logs, ignorados)) {
+        if (await this.verificarDuplicados(registroData, fila, logs, ignorados)) {
           continue;
         }
 
         // Insertar registro completo
-        await this.insertarRegistroCompleto(registroData, db);
+        await this.insertarRegistroCompleto(registroData);
         totalImportados++;
 
       } catch (error) {
@@ -177,13 +221,15 @@ class ExcelService {
     return true;
   }
 
-  async verificarDuplicados(data, db, fila, logs, ignorados) {
+  async verificarDuplicados(data, fila, logs, ignorados) {
     if (data.expediente) {
-      const existe = await this.executeQuery(db, 
-        "SELECT id FROM expedientes WHERE codigo = ?", 
-        [data.expediente]
-      );
-      if (existe.length > 0) {
+      const { data: existe } = await this.expedienteModel.db
+        .from('expedientes')
+        .select('id')
+        .eq('codigo', data.expediente)
+        .limit(1);
+
+      if (existe && existe.length > 0) {
         logs.push(`Fila ${fila}: expediente duplicado (${data.expediente}), registro ignorado.`);
         ignorados.push(fila);
         return true;
@@ -257,17 +303,60 @@ class ExcelService {
     return resumen;
   }
 
-  async insertarRegistroCompleto(data, db) {
-    // Implementar inserción completa (persona -> expediente -> registro)
-    // Esta lógica vendría de tu main.js original
-  }
+  async insertarRegistroCompleto(data) {
+    // 1. Buscar o crear persona
+    let persona = await this.personaModel.buscarPorDni(data.dni);
 
-  executeQuery(db, query, params = []) {
-    return new Promise((resolve, reject) => {
-      db.all(query, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
+    if (!persona) {
+      const { lastID } = await this.personaModel.crear(data.nombre, data.dni, data.numero);
+      persona = await this.personaModel.buscarPorId(lastID);
+    } else {
+      // Actualizar número si cambió
+      if (data.numero && data.numero !== '---' && data.numero !== persona.numero) {
+        await this.personaModel.actualizar(persona.id, { numero: data.numero });
+      }
+    }
+
+    // 2. Crear expediente
+    let expedienteId = null;
+    if (data.expediente && data.expediente !== '---') {
+      const { lastID } = await this.expedienteModel.crear({
+        persona_id: persona.id,
+        codigo: data.expediente,
+        fecha_solicitud: data.fecha_solicitud,
+        fecha_entrega: data.fecha_entrega,
+        observacion: data.observacion
       });
+      expedienteId = lastID;
+    } else {
+      // Crear expediente sin código
+      const { lastID } = await this.expedienteModel.crear({
+        persona_id: persona.id,
+        codigo: null,
+        fecha_solicitud: data.fecha_solicitud,
+        fecha_entrega: data.fecha_entrega,
+        observacion: data.observacion
+      });
+      expedienteId = lastID;
+    }
+
+    // 3. Buscar estado
+    const { data: estados } = await this.estadoModel.db
+      .from('estados')
+      .select('id')
+      .eq('nombre', data.estado)
+      .single();
+
+    const estadoId = estados?.id || 1; // Default: 1 (Recibido)
+
+    // 4. Crear registro
+    await this.registroModel.crear({
+      proyecto_id: 1, // Proyecto por defecto
+      persona_id: persona.id,
+      expediente_id: expedienteId,
+      estado_id: estadoId,
+      usuario_creador_id: 1, // Usuario por defecto
+      fecha_en_caja: data.fecha_en_caja === 'No entregado' ? null : data.fecha_en_caja
     });
   }
 }

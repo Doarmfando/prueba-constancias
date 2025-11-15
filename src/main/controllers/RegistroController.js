@@ -317,15 +317,18 @@ class RegistroController extends BaseController {
 
       // Agregar estadÃ­sticas adicionales para el dashboard
       const hoy = new Date().toISOString().split('T')[0];
-      const registrosHoy = await this.model.executeQuery(`
-        SELECT COUNT(*) as total
-        FROM registros
-        WHERE DATE(fecha_registro) = ? AND eliminado = 0
-      `, [hoy]);
+
+      // Contar registros de hoy usando Supabase
+      const { data: registrosHoy } = await this.model.db
+        .from('registros')
+        .select('id', { count: 'exact', head: true })
+        .gte('fecha_registro', hoy)
+        .lt('fecha_registro', `${hoy}T23:59:59`)
+        .eq('eliminado', false);
 
       return {
         ...resultado,
-        hoy: registrosHoy[0]?.total || 0
+        hoy: registrosHoy || 0
       };
     } catch (error) {
       this.handleError(error, "Error obteniendo estadÃ­sticas");
@@ -357,26 +360,37 @@ class RegistroController extends BaseController {
   }
 
   async calcularEstadisticas(tipo, anio) {
-    // Esta lÃ³gica deberÃ­a estar en el modelo o en un servicio de estadÃ­sticas
-    // La mantenemos aquÃ­ temporalmente para compatibilidad
-    const campoFecha = tipo === "solicitud" ? "expedientes.fecha_solicitud" : "registros.fecha_registro";
-    const whereFecha = anio !== "Todo" ? `AND strftime('%Y', ${campoFecha}) = ?` : "";
-    
-    const query = `
-      SELECT estados.nombre, COUNT(*) as total
-      FROM registros
-      INNER JOIN estados ON registros.estado_id = estados.id
-      LEFT JOIN expedientes ON registros.expediente_id = expedientes.id
-      WHERE registros.eliminado = 0
-      ${whereFecha}
-      GROUP BY estados.nombre
-    `;
-    
-    const params = anio !== "Todo" ? [anio] : [];
-    
     try {
-      const rows = await this.model.executeQuery(query, params);
-      
+      // Obtener todos los registros con sus relaciones
+      let query = this.model.db
+        .from('registros')
+        .select(`
+          id,
+          estado_id,
+          fecha_registro,
+          estados!inner (nombre),
+          expedientes (fecha_solicitud)
+        `)
+        .eq('eliminado', false);
+
+      // Si se especifica un año, filtrar por él
+      if (anio !== "Todo") {
+        if (tipo === "solicitud") {
+          // Filtrar por año de solicitud
+          query = query.gte('expedientes.fecha_solicitud', `${anio}-01-01`)
+                       .lte('expedientes.fecha_solicitud', `${anio}-12-31`);
+        } else {
+          // Filtrar por año de registro
+          query = query.gte('fecha_registro', `${anio}-01-01T00:00:00`)
+                       .lte('fecha_registro', `${anio}-12-31T23:59:59`);
+        }
+      }
+
+      const { data: registros, error } = await query;
+
+      if (error) throw error;
+
+      // Contar por estado
       const conteo = {
         Recibido: 0,
         "En Caja": 0,
@@ -384,15 +398,17 @@ class RegistroController extends BaseController {
         Tesoreria: 0,
       };
 
-      for (const row of rows) {
-        if (conteo.hasOwnProperty(row.nombre)) {
-          conteo[row.nombre] = row.total;
+      (registros || []).forEach(r => {
+        const estadoNombre = r.estados?.nombre;
+        if (conteo.hasOwnProperty(estadoNombre)) {
+          conteo[estadoNombre]++;
         }
-      }
+      });
 
       const total = Object.values(conteo).reduce((a, b) => a + b, 0);
       return { success: true, total, ...conteo };
     } catch (error) {
+      console.error('Error calcularEstadisticas:', error);
       return { success: false };
     }
   }

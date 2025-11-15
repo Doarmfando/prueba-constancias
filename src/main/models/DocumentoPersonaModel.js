@@ -135,25 +135,60 @@ class DocumentoPersonaModel extends BaseModel {
 
   // Buscar documentos por nombre o comentario
   async buscar(termino) {
-    const query = `
-      SELECT
-        d.*,
-        u.nombre_usuario as usuario_carga_nombre,
-        p.nombre as persona_nombre,
-        p.dni as persona_dni
-      FROM documentos_persona d
-      LEFT JOIN usuarios u ON d.usuario_carga_id = u.id
-      LEFT JOIN personas p ON d.persona_id = p.id
-      WHERE
-        d.nombre_archivo LIKE ? OR
-        d.comentario LIKE ? OR
-        p.nombre LIKE ? OR
-        p.dni LIKE ?
-      ORDER BY d.fecha_carga DESC
-    `;
+    const { data, error } = await this.db
+      .from(this.tableName)
+      .select(`
+        *,
+        usuarios (nombre_usuario),
+        personas (nombre, dni)
+      `)
+      .or(`nombre_archivo.ilike.%${termino}%,comentario.ilike.%${termino}%`)
+      .order('fecha_carga', { ascending: false });
 
-    const pattern = `%${termino}%`;
-    return this.executeQuery(query, [pattern, pattern, pattern, pattern]);
+    if (error) throw error;
+
+    // También buscar por nombre o DNI de persona
+    const { data: porPersona, error: errorPersona } = await this.db
+      .from('personas')
+      .select(`
+        id,
+        documentos_persona (
+          *,
+          usuarios (nombre_usuario),
+          personas (nombre, dni)
+        )
+      `)
+      .or(`nombre.ilike.%${termino}%,dni.ilike.%${termino}%`);
+
+    if (errorPersona) throw errorPersona;
+
+    // Combinar resultados
+    const documentosPersona = (porPersona || [])
+      .flatMap(p => (p.documentos_persona || []).map(d => ({
+        ...d,
+        usuario_carga_nombre: d.usuarios?.nombre_usuario,
+        persona_nombre: d.personas?.nombre,
+        persona_dni: d.personas?.dni
+      })));
+
+    // Formatear resultados directos
+    const documentosDirectos = (data || []).map(d => ({
+      ...d,
+      usuario_carga_nombre: d.usuarios?.nombre_usuario,
+      persona_nombre: d.personas?.nombre,
+      persona_dni: d.personas?.dni
+    }));
+
+    // Combinar y eliminar duplicados por ID
+    const todosDocumentos = [...documentosDirectos, ...documentosPersona];
+    const documentosUnicos = Array.from(
+      new Map(todosDocumentos.map(d => [d.id, d])).values()
+    );
+
+    // Ordenar por fecha de carga descendente
+    return documentosUnicos.sort((a, b) =>
+      new Date(b.fecha_carga) - new Date(a.fecha_carga)
+    );
   }
 }
 

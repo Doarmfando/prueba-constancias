@@ -136,8 +136,14 @@ class AuthController extends BaseController {
         throw new Error('No tienes permisos para cambiar esta contraseña');
       }
 
-      // Cambiar password usando Supabase Auth (funciona tanto para admin como para el mismo usuario)
-      await this.usuarioModel.cambiarPassword(id, passwordNuevo);
+      // Si el usuario cambia su propia contraseña
+      if (usuarioActual.id === parseInt(id)) {
+        await this.usuarioModel.cambiarPasswordPropia(passwordNuevo);
+      }
+      // Si es admin cambiando la contraseña de otro usuario
+      else {
+        await this.usuarioModel.cambiarPasswordAdmin(id, passwordNuevo);
+      }
 
       // Registrar acción en auditoría
       await this.auditoriaModel.registrarEdicion(

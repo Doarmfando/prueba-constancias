@@ -2,11 +2,13 @@
 const BaseController = require('./BaseController');
 
 class ExcelController extends BaseController {
-  constructor(excelService, fileService, db) {
+  constructor(excelService, fileService, models) {
     super(null); // No necesita modelo específico
     this.excelService = excelService;
     this.fileService = fileService;
-    this.db = db;
+
+    // Configurar modelos en el ExcelService
+    this.excelService.setModels(models);
   }
 
   // Exportar base de datos completa a Excel
@@ -14,14 +16,14 @@ class ExcelController extends BaseController {
     try {
       // Solicitar ruta de guardado
       const rutaResult = await this.fileService.seleccionarRutaGuardado("base_completa.xlsx");
-      
+
       if (!rutaResult.success) {
         return { success: false, message: "Exportación cancelada" };
       }
 
       // Realizar exportación
-      const resultado = await this.excelService.exportarBaseDatos(this.db, rutaResult.filePath);
-      
+      const resultado = await this.excelService.exportarBaseDatos(rutaResult.filePath);
+
       if (resultado.success) {
         return {
           success: true,
@@ -41,13 +43,13 @@ class ExcelController extends BaseController {
     try {
       // Solicitar archivo de importación
       const archivoResult = await this.fileService.seleccionarArchivoExcel();
-      
+
       if (!archivoResult.success) {
         return { success: false, message: "Importación cancelada" };
       }
 
       // Realizar importación
-      const resultado = await this.excelService.importarDesdeExcel(archivoResult.filePath, this.db);
+      const resultado = await this.excelService.importarDesdeExcel(archivoResult.filePath);
       
       return {
         ...resultado,

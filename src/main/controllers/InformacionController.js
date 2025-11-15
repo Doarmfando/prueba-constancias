@@ -24,10 +24,7 @@ class InformacionController extends BaseController {
       } = this.sanitizeInput(datos);
 
       // Obtener persona_id desde el registro
-      const registro = await this.registroModel.executeGet(
-        "SELECT persona_id FROM registros WHERE id = ?", 
-        [registro_id]
-      );
+      const registro = await this.registroModel.obtenerPorId(registro_id);
 
       if (!registro) {
         throw new Error("Registro no encontrado");
@@ -162,29 +159,9 @@ class InformacionController extends BaseController {
   async validarConsistenciaDatos(registro_id) {
     try {
       this.validateRequired({ registro_id }, ['registro_id']);
-      
-      const query = `
-        SELECT 
-          r.id as registro_id,
-          r.estado_id,
-          r.fecha_registro,
-          r.fecha_en_caja,
-          p.nombre,
-          p.dni,
-          p.numero,
-          e.codigo,
-          e.fecha_solicitud,
-          e.fecha_entrega,
-          es.nombre as estado_nombre
-        FROM registros r
-        JOIN personas p ON r.persona_id = p.id
-        JOIN expedientes e ON r.expediente_id = e.id
-        JOIN estados es ON r.estado_id = es.id
-        WHERE r.id = ? AND r.eliminado = 0
-      `;
 
-      const registro = await this.registroModel.executeGet(query, [registro_id]);
-      
+      const registro = await this.registroModel.obtenerPorId(registro_id);
+
       if (!registro) {
         throw new Error("Registro no encontrado");
       }
@@ -192,25 +169,25 @@ class InformacionController extends BaseController {
       const inconsistencias = [];
 
       // Validar fechas
-      if (registro.fecha_entrega && !registro.fecha_solicitud) {
+      if (registro.expediente_fecha_entrega && !registro.expediente_fecha_solicitud) {
         inconsistencias.push("Expediente entregado sin fecha de solicitud");
       }
 
-      if (registro.estado_nombre === "Entregado" && !registro.fecha_entrega) {
+      if (registro.estado_nombre === "Entregado" && !registro.expediente_fecha_entrega) {
         inconsistencias.push("Estado 'Entregado' sin fecha de entrega");
       }
 
-      if (registro.estado_nombre === "En Caja" && registro.fecha_en_caja === "No entregado") {
+      if (registro.estado_nombre === "En Caja" && (!registro.fecha_en_caja || registro.fecha_en_caja === "No entregado")) {
         inconsistencias.push("Estado 'En Caja' sin fecha en caja");
       }
 
       // Validar DNI
-      if (registro.dni && !/^\d{8}$/.test(registro.dni)) {
+      if (registro.persona_dni && !/^\d{8}$/.test(registro.persona_dni)) {
         inconsistencias.push("DNI con formato inválido");
       }
 
       // Validar datos obligatorios
-      if (!registro.nombre || registro.nombre.trim() === "") {
+      if (!registro.persona_nombre || registro.persona_nombre.trim() === "") {
         inconsistencias.push("Nombre vacío");
       }
 
@@ -370,22 +347,28 @@ class InformacionController extends BaseController {
 
       // Buscar por DNI similar
       if (dni && dni.length >= 6) {
-        const dniPattern = `%${dni.substring(0, 6)}%`;
-        const porDni = await this.personaModel.executeQuery(
-          "SELECT * FROM personas WHERE dni LIKE ? AND dni != ?",
-          [dniPattern, dni]
-        );
-        similares = [...similares, ...porDni];
+        const dniPattern = dni.substring(0, 6);
+        const { data: porDni, error: errorDni } = await this.personaModel.db
+          .from('personas')
+          .select('*')
+          .ilike('dni', `${dniPattern}%`)
+          .neq('dni', dni);
+
+        if (!errorDni && porDni) {
+          similares = [...similares, ...porDni];
+        }
       }
 
       // Buscar por nombre similar
       if (nombre && nombre.length >= 3) {
-        const nombrePattern = `%${nombre}%`;
-        const porNombre = await this.personaModel.executeQuery(
-          "SELECT * FROM personas WHERE nombre LIKE ?",
-          [nombrePattern]
-        );
-        similares = [...similares, ...porNombre];
+        const { data: porNombre, error: errorNombre } = await this.personaModel.db
+          .from('personas')
+          .select('*')
+          .ilike('nombre', `%${nombre}%`);
+
+        if (!errorNombre && porNombre) {
+          similares = [...similares, ...porNombre];
+        }
       }
 
       // Eliminar duplicados
