@@ -118,7 +118,8 @@ class RegistroController extends BaseController {
       this.validateRequired(datos, ['id']);
       const datosSanitizados = this.sanitizeInput(datos);
 
-      const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [datosSanitizados.id]);
+      // Obtener el registro para verificar permisos
+      const reg = await this.model.getById(datosSanitizados.id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
@@ -140,7 +141,7 @@ class RegistroController extends BaseController {
       const id = typeof payload === 'object' ? payload.id : payload;
       const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
-      const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+      const reg = await this.model.getById(id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
@@ -161,7 +162,7 @@ class RegistroController extends BaseController {
       }
       // Validar permisos por cada registro
       for (const id of ids) {
-        const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+        const reg = await this.model.getById(id);
         if (reg?.proyecto_id) {
           await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
         }
@@ -179,7 +180,7 @@ class RegistroController extends BaseController {
       const id = typeof payload === 'object' ? payload.id : payload;
       const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
-      const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+      const reg = await this.model.getById(id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
@@ -199,7 +200,7 @@ class RegistroController extends BaseController {
         throw new Error("No se proporcionaron IDs vÃ¡lidos");
       }
       for (const id of ids) {
-        const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+        const reg = await this.model.getById(id);
         if (reg?.proyecto_id) {
           await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
         }
@@ -217,7 +218,7 @@ class RegistroController extends BaseController {
       const id = typeof payload === 'object' ? payload.id : payload;
       const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
-      const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+      const reg = await this.model.getById(id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
@@ -241,7 +242,7 @@ class RegistroController extends BaseController {
       const resultados = [];
       for (const id of ids) {
         try {
-          const reg = await this.model.executeGet('SELECT proyecto_id FROM registros WHERE id = ?', [id]);
+          const reg = await this.model.getById(id);
           if (reg?.proyecto_id) {
             await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
           }

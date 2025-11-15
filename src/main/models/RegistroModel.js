@@ -29,6 +29,117 @@ class RegistroModel extends BaseModel {
     return { lastID: registro.id };
   }
 
+  // Agregar nuevo registro (con lógica completa de persona y expediente)
+  async agregar(datos) {
+    try {
+      const {
+        nombre,
+        dni,
+        numero = '',
+        expediente_codigo = '',
+        fecha_solicitud,
+        fecha_entrega,
+        observacion = '',
+        estado_id,
+        proyecto_id,
+        usuario_creador_id,
+        fecha_en_caja = null
+      } = datos;
+
+      // 1. Buscar o crear persona
+      let persona = null;
+      if (dni) {
+        const { data: personaExistente, error: errorBuscarPersona } = await this.db
+          .from('personas')
+          .select('*')
+          .eq('dni', dni)
+          .single();
+
+        if (errorBuscarPersona && errorBuscarPersona.code !== 'PGRST116') {
+          throw errorBuscarPersona;
+        }
+
+        persona = personaExistente;
+      }
+
+      if (!persona && nombre && dni) {
+        // Crear nueva persona
+        const { data: nuevaPersona, error: errorCrearPersona } = await this.db
+          .from('personas')
+          .insert({ nombre, dni, numero })
+          .select()
+          .single();
+
+        if (errorCrearPersona) throw errorCrearPersona;
+        persona = nuevaPersona;
+      }
+
+      if (!persona) {
+        throw new Error('No se pudo crear o encontrar la persona');
+      }
+
+      // 2. Buscar o crear expediente
+      let expediente = null;
+      if (expediente_codigo) {
+        const { data: expedienteExistente, error: errorBuscarExpediente } = await this.db
+          .from('expedientes')
+          .select('*')
+          .eq('codigo', expediente_codigo)
+          .eq('persona_id', persona.id)
+          .single();
+
+        if (errorBuscarExpediente && errorBuscarExpediente.code !== 'PGRST116') {
+          throw errorBuscarExpediente;
+        }
+
+        expediente = expedienteExistente;
+      }
+
+      if (!expediente) {
+        // Crear nuevo expediente
+        const { data: nuevoExpediente, error: errorCrearExpediente } = await this.db
+          .from('expedientes')
+          .insert({
+            persona_id: persona.id,
+            codigo: expediente_codigo || null,
+            fecha_solicitud,
+            fecha_entrega: fecha_entrega || null,
+            observacion
+          })
+          .select()
+          .single();
+
+        if (errorCrearExpediente) throw errorCrearExpediente;
+        expediente = nuevoExpediente;
+      }
+
+      // 3. Crear registro
+      const { data: nuevoRegistro, error: errorCrearRegistro } = await this.db
+        .from(this.tableName)
+        .insert({
+          proyecto_id,
+          persona_id: persona.id,
+          expediente_id: expediente.id,
+          estado_id,
+          usuario_creador_id,
+          fecha_en_caja,
+          eliminado: false
+        })
+        .select()
+        .single();
+
+      if (errorCrearRegistro) throw errorCrearRegistro;
+
+      // 4. Obtener registro completo con relaciones
+      const registroCompleto = await this.obtenerPorId(nuevoRegistro.id);
+
+      return registroCompleto || nuevoRegistro;
+    } catch (error) {
+      console.error('Error en agregar registro:', error);
+      throw error;
+    }
+  }
+
   // Obtener registro por ID con información completa
   async obtenerPorId(id) {
     const { data, error } = await this.db
@@ -103,6 +214,77 @@ class RegistroModel extends BaseModel {
     }));
   }
 
+  // Actualizar registro completo (con lógica de persona y expediente)
+  async actualizar(datos) {
+    try {
+      const {
+        id,
+        nombre,
+        dni,
+        numero,
+        expediente_codigo,
+        fecha_solicitud,
+        fecha_entrega,
+        observacion,
+        estado_id,
+        fecha_en_caja
+      } = datos;
+
+      // Obtener el registro actual
+      const registroActual = await this.getById(id);
+      if (!registroActual) {
+        throw new Error('Registro no encontrado');
+      }
+
+      // Actualizar persona si hay cambios
+      if (registroActual.persona_id && (nombre || dni !== undefined || numero !== undefined)) {
+        const datosPersona = {};
+        if (nombre) datosPersona.nombre = nombre;
+        if (dni !== undefined) datosPersona.dni = dni;
+        if (numero !== undefined) datosPersona.numero = numero;
+
+        if (Object.keys(datosPersona).length > 0) {
+          await this.db
+            .from('personas')
+            .update(datosPersona)
+            .eq('id', registroActual.persona_id);
+        }
+      }
+
+      // Actualizar expediente si hay cambios
+      if (registroActual.expediente_id && (expediente_codigo !== undefined || fecha_solicitud || fecha_entrega !== undefined || observacion !== undefined)) {
+        const datosExpediente = {};
+        if (expediente_codigo !== undefined) datosExpediente.codigo = expediente_codigo || null;
+        if (fecha_solicitud) datosExpediente.fecha_solicitud = fecha_solicitud;
+        if (fecha_entrega !== undefined) datosExpediente.fecha_entrega = fecha_entrega || null;
+        if (observacion !== undefined) datosExpediente.observacion = observacion;
+
+        if (Object.keys(datosExpediente).length > 0) {
+          await this.db
+            .from('expedientes')
+            .update(datosExpediente)
+            .eq('id', registroActual.expediente_id);
+        }
+      }
+
+      // Actualizar registro
+      const datosRegistro = {};
+      if (estado_id) datosRegistro.estado_id = estado_id;
+      if (fecha_en_caja !== undefined) datosRegistro.fecha_en_caja = fecha_en_caja;
+
+      if (Object.keys(datosRegistro).length > 0) {
+        await this.update(id, datosRegistro);
+      }
+
+      // Obtener registro completo actualizado
+      const registroCompleto = await this.obtenerPorId(id);
+      return registroCompleto;
+    } catch (error) {
+      console.error('Error en actualizar registro:', error);
+      throw error;
+    }
+  }
+
   // Actualizar estado del registro
   async actualizarEstado(id, estadoId, usuarioId) {
     await this.update(id, { estado_id: estadoId });
@@ -113,6 +295,12 @@ class RegistroModel extends BaseModel {
   async actualizarFechaEnCaja(id, fecha, usuarioId) {
     await this.update(id, { fecha_en_caja: fecha });
     return { changes: 1 };
+  }
+
+  // Mover a papelera (eliminación lógica)
+  async moverAPapelera(id, usuarioId) {
+    await this.update(id, { eliminado: true });
+    return { success: true, message: 'Registro movido a papelera' };
   }
 
   // Eliminar registro (eliminación lógica)
