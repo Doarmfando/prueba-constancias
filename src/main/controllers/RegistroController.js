@@ -8,17 +8,45 @@ class RegistroController extends BaseController {
   }
 
   async verificarPermisoEdicion(proyectoId, usuario) {
+    // Si no hay usuario, permitir (modo desarrollo)
     if (!usuario || !usuario.id) {
       return true;
     }
-    if (usuario.rol === 'administrador') return true;
-    if (!this.proyectoModel) return true;
-    const usuarioId = typeof usuario.id === 'string' ? parseInt(usuario.id, 10) : usuario.id;
-    const permitido = await this.proyectoModel.verificarAcceso(proyectoId, usuarioId, 'editar');
-    if (!permitido) {
-      throw new Error('No tienes permisos para editar este proyecto');
+
+    // Administradores pueden editar todo
+    if (usuario.rol === 'administrador') {
+      return true;
     }
-    return true;
+
+    // Si no hay proyectoModel, permitir
+    if (!this.proyectoModel) {
+      return true;
+    }
+
+    try {
+      // Obtener el proyecto para verificar si es público o privado
+      const proyecto = await this.proyectoModel.obtenerPorId(proyectoId);
+
+      if (!proyecto) {
+        throw new Error('Proyecto no encontrado');
+      }
+
+      // Proyectos públicos: todos los usuarios pueden editar
+      if (proyecto.es_publico === true) {
+        return true;
+      }
+
+      // Proyectos privados: solo el creador o admin
+      const usuarioId = typeof usuario.id === 'string' ? parseInt(usuario.id, 10) : usuario.id;
+      if (proyecto.usuario_creador_id === usuarioId) {
+        return true;
+      }
+
+      // Si llegamos aquí, no tiene permisos
+      throw new Error('No tienes permisos para editar registros en este proyecto privado');
+    } catch (error) {
+      throw error;
+    }
   }
 
   // Obtener todos los registros activos
@@ -44,12 +72,10 @@ class RegistroController extends BaseController {
   // Obtener registros por proyecto
   async obtenerRegistrosPorProyecto(proyectoId) {
     try {
-      console.log(`ðŸ” Obteniendo registros para proyecto ID: ${proyectoId}`);
 
       const registros = await this.model.obtenerTodos(proyectoId);
       const registrosEliminados = await this.model.obtenerEliminados(proyectoId);
 
-      console.log(`ðŸ“Š Encontrados ${registros?.length || 0} registros activos y ${registrosEliminados?.length || 0} eliminados`);
 
       return {
         success: true,
@@ -72,7 +98,6 @@ class RegistroController extends BaseController {
       const usuario = payload?.usuario || null;
       const datosSanitizados = this.sanitizeInput(datos);
 
-      console.log('🔍 RegistroController.agregarRegistro - Datos sanitizados:', JSON.stringify(datosSanitizados, null, 2));
 
       // Mapear nombres del frontend a nombres del backend
       const datosMapeados = {
