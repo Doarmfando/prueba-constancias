@@ -199,10 +199,26 @@ class DocumentoPersonaController extends BaseController {
         throw new Error('Documento no encontrado');
       }
 
-      // Eliminar archivo físico
-      if (fs.existsSync(documento.ruta_archivo)) {
-        fs.unlinkSync(documento.ruta_archivo);
-        console.log(`🗑️ Archivo eliminado: ${documento.ruta_archivo}`);
+      // Eliminar de Supabase Storage si está ahí
+      if (documento.ubicacion_almacenamiento === 'SUPABASE') {
+        if (this.hybridStorage) {
+          try {
+            console.log('🗑️ Eliminando archivo de Supabase Storage...');
+            const resultado = await this.hybridStorage.storageService.eliminarArchivo(documento.ruta_archivo);
+            if (resultado.success) {
+              console.log('✅ Archivo eliminado de Supabase Storage');
+            }
+          } catch (error) {
+            console.error('Error eliminando de Supabase Storage:', error);
+            // Continuar con la eliminación de BD aunque falle la eliminación del archivo
+          }
+        }
+      } else {
+        // Eliminar archivo físico local
+        if (fs.existsSync(documento.ruta_archivo)) {
+          fs.unlinkSync(documento.ruta_archivo);
+          console.log(`🗑️ Archivo local eliminado: ${documento.ruta_archivo}`);
+        }
       }
 
       // Eliminar de la base de datos
@@ -229,18 +245,58 @@ class DocumentoPersonaController extends BaseController {
         throw new Error('Documento no encontrado');
       }
 
-      if (!fs.existsSync(documento.ruta_archivo)) {
-        throw new Error('El archivo ya no existe en el sistema');
+      let rutaArchivo;
+
+      // Verificar si el archivo está en Supabase
+      if (documento.ubicacion_almacenamiento === 'SUPABASE') {
+        console.log('📥 Archivo en Supabase, descargando...');
+
+        // Verificar si ya existe localmente en caché
+        const cacheDir = path.join(app.getPath('temp'), 'documentos_cache');
+        if (!fs.existsSync(cacheDir)) {
+          fs.mkdirSync(cacheDir, { recursive: true });
+        }
+
+        const nombreArchivoSanitizado = documento.nombre_archivo.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const rutaCache = path.join(cacheDir, `${id}_${nombreArchivoSanitizado}`);
+
+        // Si ya existe en caché, usar esa versión
+        if (fs.existsSync(rutaCache)) {
+          console.log('✅ Usando versión en caché');
+          rutaArchivo = rutaCache;
+        } else {
+          // Descargar desde Supabase
+          if (!this.hybridStorage) {
+            throw new Error('El archivo está en la nube pero el servicio de almacenamiento no está disponible');
+          }
+
+          const resultado = await this.hybridStorage.descargarArchivo(documento.ruta_archivo, false);
+
+          if (!resultado.success) {
+            throw new Error(`No se pudo descargar el archivo desde la nube: ${resultado.error}`);
+          }
+
+          // Guardar en caché temporal
+          fs.writeFileSync(rutaCache, Buffer.from(await resultado.data.arrayBuffer()));
+          console.log(`💾 Archivo descargado y guardado en caché: ${rutaCache}`);
+          rutaArchivo = rutaCache;
+        }
+      } else {
+        // Archivo local
+        if (!fs.existsSync(documento.ruta_archivo)) {
+          throw new Error('El archivo ya no existe en el sistema. Si fue guardado en otra computadora, no está disponible localmente.');
+        }
+        rutaArchivo = documento.ruta_archivo;
       }
 
       // Abrir el archivo con la aplicación predeterminada
       const { shell } = require('electron');
-      await shell.openPath(documento.ruta_archivo);
+      await shell.openPath(rutaArchivo);
 
       return {
         success: true,
         message: 'Documento abierto',
-        ruta: documento.ruta_archivo
+        ruta: rutaArchivo
       };
     } catch (error) {
       this.handleError(error, 'Error abriendo documento');
@@ -259,8 +315,38 @@ class DocumentoPersonaController extends BaseController {
         throw new Error('Documento no encontrado');
       }
 
-      if (!fs.existsSync(documento.ruta_archivo)) {
-        throw new Error('El archivo ya no existe en el sistema');
+      let rutaArchivoTemporal;
+
+      // Verificar si el archivo está en Supabase
+      if (documento.ubicacion_almacenamiento === 'SUPABASE') {
+        console.log('📥 Descargando archivo desde Supabase...');
+
+        // Descargar desde Supabase a una ubicación temporal
+        if (!this.hybridStorage) {
+          throw new Error('El archivo está en la nube pero el servicio de almacenamiento no está disponible');
+        }
+
+        const resultado = await this.hybridStorage.descargarArchivo(documento.ruta_archivo, false);
+
+        if (!resultado.success) {
+          throw new Error(`No se pudo descargar el archivo desde la nube: ${resultado.error}`);
+        }
+
+        // Guardar temporalmente
+        const tempDir = path.join(app.getPath('temp'), 'documentos_temp');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        rutaArchivoTemporal = path.join(tempDir, documento.nombre_archivo);
+        fs.writeFileSync(rutaArchivoTemporal, Buffer.from(await resultado.data.arrayBuffer()));
+        console.log(`✅ Archivo descargado temporalmente: ${rutaArchivoTemporal}`);
+      } else {
+        // Archivo local
+        if (!fs.existsSync(documento.ruta_archivo)) {
+          throw new Error('El archivo ya no existe en el sistema. Si fue guardado en otra computadora, no está disponible localmente.');
+        }
+        rutaArchivoTemporal = documento.ruta_archivo;
       }
 
       // Extraer extensión del archivo original
@@ -328,7 +414,17 @@ class DocumentoPersonaController extends BaseController {
       }
 
       // Copiar archivo a la ubicación seleccionada
-      fs.copyFileSync(documento.ruta_archivo, rutaFinal);
+      fs.copyFileSync(rutaArchivoTemporal, rutaFinal);
+
+      // Si era un archivo temporal de Supabase, eliminarlo
+      if (documento.ubicacion_almacenamiento === 'SUPABASE' && rutaArchivoTemporal !== documento.ruta_archivo) {
+        try {
+          fs.unlinkSync(rutaArchivoTemporal);
+          console.log('🗑️ Archivo temporal eliminado');
+        } catch (err) {
+          console.error('Error eliminando archivo temporal:', err);
+        }
+      }
 
       return {
         success: true,
