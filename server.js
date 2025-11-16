@@ -23,7 +23,6 @@ app.use(express.urlencoded({ extended: true }));
 const { supabaseUser, supabaseAdmin } = require('./src/config/supabase');
 const DatabaseService = require('./src/main/services/DatabaseService');
 const StorageService = require('./src/main/services/StorageService');
-const HybridStorageService = require('./src/main/services/HybridStorageService');
 
 // Importar modelos
 const PersonaModel = require('./src/main/models/PersonaModel');
@@ -38,7 +37,7 @@ const PersonaController = require('./src/main/controllers/PersonaController');
 const RegistroController = require('./src/main/controllers/RegistroController');
 const AuthController = require('./src/main/controllers/AuthController');
 const ProyectoController = require('./src/main/controllers/ProyectoController');
-const DocumentoPersonaController = require('./src/main/controllers/DocumentoPersonaController');
+const DocumentoPersonaControllerWeb = require('./src/main/controllers/DocumentoPersonaControllerWeb');
 
 // Inicializar servicios
 let services = {};
@@ -55,8 +54,8 @@ async function initializeServices() {
     // Inicializar DatabaseService
     services.database = new DatabaseService(supabaseUser, supabaseAdmin);
 
-    // Inicializar StorageService y HybridStorageService
-    services.hybridStorage = new HybridStorageService(supabaseAdmin);
+    // Inicializar StorageService (solo Supabase, sin almacenamiento local)
+    services.storage = new StorageService(supabaseAdmin, 'Archivos');
 
     // Inicializar modelos
     const models = {
@@ -73,10 +72,10 @@ async function initializeServices() {
     controllers.registro = new RegistroController(models.registro, models.persona, models.expediente, models.proyecto);
     controllers.auth = new AuthController(models.usuario);
     controllers.proyecto = new ProyectoController(models.proyecto);
-    controllers.documentoPersona = new DocumentoPersonaController(
+    controllers.documentoPersona = new DocumentoPersonaControllerWeb(
       models.documentoPersona,
       models.persona,
-      services.hybridStorage
+      services.storage
     );
 
     console.log('✅ Servicios inicializados correctamente');
@@ -287,32 +286,16 @@ app.post('/api/documentos-persona/subir', ensureInitialized, upload.single('arch
 
 app.get('/api/documentos-persona/descargar/:id', ensureInitialized, async (req, res) => {
   try {
-    const documento = await controllers.documentoPersona.model.obtenerPorId(req.params.id);
+    const resultado = await controllers.documentoPersona.descargarDocumento(req.params.id);
 
-    if (!documento) {
-      return res.status(404).json({ success: false, error: 'Documento no encontrado' });
+    if (!resultado.success) {
+      return res.status(500).json({ success: false, error: resultado.error });
     }
 
-    // Descargar desde Supabase si es necesario
-    if (documento.ubicacion_almacenamiento === 'SUPABASE') {
-      const resultado = await services.hybridStorage.descargarArchivo(documento.ruta_archivo, false);
-
-      if (!resultado.success) {
-        return res.status(500).json({ success: false, error: 'No se pudo descargar el archivo' });
-      }
-
-      const buffer = Buffer.from(await resultado.data.arrayBuffer());
-
-      // Enviar archivo al cliente
-      res.setHeader('Content-Disposition', `attachment; filename="${documento.nombre_archivo}"`);
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.send(buffer);
-    } else {
-      return res.status(400).json({
-        success: false,
-        error: 'El archivo está almacenado localmente y no puede descargarse en modo web'
-      });
-    }
+    // Enviar archivo al cliente
+    res.setHeader('Content-Disposition', `attachment; filename="${resultado.nombre_archivo}"`);
+    res.setHeader('Content-Type', resultado.content_type);
+    res.send(resultado.buffer);
   } catch (error) {
     console.error('Error descargando documento:', error);
     res.status(500).json({ success: false, error: error.message });
