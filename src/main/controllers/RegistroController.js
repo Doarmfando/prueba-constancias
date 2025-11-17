@@ -234,7 +234,8 @@ class RegistroController extends BaseController {
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
-      const resultado = await this.model.moverAPapelera(id);
+      const usuarioId = usuario?.id || null;
+      const resultado = await this.model.moverAPapelera(id, usuarioId);
       return resultado;
     } catch (error) {
       this.handleError(error, "Error moviendo a papelera");
@@ -273,7 +274,8 @@ class RegistroController extends BaseController {
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
-      const resultado = await this.model.restaurar(id);
+      const usuarioId = usuario?.id || null;
+      const resultado = await this.model.restaurar(id, usuarioId);
       return resultado;
     } catch (error) {
       this.handleError(error, "Error restaurando registro");

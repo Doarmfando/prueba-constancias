@@ -1,0 +1,113 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.auditoria (
+  id bigint NOT NULL DEFAULT nextval('auditoria_id_seq'::regclass),
+  usuario_id bigint NOT NULL,
+  accion text NOT NULL,
+  tabla_afectada text NOT NULL,
+  registro_id bigint,
+  proyecto_id bigint,
+  detalles text,
+  fecha timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT auditoria_pkey PRIMARY KEY (id),
+  CONSTRAINT auditoria_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id),
+  CONSTRAINT auditoria_proyecto_id_fkey FOREIGN KEY (proyecto_id) REFERENCES public.proyectos_registros(id)
+);
+CREATE TABLE public.documentos_persona (
+  id bigint NOT NULL DEFAULT nextval('documentos_persona_id_seq'::regclass),
+  persona_id bigint NOT NULL,
+  nombre_archivo text NOT NULL,
+  ruta_archivo text NOT NULL,
+  tipo_archivo text,
+  comentario text,
+  fecha_carga timestamp with time zone DEFAULT now(),
+  usuario_carga_id bigint,
+  tamaño_bytes bigint,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  url_archivo text,
+  ubicacion_almacenamiento text DEFAULT 'LOCAL'::text,
+  CONSTRAINT documentos_persona_pkey PRIMARY KEY (id),
+  CONSTRAINT documentos_persona_persona_id_fkey FOREIGN KEY (persona_id) REFERENCES public.personas(id),
+  CONSTRAINT documentos_persona_usuario_carga_id_fkey FOREIGN KEY (usuario_carga_id) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.estados (
+  id bigint NOT NULL DEFAULT nextval('estados_id_seq'::regclass),
+  nombre text NOT NULL UNIQUE,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT estados_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.expedientes (
+  id bigint NOT NULL DEFAULT nextval('expedientes_id_seq'::regclass),
+  persona_id bigint NOT NULL,
+  codigo text UNIQUE,
+  fecha_solicitud date,
+  observacion text,
+  fecha_entrega date,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT expedientes_pkey PRIMARY KEY (id),
+  CONSTRAINT expedientes_persona_id_fkey FOREIGN KEY (persona_id) REFERENCES public.personas(id)
+);
+CREATE TABLE public.personas (
+  id bigint NOT NULL DEFAULT nextval('personas_id_seq'::regclass),
+  nombre text NOT NULL,
+  dni text,
+  numero text,
+  fecha_registro timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT personas_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.proyectos_registros (
+  id bigint NOT NULL DEFAULT nextval('proyectos_registros_id_seq'::regclass),
+  nombre text NOT NULL,
+  descripcion text,
+  usuario_creador_id bigint NOT NULL,
+  es_publico boolean DEFAULT false,
+  permite_edicion boolean DEFAULT true,
+  fecha_creacion timestamp with time zone DEFAULT now(),
+  fecha_publicacion timestamp with time zone,
+  activo boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT proyectos_registros_pkey PRIMARY KEY (id),
+  CONSTRAINT proyectos_registros_usuario_creador_id_fkey FOREIGN KEY (usuario_creador_id) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.registros (
+  id bigint NOT NULL DEFAULT nextval('registros_id_seq'::regclass),
+  proyecto_id bigint NOT NULL DEFAULT 1,
+  persona_id bigint NOT NULL,
+  expediente_id bigint NOT NULL,
+  estado_id bigint NOT NULL,
+  usuario_creador_id bigint NOT NULL DEFAULT 1,
+  fecha_registro date DEFAULT CURRENT_DATE,
+  fecha_en_caja date,
+  eliminado boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT registros_pkey PRIMARY KEY (id),
+  CONSTRAINT registros_proyecto_id_fkey FOREIGN KEY (proyecto_id) REFERENCES public.proyectos_registros(id),
+  CONSTRAINT registros_persona_id_fkey FOREIGN KEY (persona_id) REFERENCES public.personas(id),
+  CONSTRAINT registros_expediente_id_fkey FOREIGN KEY (expediente_id) REFERENCES public.expedientes(id),
+  CONSTRAINT registros_estado_id_fkey FOREIGN KEY (estado_id) REFERENCES public.estados(id),
+  CONSTRAINT registros_usuario_creador_id_fkey FOREIGN KEY (usuario_creador_id) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.usuarios (
+  id bigint NOT NULL DEFAULT nextval('usuarios_id_seq'::regclass),
+  nombre text NOT NULL,
+  nombre_usuario text,
+  email text UNIQUE,
+  rol text DEFAULT 'trabajador'::text CHECK (rol = ANY (ARRAY['administrador'::text, 'trabajador'::text])),
+  activo boolean DEFAULT true,
+  fecha_creacion timestamp with time zone DEFAULT now(),
+  ultimo_acceso timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  auth_id uuid,
+  CONSTRAINT usuarios_pkey PRIMARY KEY (id),
+  CONSTRAINT usuarios_auth_id_fkey FOREIGN KEY (auth_id) REFERENCES auth.users(id)
+);

@@ -377,6 +377,26 @@ app.delete('/api/registros/:id', ensureInitialized, async (req, res) => {
   }
 });
 
+// Mover registro a papelería
+app.post('/api/registros/:id/papeleria', ensureInitialized, async (req, res) => {
+  try {
+    const resultado = await controllers.registro.moverAPapelera({ id: req.params.id, usuario: req.body.usuario });
+    res.json(resultado);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Restaurar registro desde papelería
+app.post('/api/registros/:id/restaurar', ensureInitialized, async (req, res) => {
+  try {
+    const resultado = await controllers.registro.restaurarRegistro({ id: req.params.id, usuario: req.body.usuario });
+    res.json(resultado);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // AUTH / USUARIOS
 app.post('/api/usuarios/login', ensureInitialized, async (req, res) => {
   try {
@@ -546,7 +566,7 @@ app.post('/api/ipc', ensureInitialized, async (req, res) => {
 app.post('/api/proyectos/:id/exportar-pdf', ensureInitialized, async (req, res) => {
   try {
     const proyectoId = parseInt(req.params.id, 10);
-    const { titulo, incluirEliminados = false, usuario } = req.body || {};
+    const { titulo, incluirEliminados = false, fechaExportacion = null, usuario } = req.body || {};
 
     if (!proyectoId) {
       return res.status(400).json({ success: false, error: 'ID de proyecto invalido' });
@@ -557,7 +577,7 @@ app.post('/api/proyectos/:id/exportar-pdf', ensureInitialized, async (req, res) 
       titulo,
       incluirEliminados,
       usuario || {},
-      { soloBuffer: true }
+      { soloBuffer: true, fechaExportacion }
     );
 
     if (!resultado?.success) {

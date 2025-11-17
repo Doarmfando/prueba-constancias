@@ -164,7 +164,7 @@ class RegistroModel extends BaseModel {
         personas (nombre, dni, numero),
         expedientes (codigo, fecha_solicitud, fecha_entrega, observacion),
         estados (nombre),
-        usuarios (nombre_usuario, nombre),
+        usuario_creador:usuarios!usuario_creador_id (nombre_usuario, nombre),
         proyectos_registros (nombre)
       `)
       .eq('id', id)
@@ -190,8 +190,8 @@ class RegistroModel extends BaseModel {
       expediente_fecha_entrega: formatearFecha(data.expedientes?.fecha_entrega),
       expediente_observacion: data.expedientes?.observacion,
       estado_nombre: data.estados?.nombre,
-      usuario_nombre: data.usuarios?.nombre,
-      usuario_nombre_usuario: data.usuarios?.nombre_usuario,
+      usuario_nombre: data.usuario_creador?.nombre,
+      usuario_nombre_usuario: data.usuario_creador?.nombre_usuario,
       proyecto_nombre: data.proyectos_registros?.nombre
     } : null;
   }
@@ -211,13 +211,13 @@ class RegistroModel extends BaseModel {
       .from(this.tableName)
       .select(`
         *,
-        personas (nombre, dni),
+        personas (nombre, dni, numero),
         expedientes (codigo),
         estados (nombre)
       `)
       .eq('proyecto_id', proyectoId)
       .eq('eliminado', false)
-      .order(orden, { ascending: direccion === 'asc' })
+      .order('id', { ascending: true })
       .range(offset, offset + limite - 1);
 
     if (estado_id) {
@@ -370,7 +370,11 @@ class RegistroModel extends BaseModel {
 
   // Mover a papelera (eliminación lógica)
   async moverAPapelera(id, usuarioId) {
-    await this.update(id, { eliminado: true });
+    await this.update(id, {
+      eliminado: true,
+      eliminado_por: usuarioId,
+      fecha_eliminacion: new Date().toISOString()
+    });
     return { success: true, message: 'Registro movido a papelera' };
   }
 
@@ -382,7 +386,11 @@ class RegistroModel extends BaseModel {
 
   // Restaurar registro eliminado
   async restaurar(id, usuarioId) {
-    await this.update(id, { eliminado: false });
+    await this.update(id, {
+      eliminado: false,
+      eliminado_por: null,
+      fecha_eliminacion: null
+    });
     return { success: true };
   }
 
@@ -538,10 +546,10 @@ class RegistroModel extends BaseModel {
         expedientes (id, codigo, fecha_solicitud, fecha_entrega, observacion),
         estados (nombre),
         proyectos_registros (nombre),
-        usuarios (nombre_usuario, nombre)
+        usuario_creador:usuarios!usuario_creador_id (nombre_usuario, nombre)
       `)
       .eq('eliminado', false)
-      .order('fecha_registro', { ascending: false });
+      .order('id', { ascending: true });
 
     // Filtrar por proyecto si se especifica
     if (proyectoId) {
@@ -580,8 +588,8 @@ class RegistroModel extends BaseModel {
       estado: r.estados?.nombre,
       estado_nombre: r.estados?.nombre,
       proyecto_nombre: r.proyectos_registros?.nombre,
-      usuario_nombre: r.usuarios?.nombre,
-      usuario_nombre_usuario: r.usuarios?.nombre_usuario
+      usuario_nombre: r.usuario_creador?.nombre,
+      usuario_nombre_usuario: r.usuario_creador?.nombre_usuario
     }));
   }
 
@@ -595,10 +603,11 @@ class RegistroModel extends BaseModel {
         expedientes (id, codigo, fecha_solicitud, fecha_entrega, observacion),
         estados (nombre),
         proyectos_registros (nombre),
-        usuarios (nombre_usuario, nombre)
+        usuario_creador:usuarios!usuario_creador_id (nombre_usuario, nombre),
+        usuario_elimino:usuarios!eliminado_por (nombre_usuario, nombre)
       `)
       .eq('eliminado', true)
-      .order('fecha_registro', { ascending: false });
+      .order('fecha_eliminacion', { ascending: false });
 
     // Filtrar por proyecto si se especifica
     if (proyectoId) {
@@ -615,6 +624,11 @@ class RegistroModel extends BaseModel {
       return fecha.split('T')[0];
     };
 
+    const formatearFechaHora = (fecha) => {
+      if (!fecha) return null;
+      return new Date(fecha).toLocaleString('es-ES');
+    };
+
     return (data || []).map(r => ({
       id: r.id,
       proyecto_id: r.proyecto_id,
@@ -625,6 +639,8 @@ class RegistroModel extends BaseModel {
       fecha_registro: formatearFecha(r.fecha_registro),
       fecha_en_caja: formatearFecha(r.fecha_en_caja),
       eliminado: r.eliminado,
+      eliminado_por: r.eliminado_por,
+      fecha_eliminacion: r.fecha_eliminacion,
       // Datos de relaciones
       nombre: r.personas?.nombre,
       dni: r.personas?.dni,
@@ -637,8 +653,9 @@ class RegistroModel extends BaseModel {
       estado: r.estados?.nombre,
       estado_nombre: r.estados?.nombre,
       proyecto_nombre: r.proyectos_registros?.nombre,
-      usuario_nombre: r.usuarios?.nombre,
-      usuario_nombre_usuario: r.usuarios?.nombre_usuario
+      usuario_nombre: r.usuario_creador?.nombre,
+      usuario_nombre_usuario: r.usuario_creador?.nombre_usuario,
+      eliminado_por_nombre: r.usuario_elimino?.nombre || r.usuario_elimino?.nombre_usuario || 'Sistema'
     }));
   }
 }

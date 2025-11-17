@@ -96,13 +96,6 @@ function Dashboard() {
       color: "hover:bg-indigo-50"
     },
     {
-      title: "Buscar DNI",
-      description: "Consulta información de personas",
-      icon: <FaSearch className="text-emerald-500 text-xl" />,
-      path: "/informacion",
-      color: "hover:bg-emerald-50"
-    },
-    {
       title: "Ver Estadísticas",
       description: "Análisis y gráficos del sistema",
       icon: <MdInsertChart className="text-sky-500 text-xl" />,

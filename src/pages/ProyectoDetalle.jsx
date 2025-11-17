@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   FaArrowLeft, FaEdit, FaTrash, FaGlobe, FaLock, FaPlus,
   FaDownload, FaChartBar, FaCog, FaUsers, FaFileAlt, FaSearch,
@@ -32,6 +32,8 @@ ChartJS.register(
 
 function ProyectoDetalle() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [proyecto, setProyecto] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [tabActiva, setTabActiva] = useState('registros');
@@ -46,6 +48,8 @@ function ProyectoDetalle() {
   const [exportandoPDF, setExportandoPDF] = useState(false);
   const [tituloPDF, setTituloPDF] = useState('');
   const [incluirEliminadosEnPDF, setIncluirEliminadosEnPDF] = useState(false);
+  const [incluirFechaEnPDF, setIncluirFechaEnPDF] = useState(false);
+  const [fechaPDF, setFechaPDF] = useState('');
   const [paginaActual, setPaginaActual] = useState(1);
   const [paginaEliminados, setPaginaEliminados] = useState(1);
   const itemsPorPagina = 10;
@@ -76,7 +80,6 @@ function ProyectoDetalle() {
     }
   };
 
-  const navigate = useNavigate();
   const usuario = getUsuarioActual();
 
   // Si no hay usuario, mostrar loading (se redirigirÃ¡ al login)
@@ -125,7 +128,9 @@ function ProyectoDetalle() {
       const enCaja = registros.filter(r => r.estado === 'En Caja').length;
       const entregados = registros.filter(r => r.estado === 'Entregado').length;
       const tesoreria = registros.filter(r => r.estado === 'Tesoreria').length;
-      const total = registros.length;
+      const activos = registros.length;
+      const papeleria = registrosEliminados.length;
+      const total = activos + papeleria;
 
       setEstadisticas({
         recibidos,
@@ -133,6 +138,8 @@ function ProyectoDetalle() {
         entregados,
         tesoreria,
         total,
+        activos,
+        papeleria,
         pendientes: recibidos // Pendientes = los que estÃ¡n en estado "Recibido"
       });
     } catch (error) {
@@ -143,6 +150,8 @@ function ProyectoDetalle() {
         entregados: 0,
         tesoreria: 0,
         total: 0,
+        activos: 0,
+        papeleria: 0,
         pendientes: 0
       });
     }
@@ -253,6 +262,7 @@ function ProyectoDetalle() {
           body: JSON.stringify({
             titulo: tituloPDF,
             incluirEliminados: incluirEliminadosEnPDF,
+            fechaExportacion: incluirFechaEnPDF && fechaPDF ? fechaPDF : null,
             usuario
           })
         });
@@ -278,6 +288,7 @@ function ProyectoDetalle() {
           proyecto.id,
           tituloPDF,
           incluirEliminadosEnPDF,
+          incluirFechaEnPDF && fechaPDF ? fechaPDF : null,
           usuario
         );
 
@@ -288,12 +299,12 @@ function ProyectoDetalle() {
           if (response?.message && response.message.includes('cancelada')) {
             setMostrarModalExportarPDF(false);
           } else {
-            mostrarError('Error al exportar PDF', response?.error || 'Error de conexi�n');
+            mostrarError('Error al exportar PDF', response?.error || 'Error de conexi�n');
           }
         }
       }
     } catch (error) {
-      mostrarError('Error al exportar PDF', error.message || 'Error de conexi�n');
+      mostrarError('Error al exportar PDF', error.message || 'Error de conexi�n');
       console.error('Error exportando PDF:', error);
     } finally {
       setExportandoPDF(false);
@@ -304,17 +315,32 @@ function ProyectoDetalle() {
     abrirModalExportarPDF();
   };
 
-  const puedeEditar = () => {
+  // Permisos para editar/eliminar REGISTROS (dentro del proyecto)
+  const puedeEditarRegistros = () => {
     if (!proyecto) return false;
     return (
       usuario.rol === 'administrador' ||
       proyecto.usuario_creador_id === usuario.id ||
-      proyecto.es_publico === true  // Proyectos públicos: todos pueden editar
+      proyecto.es_publico === true  // Proyectos públicos: todos pueden editar registros
+    );
+  };
+
+  // Permisos para editar/eliminar el PROYECTO en sí (configuración, visibilidad, etc)
+  const puedeEditarProyecto = () => {
+    if (!proyecto) return false;
+    return (
+      usuario.rol === 'administrador' ||
+      proyecto.usuario_creador_id === usuario.id  // Solo creador o admin
     );
   };
 
   const puedeEliminar = () => {
-    return puedeEditar();
+    return puedeEditarRegistros();
+  };
+
+  // Mantener puedeEditar() para compatibilidad con código existente (usar puedeEditarRegistros)
+  const puedeEditar = () => {
+    return puedeEditarRegistros();
   };
 
   const registrosFiltrados = registros.filter(registro =>
@@ -355,18 +381,19 @@ function ProyectoDetalle() {
 
     if (confirmado) {
       try {
-        // EliminaciÃ³n de registros temporal deshabilitada
-        const response = { success: true };
+        // Mover a papelería usando la API real
+        const response = await window.electronAPI?.registros.moverAPapelera(registro.id, usuario);
 
         if (response?.success) {
-          setRegistros(prev => prev.filter(r => r.id !== registro.id));
-          setRegistrosEliminados(prev => [...prev, { ...registro, fecha_eliminacion: new Date().toISOString(), eliminado_por: usuario.nombre, motivo: 'Eliminado por usuario' }]);
-          mostrarExito('Registro eliminado correctamente');
+          // Recargar los registros desde la base de datos para obtener el estado actualizado
+          await cargarRegistros();
+          mostrarExito('Registro movido a papelería correctamente');
         } else {
           mostrarError('Error al eliminar registro', response?.error || 'Error de conexiÃ³n');
         }
       } catch (error) {
-        mostrarError('Error al eliminar registro', 'Error de conexiÃ³n');
+        mostrarError('Error al eliminar registro', error.message || 'Error de conexiÃ³n');
+        console.error('Error eliminando registro:', error);
       }
     }
   };
@@ -382,19 +409,19 @@ function ProyectoDetalle() {
 
     if (confirmado) {
       try {
-        // RestauraciÃ³n de registros temporal deshabilitada
-        const response = { success: true };
+        // Restaurar usando la API real
+        const response = await window.electronAPI?.registros.restaurar(registro.id, usuario);
 
         if (response?.success) {
-          setRegistrosEliminados(prev => prev.filter(r => r.id !== registro.id));
-          const { fecha_eliminacion, eliminado_por, motivo, ...registroRestaurado } = registro;
-          setRegistros(prev => [...prev, { ...registroRestaurado, estado: 'Restaurado' }]);
+          // Recargar los registros desde la base de datos para obtener el estado actualizado
+          await cargarRegistros();
           mostrarExito('Registro restaurado correctamente');
         } else {
           mostrarError('Error al restaurar registro', response?.error || 'Error de conexiÃ³n');
         }
       } catch (error) {
-        mostrarError('Error al restaurar registro', 'Error de conexiÃ³n');
+        mostrarError('Error al restaurar registro', error.message || 'Error de conexiÃ³n');
+        console.error('Error restaurando registro:', error);
       }
     }
   };
@@ -428,8 +455,17 @@ function ProyectoDetalle() {
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4">
           <button
-            onClick={() => navigate('/mis-proyectos')}
+            onClick={() => {
+              // Detectar de dónde vino el usuario
+              const from = location.state?.from || document.referrer;
+              if (from && from.includes('/proyectos-publicos')) {
+                navigate('/proyectos-publicos');
+              } else {
+                navigate('/mis-proyectos');
+              }
+            }}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors mt-1"
+            title="Volver atrás"
           >
             <FaArrowLeft />
           </button>
@@ -478,8 +514,8 @@ function ProyectoDetalle() {
             <FaDownload />
           </button>
 
-          {/* Botones de gestiÃ³n (solo para propietario/admin) */}
-          {puedeEditar() && (
+          {/* Botones de gestiÃ³n del PROYECTO (solo para creador/admin) */}
+          {puedeEditarProyecto() && (
             <>
               <button
                 onClick={() => navigate(`/proyecto/${proyecto.id}/editar`)}
@@ -501,15 +537,13 @@ function ProyectoDetalle() {
                 {proyecto.es_publico ? <FaLock /> : <FaGlobe />}
               </button>
 
-              {puedeEliminar() && (
-                <button
-                  onClick={eliminarProyecto}
-                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Eliminar proyecto"
-                >
-                  <FaTrash />
-                </button>
-              )}
+              <button
+                onClick={eliminarProyecto}
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Eliminar proyecto"
+              >
+                <FaTrash />
+              </button>
             </>
           )}
         </div>
@@ -517,7 +551,7 @@ function ProyectoDetalle() {
 
       {/* Estadísticas rápidas */}
       {estadisticas && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded-lg shadow border">
             <div className="flex items-center justify-between">
               <div>
@@ -550,23 +584,6 @@ function ProyectoDetalle() {
               </div>
               <div className="p-3 bg-orange-100 rounded-full">
                 <FaTrash className="text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Última Actualización</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {estadisticas.ultima_actualizacion
-                    ? new Date(estadisticas.ultima_actualizacion).toLocaleDateString()
-                    : 'Sin actividad'
-                  }
-                </p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <FaCalendarAlt className="text-purple-600" />
               </div>
             </div>
           </div>
@@ -663,6 +680,7 @@ function ProyectoDetalle() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Persona</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expediente</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Registro</th>
@@ -672,8 +690,11 @@ function ProyectoDetalle() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {registrosPaginados.map((registro) => (
+                      {registrosPaginados.map((registro, index) => (
                         <tr key={registro.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {indiceInicioRegistros + index + 1}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-10 w-10">
@@ -772,6 +793,7 @@ function ProyectoDetalle() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-red-50">
                       <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">#</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Persona</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Expediente</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Estado</th>
@@ -781,8 +803,11 @@ function ProyectoDetalle() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {eliminadosPaginados.map((registro) => (
+                      {eliminadosPaginados.map((registro, index) => (
                         <tr key={registro.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {indiceInicioEliminados + index + 1}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-10 w-10">
@@ -805,13 +830,10 @@ function ProyectoDetalle() {
                             {registro.estado || '---'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{registro.eliminado_por}</div>
-                            {registro.motivo && (
-                              <div className="text-xs text-gray-500">Motivo: {registro.motivo}</div>
-                            )}
+                            <div className="text-sm text-gray-900">{registro.eliminado_por_nombre || 'Sistema'}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(registro.fecha_eliminacion).toLocaleDateString()}
+                            {registro.fecha_eliminacion ? new Date(registro.fecha_eliminacion).toLocaleString('es-ES') : '---'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             {puedeEditar() && (
@@ -1103,7 +1125,38 @@ function ProyectoDetalle() {
                 </p>
               </div>
 
-
+              {/* Opciones de fecha */}
+              <div>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={incluirFechaEnPDF}
+                    onChange={(e) => {
+                      setIncluirFechaEnPDF(e.target.checked);
+                      if (e.target.checked) {
+                        setFechaPDF(new Date().toISOString().split('T')[0]);
+                      }
+                    }}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-semibold text-gray-700">
+                    Incluir fecha
+                  </span>
+                </label>
+                {incluirFechaEnPDF && (
+                  <div className="mt-3 ml-8">
+                    <input
+                      type="date"
+                      value={fechaPDF}
+                      onChange={(e) => setFechaPDF(e.target.value)}
+                      className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Puedes modificar la fecha si lo deseas
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
@@ -1111,10 +1164,9 @@ function ProyectoDetalle() {
                   <div className="text-sm text-blue-800">
                     <p className="font-medium mb-1">Información a incluir</p>
                     <ul className="space-y-1 text-xs">
-                      <li> Datos del proyecto y estadisticas</li>
                       <li>Tabla con {registros.length} registros activos</li>
                       {incluirEliminadosEnPDF && <li> Tabla con {registrosEliminados.length} registros eliminados</li>}
-                      <li>Fecha y hora de generacion</li>
+                      {incluirFechaEnPDF && fechaPDF && <li>Fecha personalizada en encabezado</li>}
                     </ul>
                   </div>
                 </div>

@@ -8,8 +8,7 @@ function CrearProyecto() {
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
-    es_publico: false,
-    permite_edicion: true
+    es_publico: false
   });
   const [errores, setErrores] = useState({});
   const [guardando, setGuardando] = useState(false);
@@ -67,7 +66,7 @@ function CrearProyecto() {
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion.trim() || null,
         es_publico: formData.es_publico ? 1 : 0,
-        permite_edicion: formData.permite_edicion ? 1 : 0
+        permite_edicion: 1  // Siempre permitir edición en proyectos públicos
       }, usuario);
 
       if (response && response.success) {
@@ -187,36 +186,11 @@ function CrearProyecto() {
                     Hacer público
                   </label>
                   <p className="text-sm text-gray-500">
-                    Si está marcado, todos los usuarios podrán ver este proyecto.
+                    Si está marcado, todos los usuarios podrán ver, crear y editar registros en este proyecto.
                     Si no, solo tú y los administradores podrán acceder.
                   </p>
                 </div>
               </div>
-
-              {/* Permisos de edición (solo si es público) */}
-              {formData.es_publico && (
-                <div className="flex items-start space-x-3 pl-7">
-                  <div className="flex items-center h-5">
-                    <input
-                      id="permite_edicion"
-                      name="permite_edicion"
-                      type="checkbox"
-                      checked={formData.permite_edicion}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label htmlFor="permite_edicion" className="text-sm font-medium text-gray-700">
-                      Permitir edición a otros usuarios
-                    </label>
-                    <p className="text-sm text-gray-500">
-                      Si está marcado, otros usuarios podrán editar los registros de este proyecto público.
-                      Si no, solo podrán verlos.
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -226,8 +200,8 @@ function CrearProyecto() {
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Puedes cambiar la visibilidad del proyecto en cualquier momento</li>
               <li>• Los proyectos privados solo son visibles para ti y los administradores</li>
-              <li>• Al hacer público un proyecto, aparecerá en el área pública para todos los usuarios</li>
-              <li>• Solo tú y los administradores pueden eliminar este proyecto</li>
+              <li>• Los proyectos públicos permiten a todos los usuarios ver, crear y editar registros</li>
+              <li>• Solo tú y los administradores pueden editar o eliminar el proyecto en sí</li>
             </ul>
           </div>
 

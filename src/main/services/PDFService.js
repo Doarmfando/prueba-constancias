@@ -61,12 +61,20 @@ class PDFService {
         soloBuffer = false
       } = opciones;
 
-      const fechaReferencia = fechaExportacion ? new Date(fechaExportacion) : new Date();
-      const fechaActual = fechaReferencia.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      // Si viene fechaExportacion, parsearla correctamente evitando problemas de zona horaria
+      let fechaActual;
+      if (fechaExportacion) {
+        // Formato: yyyy-MM-dd -> crear fecha local sin conversión UTC
+        const [year, month, day] = fechaExportacion.split('-').map(Number);
+        const fechaLocal = new Date(year, month - 1, day);
+        fechaActual = fechaLocal.toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } else {
+        fechaActual = null;
+      }
 
       const formatearFecha = (valor) => {
         if (!valor || valor === 'No entregado') return valor || '---';
@@ -76,6 +84,7 @@ class PDFService {
 
       const tablaPrincipal = [
         [
+          { text: '#', style: 'tableHeader' },
           { text: 'Nombre', style: 'tableHeader' },
           { text: 'DNI', style: 'tableHeader' },
           { text: 'Expediente', style: 'tableHeader' },
@@ -84,7 +93,8 @@ class PDFService {
           { text: 'Estado', style: 'tableHeader' },
           { text: 'Fecha en Caja', style: 'tableHeader' }
         ],
-        ...registros.map((registro) => ([
+        ...registros.map((registro, index) => ([
+          { text: (index + 1).toString(), style: 'tableCell' },
           { text: registro.nombre || '---', style: 'tableCell' },
           { text: registro.dni || '---', style: 'tableCell' },
           { text: registro.expediente || registro.codigo || '---', style: 'tableCell' },
@@ -101,7 +111,7 @@ class PDFService {
         contenido.push({
           table: {
             headerRows: 1,
-            widths: ['18%', '12%', '18%', '12%', '14%', '12%', '14%'],
+            widths: ['5%', '17%', '11%', '17%', '11%', '13%', '11%', '15%'],
             body: tablaPrincipal
           },
           layout: {
@@ -161,12 +171,17 @@ class PDFService {
         pageSize: 'A4',
         pageOrientation: 'portrait',
         pageMargins: [40, 60, 40, 60],
-        header: {
+        header: fechaExportacion ? {
           margin: [40, 20, 40, 0],
           columns: [
             { text: titulo, style: 'header', alignment: 'left' },
-            { text: `Fecha de exportación: ${fechaActual}`, style: 'subheader', alignment: 'right' }
+            { text: fechaActual, style: 'subheader', alignment: 'right' }
           ]
+        } : {
+          margin: [40, 20, 40, 0],
+          text: titulo,
+          style: 'header',
+          alignment: 'left'
         },
         footer: (currentPage, pageCount) => ({
           margin: [40, 0, 40, 20],
@@ -176,10 +191,7 @@ class PDFService {
           ]
         }),
         content: [
-          { text: `Proyecto: ${proyecto.nombre}`, style: 'title', margin: [0, 0, 0, 10] },
-          { text: `Responsable: ${proyecto.usuario_creador || '---'}`, style: 'info' },
-          { text: `Estado: ${proyecto.es_publico ? 'Público' : 'Privado'}`, style: 'info', margin: [0, 0, 0, 10] },
-          { text: 'Registros', style: 'sectionHeader' },
+          { text: proyecto.nombre, style: 'title', margin: [0, 0, 0, 20] },
           ...contenido
         ],
         styles: {

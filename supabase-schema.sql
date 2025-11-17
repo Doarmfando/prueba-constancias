@@ -113,13 +113,16 @@ CREATE TABLE IF NOT EXISTS registros (
   fecha_registro TIMESTAMPTZ DEFAULT NOW(),
   fecha_en_caja DATE,
   eliminado BOOLEAN DEFAULT false,
+  eliminado_por BIGINT,
+  fecha_eliminacion TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   FOREIGN KEY (proyecto_id) REFERENCES proyectos_registros(id) ON DELETE CASCADE,
   FOREIGN KEY (persona_id) REFERENCES personas(id) ON DELETE CASCADE,
   FOREIGN KEY (expediente_id) REFERENCES expedientes(id) ON DELETE CASCADE,
   FOREIGN KEY (estado_id) REFERENCES estados(id),
-  FOREIGN KEY (usuario_creador_id) REFERENCES usuarios(id)
+  FOREIGN KEY (usuario_creador_id) REFERENCES usuarios(id),
+  FOREIGN KEY (eliminado_por) REFERENCES usuarios(id)
 );
 
 -- Índices para registros
