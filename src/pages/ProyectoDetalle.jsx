@@ -49,6 +49,13 @@ function ProyectoDetalle() {
   const [paginaActual, setPaginaActual] = useState(1);
   const [paginaEliminados, setPaginaEliminados] = useState(1);
   const itemsPorPagina = 10;
+  const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
+  const isWebBridge = typeof window !== 'undefined' && window.__WEB_BRIDGE__;
+
+  const generarNombreArchivoPDF = () => {
+    const base = tituloPDF || proyecto?.nombre || 'proyecto';
+    return `${base.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+  };
 
   // Obtener usuario actual del localStorage
   const getUsuarioActual = () => {
@@ -239,31 +246,59 @@ function ProyectoDetalle() {
     try {
       setExportandoPDF(true);
 
-      const response = await window.electronAPI?.proyectos.exportarPDF(
-        proyecto.id,
-        tituloPDF,
-        incluirEliminadosEnPDF,
-        usuario
-      );
+      if (isWebBridge) {
+        const res = await fetch(`${API_BASE_URL}/proyectos/${proyecto.id}/exportar-pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            titulo: tituloPDF,
+            incluirEliminados: incluirEliminadosEnPDF,
+            usuario
+          })
+        });
 
-      if (response?.success) {
-        mostrarExito('PDF exportado correctamente', response.filePath ? `Guardado en: ${response.filePath}` : '');
+        if (!res.ok) {
+          const errorBody = await res.json().catch(() => ({}));
+          throw new Error(errorBody?.error || 'No se pudo generar el PDF');
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = generarNombreArchivoPDF();
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        mostrarExito('PDF exportado correctamente', 'La descarga fue iniciada');
         setMostrarModalExportarPDF(false);
       } else {
-        if (response?.message && response.message.includes('cancelada')) {
-          // No mostrar error si el usuario cancelÃ³
+        const response = await window.electronAPI?.proyectos.exportarPDF(
+          proyecto.id,
+          tituloPDF,
+          incluirEliminadosEnPDF,
+          usuario
+        );
+
+        if (response?.success) {
+          mostrarExito('PDF exportado correctamente', response.filePath ? `Guardado en: ${response.filePath}` : '');
           setMostrarModalExportarPDF(false);
         } else {
-          mostrarError('Error al exportar PDF', response?.error || 'Error de conexiÃ³n');
+          if (response?.message && response.message.includes('cancelada')) {
+            setMostrarModalExportarPDF(false);
+          } else {
+            mostrarError('Error al exportar PDF', response?.error || 'Error de conexi�n');
+          }
         }
       }
     } catch (error) {
-      mostrarError('Error al exportar PDF', 'Error de conexiÃ³n');
+      mostrarError('Error al exportar PDF', error.message || 'Error de conexi�n');
       console.error('Error exportando PDF:', error);
     } finally {
       setExportandoPDF(false);
     }
-  };
+  }; 
 
   const exportarDatos = async () => {
     abrirModalExportarPDF();

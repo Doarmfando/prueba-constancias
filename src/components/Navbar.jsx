@@ -66,7 +66,6 @@ function Navbar() {
         section: "Herramientas",
         items: [
           { path: "/personas", icon: FaUsers, label: "Personas" },
-          { path: "/informacion", icon: FaInfoCircle, label: "Información" },
           { path: "/gestion-datos", icon: FaDatabase, label: "Gestión de Datos" },
         ]
       },

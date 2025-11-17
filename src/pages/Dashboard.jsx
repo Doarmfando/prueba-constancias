@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaFolderOpen, FaTrashAlt, FaDatabase, FaUser, FaUsers, FaPlus,
+  FaFolderOpen, FaTrashAlt, FaDatabase, FaUser, FaPlus,
   FaGlobe, FaHistory, FaSearch, FaBoxOpen, FaChartBar, FaFileAlt,
   FaCalendarDay, FaTrendingUp, FaExclamationTriangle, FaCheckCircle
 } from "react-icons/fa";
@@ -18,8 +18,7 @@ function Dashboard() {
     totalRegistros: 0,
     registrosHoy: 0,
     papeleria: 0,
-    proyectos: 0,
-    usuarios: 0
+    proyectos: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -34,18 +33,16 @@ function Dashboard() {
 
       // Código real para cargar estadísticas de la base de datos:
       try {
-        const [registros, papeleria, usuarios] = await Promise.all([
+        const [registros, papeleria] = await Promise.all([
           window.electronAPI?.dashboard.obtenerEstadisticas(),
-          window.electronAPI?.registros.obtenerBorrados(),
-          window.electronAPI?.auth.obtenerEstadisticas()
+          window.electronAPI?.registros.obtenerBorrados()
         ]);
 
         setStats({
           totalRegistros: registros?.total || 0,
           registrosHoy: registros?.hoy || 0,
           papeleria: papeleria?.length || 0,
-          proyectos: 1, // Proyecto por defecto creado
-          usuarios: usuarios?.activos || 1
+          proyectos: 1 // Proyecto por defecto creado
         });
       } catch (error) {
         console.error('Error cargando estadísticas:', error);
@@ -54,8 +51,7 @@ function Dashboard() {
           totalRegistros: 0,
           registrosHoy: 0,
           papeleria: 0,
-          proyectos: 1,
-          usuarios: 1
+          proyectos: 1
         });
       }
       setLoading(false);
@@ -88,13 +84,6 @@ function Dashboard() {
       icon: <MdWork className="text-purple-500 text-2xl" />,
       color: "bg-purple-50 border-purple-200",
       path: "/mis-proyectos"
-    },
-    {
-      title: "Usuarios",
-      value: stats.usuarios,
-      icon: <FaUsers className="text-orange-500 text-2xl" />,
-      color: "bg-orange-50 border-orange-200",
-      path: "/usuarios"
     }
   ];
 

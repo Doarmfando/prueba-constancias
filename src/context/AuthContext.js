@@ -2,6 +2,20 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
+// Detectar si estamos en modo Electron o Web
+const isElectron = () => typeof window !== 'undefined' && window.electronAPI !== undefined;
+
+// Helper para login en modo web
+const loginWeb = async (nombre_usuario, password) => {
+  const API_URL = 'http://localhost:3001/api';
+  const response = await fetch(`${API_URL}/usuarios/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario: nombre_usuario, contraseña: password })
+  });
+  return await response.json();
+};
+
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -21,7 +35,15 @@ export function AuthProvider({ children }) {
 
   const login = async (nombre_usuario, password) => {
     try {
-      const response = await window.electronAPI.auth.login(nombre_usuario, password);
+      let response;
+
+      if (isElectron()) {
+        // Modo Electron
+        response = await window.electronAPI.auth.login(nombre_usuario, password);
+      } else {
+        // Modo Web
+        response = await loginWeb(nombre_usuario, password);
+      }
 
       if (response.success) {
         const usuarioData = response.usuario;

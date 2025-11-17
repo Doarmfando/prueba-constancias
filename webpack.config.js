@@ -8,7 +8,7 @@ const isProduction = process.env.NODE_ENV === "production";
 
 module.exports = {
   mode: isProduction ? "production" : "development",
-  target: "electron-renderer",
+  target: "web",
 
   // ✅ solo tu app principal
   entry: "./src/index.js",
@@ -17,7 +17,7 @@ module.exports = {
     path: path.resolve(__dirname, "dist"),
     filename: "bundle.js",
     chunkFilename: "[name].bundle.js",
-    publicPath: "./",
+    publicPath: "/",
     clean: true,
   },
 
@@ -26,6 +26,7 @@ module.exports = {
     fallback: {
       path: require.resolve("path-browserify"),
       process: require.resolve("process/browser"),
+      events: require.resolve("events/"),
     },
   },
 
@@ -85,6 +86,7 @@ module.exports = {
     new webpack.DefinePlugin({
       "process.env.REACT_APP_ENV": JSON.stringify("electron"),
       "process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
+      "process.env.API_URL": JSON.stringify(process.env.API_URL || "http://localhost:3001/api"),
     }),
 
     new webpack.ProvidePlugin({

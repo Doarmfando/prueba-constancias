@@ -429,7 +429,7 @@ class ProyectoController extends BaseController {
   }
 
   // Exportar proyecto a PDF
-  async exportarProyectoPDF(proyectoId, titulo, incluirEliminados = false, usuarioActual) {
+  async exportarProyectoPDF(proyectoId, titulo, incluirEliminados = false, usuarioActual, opciones = {}) {
     try {
       // Obtener el proyecto
       const proyecto = await this.proyectoModel.obtenerPorId(proyectoId);
@@ -455,7 +455,8 @@ class ProyectoController extends BaseController {
       const resultado = await this.pdfService.exportarProyectoPDF(proyecto, registros, {
         titulo: titulo || proyecto.nombre,
         incluirEliminados,
-        registrosEliminados
+        registrosEliminados,
+        ...opciones
       });
 
       // Registrar en auditoría si fue exitoso

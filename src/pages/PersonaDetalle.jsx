@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft, FaUser, FaIdCard, FaFileAlt, FaFolderOpen,
@@ -24,6 +24,9 @@ function PersonaDetalle() {
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [subiendoDocumento, setSubiendoDocumento] = useState(false);
   const [observacionModal, setObservacionModal] = useState(null);
+  const fileInputRef = useRef(null);
+  const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
+  const isWebBridge = typeof window !== 'undefined' && window.__WEB_BRIDGE__;
 
   useEffect(() => {
     cargarDatos();
@@ -70,7 +73,16 @@ function PersonaDetalle() {
 
   const cargarDocumentos = async (personaId) => {
     try {
-      const response = await window.electronAPI?.documentosPersona.obtenerPorPersona(personaId);
+      let response;
+      if (isWebBridge) {
+        const res = await fetch(`${API_BASE_URL}/documentos-persona/${personaId}`);
+        response = await res.json();
+        if (!res.ok) {
+          throw new Error(response?.error || 'No se pudieron obtener los documentos');
+        }
+      } else {
+        response = await window.electronAPI?.documentosPersona.obtenerPorPersona(personaId);
+      }
 
       if (response?.success) {
         setDocumentos(response.documentos || []);
@@ -80,12 +92,13 @@ function PersonaDetalle() {
     }
   };
 
-  const handleSeleccionarArchivo = async () => {
+  const seleccionarArchivoElectron = async () => {
     try {
       const response = await window.electronAPI?.documentosPersona.seleccionarArchivo();
 
       if (response?.success && !response.cancelled) {
         setArchivoSeleccionado({
+          origen: 'electron',
           ruta: response.archivo_origen,
           nombre: response.nombre_archivo
         });
@@ -93,6 +106,30 @@ function PersonaDetalle() {
     } catch (error) {
       console.error('Error seleccionando archivo:', error);
       mostrarError('Error', 'No se pudo seleccionar el archivo');
+    }
+  };
+
+  const handleSeleccionarArchivo = () => {
+    if (isWebBridge) {
+      fileInputRef.current?.click();
+    } else {
+      seleccionarArchivoElectron();
+    }
+  };
+
+  const handleArchivoInputChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setArchivoSeleccionado({
+        origen: 'web',
+        nombre: file.name,
+        file
+      });
+    } else {
+      setArchivoSeleccionado(null);
+    }
+    if (event.target) {
+      event.target.value = '';
     }
   };
 
@@ -105,13 +142,36 @@ function PersonaDetalle() {
     try {
       setSubiendoDocumento(true);
 
-      const response = await window.electronAPI?.documentosPersona.subirDocumento({
-        persona_id: persona.id,
-        archivo_origen: archivoSeleccionado.ruta,
-        nombre_archivo: archivoSeleccionado.nombre,
-        comentario: comentarioDocumento,
-        usuario: usuario
-      });
+      let response;
+      if (isWebBridge) {
+        if (!archivoSeleccionado?.file) {
+          mostrarError('Error', 'No se pudo acceder al archivo seleccionado');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('archivo', archivoSeleccionado.file);
+        formData.append('persona_id', persona.id);
+        if (comentarioDocumento) formData.append('comentario', comentarioDocumento);
+        if (usuario?.id) formData.append('usuario_carga_id', usuario.id);
+
+        const res = await fetch(`${API_BASE_URL}/documentos-persona/subir`, {
+          method: 'POST',
+          body: formData,
+        });
+        response = await res.json();
+        if (!res.ok) {
+          throw new Error(response?.error || 'No se pudo cargar el documento');
+        }
+      } else {
+        response = await window.electronAPI?.documentosPersona.subirDocumento({
+          persona_id: persona.id,
+          archivo_origen: archivoSeleccionado.ruta,
+          nombre_archivo: archivoSeleccionado.nombre,
+          comentario: comentarioDocumento,
+          usuario: usuario
+        });
+      }
 
       if (response?.success) {
         mostrarExito('Documento cargado', 'El documento se ha cargado correctamente');
@@ -138,7 +198,18 @@ function PersonaDetalle() {
 
     if (confirmado) {
       try {
-        const response = await window.electronAPI?.documentosPersona.eliminar(documento.id, usuario);
+        let response;
+        if (isWebBridge) {
+          const res = await fetch(`${API_BASE_URL}/documentos-persona/${documento.id}`, {
+            method: 'DELETE',
+          });
+          response = await res.json();
+          if (!res.ok) {
+            throw new Error(response?.error || 'No se pudo eliminar el documento');
+          }
+        } else {
+          response = await window.electronAPI?.documentosPersona.eliminar(documento.id, usuario);
+        }
 
         if (response?.success) {
           mostrarExito('Documento eliminado', 'El documento ha sido eliminado correctamente');
@@ -155,6 +226,12 @@ function PersonaDetalle() {
 
   const handleAbrirDocumento = async (documento) => {
     try {
+      if (isWebBridge) {
+        const url = `${API_BASE_URL}/documentos-persona/descargar/${documento.id}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
       const response = await window.electronAPI?.documentosPersona.abrir(documento.id);
 
       if (!response?.success) {
@@ -168,6 +245,17 @@ function PersonaDetalle() {
 
   const handleDescargarDocumento = async (documento) => {
     try {
+      if (isWebBridge) {
+        const link = document.createElement('a');
+        link.href = `${API_BASE_URL}/documentos-persona/descargar/${documento.id}`;
+        link.download = documento.nombre_archivo || '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        mostrarExito('Descarga iniciada', 'Revisa tu carpeta de descargas');
+        return;
+      }
+
       const response = await window.electronAPI?.documentosPersona.descargar(documento.id);
 
       if (response?.success) {
@@ -578,6 +666,14 @@ function PersonaDetalle() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Archivo
                   </label>
+                  {isWebBridge && (
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleArchivoInputChange}
+                    />
+                  )}
                   <button
                     onClick={handleSeleccionarArchivo}
                     className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 transition-colors"
