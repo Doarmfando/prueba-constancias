@@ -174,15 +174,10 @@ class PDFService {
         header: fechaExportacion ? {
           margin: [40, 20, 40, 0],
           columns: [
-            { text: titulo, style: 'header', alignment: 'left' },
+            { text: '', alignment: 'left' },
             { text: fechaActual, style: 'subheader', alignment: 'right' }
           ]
-        } : {
-          margin: [40, 20, 40, 0],
-          text: titulo,
-          style: 'header',
-          alignment: 'left'
-        },
+        } : undefined,
         footer: (currentPage, pageCount) => ({
           margin: [40, 0, 40, 20],
           columns: [
@@ -191,7 +186,7 @@ class PDFService {
           ]
         }),
         content: [
-          { text: proyecto.nombre, style: 'title', margin: [0, 0, 0, 20] },
+          { text: titulo || proyecto.nombre, style: 'title', margin: [0, 0, 0, 20] },
           ...contenido
         ],
         styles: {

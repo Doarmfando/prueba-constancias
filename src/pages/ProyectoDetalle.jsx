@@ -984,7 +984,9 @@ function ProyectoDetalle() {
                           backgroundColor: 'rgba(239, 68, 68, 0.8)',
                           borderColor: 'rgb(239, 68, 68)',
                           borderWidth: 2,
-                          borderRadius: 6
+                          borderRadius: 6,
+                          maxBarThickness: 48,
+                          barThickness: 40
                         }]
                       }}
                       options={{

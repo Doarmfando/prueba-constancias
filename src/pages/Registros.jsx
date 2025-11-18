@@ -1,21 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaSearch, FaFileAlt, FaEdit, FaTrash, FaFilePdf, FaCalendarAlt, FaUser, FaIdCard, FaFilter } from 'react-icons/fa';
-import { MdPersonAdd, MdFilterList, MdVisibility } from 'react-icons/md';
-import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
-import FormularioRegistro from '../components/FormularioRegistro';
+import { FaSearch, FaFileAlt, FaFilePdf, FaCalendarAlt, FaUser, FaIdCard, FaFilter } from 'react-icons/fa';
+import { mostrarError, formatearFecha } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+import { FaDownload } from 'react-icons/fa';
 
 function Registros() {
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroProyecto, setFiltroProyecto] = useState('todos');
   const [paginaActual, setPaginaActual] = useState(1);
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [registroEditando, setRegistroEditando] = useState(null);
   const registrosPorPagina = 10;
+  const [incluirFechaPdf, setIncluirFechaPdf] = useState(false);
+  const [fechaPdf, setFechaPdf] = useState(() => {
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`; // Fecha local sin desfase UTC
+  });
+  const [nombrePdf, setNombrePdf] = useState('Registros Generales');
+  const [mostrarModalPdf, setMostrarModalPdf] = useState(false);
 
   useEffect(() => {
+    // Configurar fuentes de pdfmake con fallback para evitar undefined
+    const fuentes = pdfFonts?.pdfMake?.vfs || pdfFonts?.vfs;
+    if (pdfMake && fuentes) {
+      pdfMake.vfs = fuentes;
+    }
     cargarRegistros();
   }, []);
 
@@ -62,6 +77,11 @@ function Registros() {
 
     if (!coincideBusqueda) return false;
 
+    if (filtroProyecto !== 'todos') {
+      const nombreProyecto = registro.proyecto_nombre || 'Proyecto público';
+      if (nombreProyecto !== filtroProyecto) return false;
+    }
+
     if (filtroEstado === 'todos') return true;
     return (registro.estado || '').toLowerCase() === filtroEstado.toLowerCase();
   });
@@ -73,7 +93,7 @@ function Registros() {
   // Resetear a pagina 1 cuando cambia el filtro o busqueda
   useEffect(() => {
     setPaginaActual(1);
-  }, [filtroEstado, busqueda]);
+  }, [filtroEstado, busqueda, filtroProyecto]);
 
   const estadisticas = {
     total: registros.length,
@@ -83,28 +103,91 @@ function Registros() {
     tesoreria: registros.filter(r => r.estado === 'Tesoreria').length
   };
 
-  const eliminarRegistro = async (registro) => {
-    const confirmado = await mostrarConfirmacion({
-      titulo: '¿Mover a papelera?',
-      texto: `Se moverá a papelera el registro de ${registro.nombre || 'Sin nombre'} (DNI: ${registro.dni || 'Sin DNI'})`,
-      confirmButtonText: 'Sí, mover a papelera',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (confirmado) {
-      try {
-        const response = await window.electronAPI?.registros.moverAPapelera(registro.id, usuario);
-        if (response && response.success) {
-          setRegistros(prev => prev.filter(r => r.id !== registro.id));
-          mostrarExito('Registro movido a papelera correctamente');
-        } else {
-          mostrarError('Error', response?.error || 'No se pudo mover el registro a papelera');
-        }
-      } catch (error) {
-        console.error('Error moviendo a papelera:', error);
-        mostrarError('Error', 'No se pudo mover el registro a papelera');
+  const exportarPDF = () => {
+    const ahora = new Date();
+    const formatearFechaTabla = (valor) => {
+      if (!valor || valor === 'No entregado') return valor || '---';
+      const d = new Date(valor);
+      return Number.isNaN(d.getTime()) ? '---' : d.toLocaleDateString('es-ES');
+    };
+    const formatearFechaInput = (valor) => {
+      if (!valor) return null;
+      const partes = valor.split('-');
+      if (partes.length === 3) {
+        const [yyyy, mm, dd] = partes;
+        return `${dd}/${mm}/${yyyy}`;
       }
-    }
+      return valor;
+    };
+    const fechaExportacion = incluirFechaPdf && fechaPdf ? formatearFechaInput(fechaPdf) : null;
+
+    const contenidoTabla = registrosFiltrados.length > 0
+      ? {
+          table: {
+            headerRows: 1,
+            widths: ['5%', '17%', '11%', '17%', '11%', '13%', '11%', '15%'],
+            body: [
+              [
+                { text: '#', style: 'tableHeader' },
+                { text: 'Nombre', style: 'tableHeader' },
+                { text: 'DNI', style: 'tableHeader' },
+                { text: 'Expediente', style: 'tableHeader' },
+                { text: 'Número', style: 'tableHeader' },
+                { text: 'Fecha Registro', style: 'tableHeader' },
+                { text: 'Estado', style: 'tableHeader' },
+                { text: 'Fecha en Caja', style: 'tableHeader' }
+              ],
+              ...registrosFiltrados.map((r, i) => ([
+                { text: (i + 1).toString(), style: 'tableCell' },
+                { text: r.nombre || '---', style: 'tableCell' },
+                { text: r.dni || '---', style: 'tableCell' },
+                { text: r.expediente || r.codigo || '---', style: 'tableCell' },
+                { text: r.numero || '---', style: 'tableCell' },
+                { text: formatearFechaTabla(r.fecha_registro) || '---', style: 'tableCell' },
+                { text: r.estado || '---', style: 'tableCell' },
+                { text: formatearFechaTabla(r.fecha_en_caja) || '---', style: 'tableCell' }
+              ]))
+            ]
+          },
+          layout: {
+            fillColor: (rowIndex) => (rowIndex === 0 ? '#3b82f6' : (rowIndex % 2 === 0 ? '#f9fafb' : null)),
+            hLineWidth: (i, node) => (i === 0 || i === node.table.body.length ? 1 : 0.5),
+            vLineWidth: () => 0.5,
+            hLineColor: () => '#e5e7eb',
+            vLineColor: () => '#e5e7eb',
+            paddingLeft: () => 8,
+            paddingRight: () => 8,
+            paddingTop: () => 6,
+            paddingBottom: () => 6
+          }
+        }
+      : { text: 'No hay registros para exportar con los filtros actuales.', style: 'info', italics: true, color: '#6b7280' };
+
+    const contenido = [
+      { text: nombrePdf || 'Registros Generales', style: 'header' },
+      ...(fechaExportacion ? [{ text: `Fecha de exportación: ${fechaExportacion}`, margin: [0, 0, 0, 10], style: 'subheader' }] : []),
+      contenidoTabla
+    ];
+
+    const docDefinition = {
+      content: contenido,
+      styles: {
+        header: { fontSize: 16, bold: true, margin: [0, 0, 0, 6] },
+        subheader: { fontSize: 10, color: '#555' },
+        tableHeader: { bold: true, color: '#ffffff', fillColor: '#3b82f6', fontSize: 10 },
+        tableCell: { fontSize: 9 },
+        info: { fontSize: 10 }
+      },
+      defaultStyle: { fontSize: 9 }
+    };
+
+    const nombreArchivo = (nombrePdf || 'registros_generales')
+      .toString()
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^\w\-]/g, '') || 'registros_generales';
+
+    pdfMake.createPdf(docDefinition).download(`${nombreArchivo}.pdf`);
   };
 
   const getEstadoColor = (estado) => {
@@ -130,23 +213,33 @@ function Registros() {
     );
   }
 
+  const proyectosDisponibles = Array.from(
+    new Set(
+      registros
+        .map((r) => r.proyecto_nombre || 'Proyecto público')
+        .filter(Boolean)
+    )
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Registros Legacy</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Registros Generales</h1>
           <p className="text-gray-600 mt-1">
-            Sistema legacy de gestión de registros documentales
+            Consulta los registros de todos los proyectos públicos desde una sola vista
           </p>
         </div>
-        <button
-          onClick={() => setMostrarFormulario(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-        >
-          <FaPlus className="text-sm" />
-          <span>Nuevo Registro</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <button
+            onClick={() => setMostrarModalPdf(true)}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+          >
+            <FaFilePdf className="text-sm" />
+            <span>Exportar PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* Estadísticas */}
@@ -256,15 +349,33 @@ function Registros() {
             </button>
           </div>
 
-          <div className="relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
-            <input
-              type="text"
-              placeholder="Buscar registros..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
-            />
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <div className="relative">
+              <select
+                value={filtroProyecto}
+                onChange={(e) => setFiltroProyecto(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64"
+              >
+                <option value="todos">Todos los proyectos</option>
+                {proyectosDisponibles.map((proyecto) => (
+                  <option key={proyecto} value={proyecto}>
+                    {proyecto}
+                  </option>
+                ))}
+              </select>
+              <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
+            </div>
+
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
+              <input
+                type="text"
+                placeholder="Buscar registros..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -279,6 +390,9 @@ function Registros() {
                   Persona
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Proyecto
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Expediente
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -289,9 +403,6 @@ function Registros() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha en Caja
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
                 </th>
               </tr>
             </thead>
@@ -331,6 +442,9 @@ function Registros() {
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {registro.proyecto_nombre || 'Proyecto público'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <code className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-900">
                         {registro.expediente || 'Sin expediente'}
@@ -352,27 +466,6 @@ function Registros() {
                         : '---'
                       }
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => {
-                            setRegistroEditando(registro);
-                            setMostrarFormulario(true);
-                          }}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Editar registro"
-                        >
-                          <FaEdit className="text-sm" />
-                        </button>
-                        <button
-                          onClick={() => eliminarRegistro(registro)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          title="Eliminar registro"
-                        >
-                          <FaTrash className="text-sm" />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))
               )}
@@ -393,27 +486,125 @@ function Registros() {
         )}
       </div>
 
-      {/* Informacion Legacy */}
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+      {/* Información */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
-          <FaFilter className="text-orange-600 mt-0.5" />
-          <div className="text-sm text-orange-800">
-            <p className="font-medium mb-1">Vista Legacy</p>
-            <p>Esta es una vista del sistema legacy mantenida por compatibilidad. Se recomienda usar el nuevo sistema de proyectos para nuevos registros.</p>
+          <FaFilter className="text-blue-600 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <p className="font-medium mb-1">Vista general de registros</p>
+            <p>Consulta y filtra los registros activos de los proyectos públicos. La edición y creación se realizan desde cada proyecto para respetar permisos y contexto.</p>
           </div>
         </div>
       </div>
 
-      {/* Formulario de registro */}
-      <FormularioRegistro
-        mostrar={mostrarFormulario}
-        onCerrar={() => {
-          setMostrarFormulario(false);
-          setRegistroEditando(null);
-        }}
-        onRegistroCreado={cargarRegistros}
-        registroEditar={registroEditando}
-      />
+      {/* Modal Exportar PDF */}
+      {mostrarModalPdf && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+            <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <FaDownload className="text-lg" />
+                Exportar a PDF
+              </h3>
+              <button
+                onClick={() => setMostrarModalPdf(false)}
+                className="text-white hover:text-gray-200 transition-colors p-2 hover:bg-white/10 rounded-lg"
+                title="Cerrar"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Título del documento <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={nombrePdf}
+                  onChange={(e) => setNombrePdf(e.target.value)}
+                  placeholder="Ej: Reporte de Registros - Enero 2024"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 text-gray-900"
+                />
+                <p className="mt-2 text-sm text-gray-500">
+                  Este título aparecerá en el encabezado y nombre del PDF
+                </p>
+              </div>
+
+              <div>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={incluirFechaPdf}
+                    onChange={(e) => {
+                      setIncluirFechaPdf(e.target.checked);
+                      if (e.target.checked) {
+                        const hoy = new Date();
+                        const yyyy = hoy.getFullYear();
+                        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+                        const dd = String(hoy.getDate()).padStart(2, '0');
+                        setFechaPdf(`${yyyy}-${mm}-${dd}`);
+                      }
+                    }}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-semibold text-gray-700">
+                    Incluir fecha
+                  </span>
+                </label>
+                {incluirFechaPdf && (
+                  <div className="mt-3 ml-8">
+                    <input
+                      type="date"
+                      value={fechaPdf}
+                      onChange={(e) => setFechaPdf(e.target.value)}
+                      className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Puedes modificar la fecha si lo deseas
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <FaDownload className="text-blue-600 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Información a incluir</p>
+                    <ul className="space-y-1 text-xs">
+                      <li>Tabla con {registrosFiltrados.length} registros filtrados</li>
+                      {incluirFechaPdf && fechaPdf && <li>Fecha personalizada en encabezado</li>}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalPdf(false)}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    exportarPDF();
+                    setMostrarModalPdf(false);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  Exportar PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

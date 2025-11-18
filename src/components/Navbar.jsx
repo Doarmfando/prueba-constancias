@@ -9,7 +9,6 @@ import {
   FaUsers,
   FaClipboardList,
   FaInfoCircle,
-  FaDatabase,
   FaFileAlt,
   FaPrint,
   FaChartBar,
@@ -66,14 +65,12 @@ function Navbar() {
         section: "Herramientas",
         items: [
           { path: "/personas", icon: FaUsers, label: "Personas" },
-          { path: "/gestion-datos", icon: FaDatabase, label: "Gestión de Datos" },
         ]
       },
       {
-        section: "Legacy (Compatibilidad)",
+        section: "Registros y Reportes",
         items: [
           { path: "/registros", icon: FaFileAlt, label: "Registros" },
-          { path: "/papeleria", icon: FaPrint, label: "Papelería" },
           { path: "/graficos", icon: FaChartBar, label: "Gráficos" },
         ]
       }
@@ -199,3 +196,5 @@ function Navbar() {
 }
 
 export default Navbar;
+
+

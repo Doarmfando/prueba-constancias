@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaFolderOpen, FaTrashAlt, FaDatabase, FaUser, FaPlus,
+  FaFolderOpen, FaTrashAlt, FaUser, FaPlus,
   FaGlobe, FaHistory, FaSearch, FaBoxOpen, FaChartBar, FaFileAlt,
   FaCalendarDay, FaTrendingUp, FaExclamationTriangle, FaCheckCircle
 } from "react-icons/fa";
@@ -101,13 +101,6 @@ function Dashboard() {
       icon: <MdInsertChart className="text-sky-500 text-xl" />,
       path: "/graficos",
       color: "hover:bg-sky-50"
-    },
-    {
-      title: "Gestión de Datos",
-      description: "Importar/exportar y administrar datos",
-      icon: <FaDatabase className="text-amber-500 text-xl" />,
-      path: "/gestion-datos",
-      color: "hover:bg-amber-50"
     },
     {
       title: "Proyectos Públicos",

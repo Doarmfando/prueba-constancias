@@ -10,6 +10,7 @@ import Paginacion from '../components/Paginacion';
 
 function Personas() {
   const [personas, setPersonas] = useState([]);
+  const [todasPersonas, setTodasPersonas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -29,40 +30,20 @@ function Personas() {
       const response = await window.electronAPI?.personas.obtenerConDocumentos();
 
       if (response?.success) {
-        setPersonas(response.personas || []);
+        const personasCargadas = response.personas || [];
+        setPersonas(personasCargadas);
+        setTodasPersonas(personasCargadas);
       } else {
         console.error('Error cargando personas:', response?.error);
         mostrarError('Error', 'No se pudieron cargar las personas');
         setPersonas([]);
+        setTodasPersonas([]);
       }
     } catch (error) {
       console.error('Error cargando personas:', error);
       mostrarError('Error de conexión', 'No se pudieron cargar las personas');
       setPersonas([]);
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  const buscarPersonas = async (termino) => {
-    if (!termino || termino.trim().length === 0) {
-      cargarPersonas();
-      return;
-    }
-
-    try {
-      setCargando(true);
-      const response = await window.electronAPI?.personas.buscar(termino);
-
-      if (response?.success) {
-        setPersonas(response.personas || []);
-      } else {
-        console.error('Error buscando personas:', response?.error);
-        setPersonas([]);
-      }
-    } catch (error) {
-      console.error('Error buscando personas:', error);
-      setPersonas([]);
+      setTodasPersonas([]);
     } finally {
       setCargando(false);
     }
@@ -71,13 +52,34 @@ function Personas() {
   const handleBusqueda = (e) => {
     const valor = e.target.value;
     setBusqueda(valor);
-
-    if (valor.trim().length >= 3) {
-      buscarPersonas(valor);
-    } else if (valor.trim().length === 0) {
-      cargarPersonas();
-    }
   };
+
+  // Aplicar filtro local de manera reactiva para evitar parpadeos al escribir
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const termino = busqueda.trim().toLowerCase();
+
+      if (!termino) {
+        setPersonas(todasPersonas);
+        return;
+      }
+
+      const filtradas = todasPersonas.filter((persona) => {
+        const nombre = (persona.nombre || '').toLowerCase();
+        const dni = persona.dni || '';
+        const numero = (persona.numero || '').toLowerCase();
+        return (
+          nombre.includes(termino) ||
+          dni.includes(busqueda.trim()) ||
+          numero.includes(termino)
+        );
+      });
+
+      setPersonas(filtradas);
+    }, 200);
+
+    return () => clearTimeout(handler);
+  }, [busqueda, todasPersonas]);
 
   const eliminarPersona = async (id) => {
     const confirmado = confirm('¿Estás seguro de eliminar esta persona? Esta acción no se puede deshacer.');
@@ -186,7 +188,7 @@ function Personas() {
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por DNI o nombre... (mínimo 3 caracteres)"
+            placeholder="Buscar por DNI, nombre o número..."
             value={busqueda}
             onChange={handleBusqueda}
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

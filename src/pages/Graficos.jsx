@@ -30,12 +30,11 @@ const StatCard = ({ title, value, color, icon }) => (
 function Graficos() {
   const [estadisticas, setEstadisticas] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [filtroTipo, setFiltroTipo] = useState('registro');
   const [filtroAnio, setFiltroAnio] = useState('Todo');
 
   useEffect(() => {
     cargarEstadisticas();
-  }, [filtroTipo, filtroAnio]);
+  }, [filtroAnio]);
 
   const cargarEstadisticas = async () => {
     try {
@@ -183,15 +182,6 @@ function Graficos() {
         {/* Filtros */}
         <div className="flex space-x-3">
           <select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="registro">Fecha de Registro</option>
-            <option value="solicitud">Fecha de Solicitud</option>
-          </select>
-
-          <select
             value={filtroAnio}
             onChange={(e) => setFiltroAnio(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -292,7 +282,7 @@ function Graficos() {
           <p className="font-medium mb-1">Resumen del filtro actual</p>
           <p>
             <strong>Total de registros:</strong> {estadisticas?.total || 0} |
-            <strong> Filtrado por:</strong> {filtroTipo === 'registro' ? 'Fecha de Registro' : 'Fecha de Solicitud'}
+            <strong> Basado en:</strong> Fecha de Registro
             {filtroAnio !== 'Todo' && ` - Año ${filtroAnio}`}
           </p>
         </div>

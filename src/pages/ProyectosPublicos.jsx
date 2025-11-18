@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaGlobe, FaUsers, FaEye, FaEdit, FaCalendarAlt, FaSearch } from 'react-icons/fa';
+import { FaGlobe, FaUsers, FaEye, FaCalendarAlt, FaSearch } from 'react-icons/fa';
 import { MdPublic } from 'react-icons/md';
 import { mostrarError } from '../utils/alertas';
 
@@ -91,13 +91,13 @@ function ProyectosPublicos() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Proyectos Públicos</h1>
           <p className="text-gray-600 mt-1">
-            Explora y colabora en proyectos compartidos por la comunidad
+            Explora proyectos compartidos por la comunidad
           </p>
         </div>
       </div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-lg shadow border">
           <div className="flex items-center justify-between">
             <div>
@@ -120,20 +120,6 @@ function ProyectosPublicos() {
             </div>
             <div className="p-3 bg-green-100 rounded-full">
               <FaUsers className="text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Colaborativos</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {proyectos.filter(p => p.permite_edicion === 1).length}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-full">
-              <FaEdit className="text-purple-600" />
             </div>
           </div>
         </div>
@@ -192,11 +178,6 @@ function ProyectosPublicos() {
                     <div className="p-2 bg-green-100 rounded-full" title="Proyecto público">
                       <MdPublic className="text-green-600 text-sm" />
                     </div>
-                    {proyecto.permite_edicion === 1 && (
-                      <div className="p-2 bg-blue-100 rounded-full" title="Permite edición">
-                        <FaEdit className="text-blue-600 text-sm" />
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -213,11 +194,6 @@ function ProyectosPublicos() {
                     <FaUsers className="mr-1" />
                     <span>Creado por: {proyecto.nombre_creador}</span>
                   </div>
-
-                  <div className="flex items-center text-sm text-blue-600">
-                    <FaEdit className="mr-1" />
-                    <span>Colaborativo</span>
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -228,12 +204,6 @@ function ProyectosPublicos() {
                     <FaEye className="text-sm" />
                     <span>Ver Proyecto</span>
                   </button>
-
-                  <div className="flex items-center space-x-1">
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      Puedes colaborar
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -249,7 +219,6 @@ function ProyectosPublicos() {
             <p className="font-medium mb-1">Acerca de los proyectos públicos</p>
             <ul className="space-y-1">
               <li>• Los proyectos públicos son visibles para todos los usuarios</li>
-              <li>• Los creadores pueden configurar si permiten edición colaborativa</li>
               <li>• Puedes ver y trabajar en proyectos de otros usuarios según sus permisos</li>
               <li>• Los cambios que hagas se registran con tu nombre de usuario</li>
             </ul>
