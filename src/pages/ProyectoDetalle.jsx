@@ -62,12 +62,19 @@ function ProyectoDetalle() {
   const isWebBridge = typeof window !== 'undefined' && window.__WEB_BRIDGE__;
 
   // Realtime para registros del proyecto
+  const handleRealtime = async () => {
+    console.log('🔄 Realtime: Cambio detectado, recargando datos...');
+    const datos = await cargarRegistros({ mostrarLoading: false });
+    await cargarEstadisticas(datos);
+  };
+
+  // Suscripciones a las tablas relevantes
+  // NOTA: No podemos filtrar por proyecto_id en el nivel de suscripción con Supabase Realtime
+  // porque los filtros solo funcionan con columnas específicas en el payload
+  // En su lugar, recargamos todos los datos y dejamos que cargarRegistros filtre por proyecto
   const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
     'registros',
-    () => {
-      cargarRegistros({ mostrarLoading: false });
-      cargarEstadisticas();
-    },
+    handleRealtime,
     {
       habilitado: true,
       debounceMs: 500
@@ -195,11 +202,14 @@ function ProyectoDetalle() {
     setAñosDisponibles(Array.from(años).sort((a, b) => b - a));
   };
 
-  const cargarEstadisticas = async () => {
+  const cargarEstadisticas = async (datosLocales = {}) => {
     try {
+      const registrosFuente = datosLocales.registros ?? registros;
+      const registrosEliminadosFuente = datosLocales.registrosEliminados ?? registrosEliminados;
+
       // Filtrar registros según el tipo de fecha y periodo seleccionado
-      const registrosFiltrados = filtrarRegistrosPorFecha(registros);
-      const eliminadosFiltrados = filtrarRegistrosPorFecha(registrosEliminados);
+      const registrosFiltrados = filtrarRegistrosPorFecha(registrosFuente);
+      const eliminadosFiltrados = filtrarRegistrosPorFecha(registrosEliminadosFuente);
 
       // Calcular estadísticas por estado desde los registros filtrados
       const recibidos = registrosFiltrados.filter(r => r.estado === 'Recibido').length;
@@ -235,39 +245,42 @@ function ProyectoDetalle() {
     }
   };
 
-  const cargarRegistros = async ({ proyectoData = null, mostrarLoading = false } = {}) => {
+const cargarRegistros = async ({ proyectoData = null, mostrarLoading = false } = {}) => {
+    let registrosData = [];
+    let registrosEliminadosData = [];
+
     try {
       if (mostrarLoading) setCargandoRegistros(true);
 
-      // Usar el proyecto pasado como parÃ¡metro o el del estado
       const proyectoActual = proyectoData || proyecto;
-
-      // Verificar que el proyecto estÃ© cargado
       if (!proyectoActual?.id) {
         console.warn('Proyecto no disponible, saltando carga de registros');
-        if (mostrarLoading) setCargandoRegistros(false);
-        return;
+        return { registros: registrosData, registrosEliminados: registrosEliminadosData };
       }
 
-      // Cargar registros reales desde la base de datos
       const response = await window.electronAPI?.registros.obtenerPorProyecto(proyectoActual.id);
 
       if (response?.success) {
-        setRegistros(response.registros || []);
-        setRegistrosEliminados(response.registrosEliminados || []);
+        registrosData = response.registros || [];
+        registrosEliminadosData = response.registrosEliminados || [];
+        setRegistros(registrosData);
+        setRegistrosEliminados(registrosEliminadosData);
       } else {
         console.error('Error cargando registros:', response?.error);
         setRegistros([]);
         setRegistrosEliminados([]);
       }
-      if (mostrarLoading) setCargandoRegistros(false);
     } catch (error) {
       console.error('Error cargando registros:', error);
+      setRegistros([]);
+      setRegistrosEliminados([]);
+    } finally {
       if (mostrarLoading) setCargandoRegistros(false);
     }
-  };
 
-  const eliminarProyecto = async () => {
+    return { registros: registrosData, registrosEliminados: registrosEliminadosData };
+  };
+const eliminarProyecto = async () => {
     const confirmado = await mostrarConfirmacion({
       titulo: '¿Eliminar proyecto?',
       texto: `Se eliminará el proyecto \"${proyecto.nombre}\" y todos sus registros.`,
@@ -479,9 +492,9 @@ function ProyectoDetalle() {
   const restaurarRegistro = async (registro) => {
     const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || 'este registro';
     const confirmado = await mostrarConfirmacion({
-      titulo: 'Â¿Restaurar registro?',
-      texto: `Se restaurarÃ¡ el registro de ${nombreCompleto}`,
-      confirmButtonText: 'SÃ­, restaurar',
+      titulo: '¿Restaurar registro?',
+      texto: `Se restaurará el registro de ${nombreCompleto}`,
+      confirmButtonText: 'Sí, restaurar',
       cancelButtonText: 'Cancelar'
     });
 
@@ -876,7 +889,7 @@ function ProyectoDetalle() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Expediente</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Estado</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Eliminado por</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Fecha EliminaciÃ³n</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase">Fecha Eliminacion</th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-red-600 uppercase">Acciones</th>
                       </tr>
                     </thead>
@@ -1002,7 +1015,6 @@ function ProyectoDetalle() {
                 {/* GrÃ¡fico de Dona - DistribuciÃ³n por Estado */}
                 <div className="bg-white border rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">
-                    DistribuciÃ³n por Estado
                   </h4>
                   <div className="h-64 flex items-center justify-center">
                     <Doughnut

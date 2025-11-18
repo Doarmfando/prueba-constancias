@@ -16,16 +16,27 @@ export const useRealtimeData = (tabla, onDataChange, opciones = {}) => {
   const [conectado, setConectado] = useState(false);
   const [error, setError] = useState(null);
   const canalRef = useRef(null);
+  const onDataChangeRef = useRef(onDataChange);
   const {
     habilitado = true, // Permite habilitar/deshabilitar la suscripción
     filtros = {},
     debounceMs = 0, // Tiempo de espera antes de ejecutar el callback (evita múltiples llamadas)
   } = opciones;
 
+  // Mantener referencia fresca al callback sin recrear la suscripción en cada render
   useEffect(() => {
-    const puedeRealtime = habilitado && (window.__WEB_BRIDGE__ || supabaseUser);
+    onDataChangeRef.current = onDataChange;
+  }, [onDataChange]);
+
+  useEffect(() => {
+    const puedeRealtime = habilitado && supabaseUser;
+
     // Solo suscribirse si está habilitado y hay cliente Supabase disponible
     if (!puedeRealtime) {
+      console.warn(`⚠️ Realtime deshabilitado para ${tabla}:`, {
+        habilitado,
+        supabaseUser: !!supabaseUser
+      });
       return;
     }
 
@@ -36,26 +47,28 @@ export const useRealtimeData = (tabla, onDataChange, opciones = {}) => {
       if (debounceMs > 0) {
         if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
-          onDataChange(evento);
+          onDataChangeRef.current?.(evento);
         }, debounceMs);
       } else {
-        onDataChange(evento);
+        onDataChangeRef.current?.(evento);
       }
     };
 
     try {
       setError(null);
-      console.log(`🔌 Intentando conectar a ${tabla}...`);
+      console.log(`🔌 Intentando conectar a tabla "${tabla}"...`);
 
       canalRef.current = suscribirseATabla(tabla, handleChange, filtros);
 
       if (canalRef.current) {
+        console.log(`✅ Conectado exitosamente a tabla "${tabla}"`);
         setConectado(true);
       } else {
+        console.error(`❌ No se pudo crear la suscripción para tabla "${tabla}"`);
         setError('No se pudo crear la suscripción');
       }
     } catch (err) {
-      console.error(`Error en suscripción a ${tabla}:`, err);
+      console.error(`❌ Error en suscripción a ${tabla}:`, err);
       setError(err.message);
       setConectado(false);
     }
