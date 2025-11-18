@@ -119,10 +119,9 @@ function Dashboard() {
   ];
 
   const recentActivity = [
-    { action: "Nuevo registro creado", time: "Hace 2 minutos", type: "success" },
     { action: "Proyecto publicado", time: "Hace 15 minutos", type: "info" },
     { action: "Usuario eliminado", time: "Hace 1 hora", type: "warning" },
-    { action: "Datos exportados", time: "Hace 2 horas", type: "success" }
+    { action: "Datos exportadosos", time: "Hace 2 horas", type: "success" }
   ];
 
   return (
@@ -224,7 +223,7 @@ function Dashboard() {
                   onClick={() => navigate('/auditoria')}
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                 >
-                  Ver todo el historial →
+                  Ver todo el historial→
                 </button>
               </div>
             </div>
@@ -279,3 +278,5 @@ function Dashboard() {
 }
 
 export default Dashboard;
+
+
