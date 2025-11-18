@@ -11,6 +11,7 @@ import {
   MdInsertChart, MdDashboard, MdWork, MdPublic, MdSettings,
   MdNotifications, MdRefresh, MdVisibility
 } from "react-icons/md";
+import { useRealtimeSync } from '../hooks/useRealtimeData';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -20,6 +21,12 @@ function Dashboard() {
     proyectos: 0
   });
   const [loading, setLoading] = useState(true);
+
+  // Realtime - actualizar cuando cambie cualquier registro
+  useRealtimeSync('registros', cargarEstadisticas, {
+    habilitado: window.__WEB_BRIDGE__ === true,
+    debounceMs: 1000
+  });
 
   // Cargar estadísticas al montar el componente
   useEffect(() => {

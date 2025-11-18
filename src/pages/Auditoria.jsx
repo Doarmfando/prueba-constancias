@@ -179,25 +179,9 @@ function Auditoria() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            Auditoría del Sistema
-            {window.__WEB_BRIDGE__ && conectado && (
-              <span className="flex items-center gap-1 text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                En vivo
-              </span>
-            )}
-            {window.__WEB_BRIDGE__ && sincronizando && (
-              <FaSync className="text-blue-500 text-sm animate-spin" />
-            )}
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Auditoría del Sistema</h1>
           <p className="text-gray-600 mt-1">
             Registro completo de todas las acciones realizadas en el sistema
-            {window.__WEB_BRIDGE__ && ultimaActualizacion && (
-              <span className="text-xs text-gray-500 ml-2">
-                • Última actualización: {ultimaActualizacion.toLocaleTimeString()}
-              </span>
-            )}
           </p>
         </div>
         <div className="flex items-center space-x-2">

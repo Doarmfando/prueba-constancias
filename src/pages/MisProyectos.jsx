@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaPlus, FaEdit, FaTrash, FaGlobe, FaLock, FaUsers, FaChartBar } from 'react-icons/fa';
 import { MdPublic, MdPrivateConnectivity, MdVisibility } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
 
 function MisProyectos() {
   const [proyectos, setProyectos] = useState([]);
@@ -45,6 +46,12 @@ function MisProyectos() {
   const puedeEditar = (proyecto) => {
     return usuario.rol === 'administrador' || proyecto.usuario_creador_id === usuario.id;
   };
+
+  // Realtime
+  useRealtimeSync('registros', cargarProyectos, {
+    habilitado: window.__WEB_BRIDGE__ === true,
+    debounceMs: 500
+  });
 
   useEffect(() => {
     cargarProyectos();

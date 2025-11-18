@@ -4,6 +4,7 @@ import { FaLock, FaUsers, FaEye, FaEdit, FaCalendarAlt, FaSearch, FaShieldAlt } 
 import { MdPrivateConnectivity } from 'react-icons/md';
 import { mostrarError } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
 
 function ProyectosPrivados() {
   const [proyectos, setProyectos] = useState([]);
@@ -46,6 +47,12 @@ function ProyectosPrivados() {
       </div>
     );
   }
+
+  // Realtime
+  useRealtimeSync('registros', cargarProyectosPrivados, {
+    habilitado: window.__WEB_BRIDGE__ === true,
+    debounceMs: 500
+  });
 
   useEffect(() => {
     cargarProyectosPrivados();

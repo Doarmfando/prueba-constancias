@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FaSearch, FaFileAlt, FaFilePdf, FaCalendarAlt, FaUser, FaIdCard, FaFilter } from 'react-icons/fa';
+import { FaSearch, FaFileAlt, FaFilePdf, FaCalendarAlt, FaUser, FaIdCard, FaFilter, FaSync } from 'react-icons/fa';
 import { mostrarError, formatearFecha } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { FaDownload } from 'react-icons/fa';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { toast } from 'react-toastify';
 
 function Registros() {
   const [registros, setRegistros] = useState([]);
@@ -26,6 +28,20 @@ function Registros() {
   const [fechaPdf, setFechaPdf] = useState(getFechaLocal());
   const [nombrePdf, setNombrePdf] = useState('Registros Generales');
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false);
+
+  // Realtime
+  const { conectado, sincronizando } = useRealtimeSync(
+    'registros',
+    cargarRegistros,
+    {
+      habilitado: window.__WEB_BRIDGE__ === true,
+      debounceMs: 500,
+      onCambio: (evento) => {
+        const msgs = { INSERT: '✨ Nuevo registro', UPDATE: '🔄 Actualizado', DELETE: '🗑️ Eliminado' };
+        if (msgs[evento.tipo]) toast.info(msgs[evento.tipo], { position: 'bottom-right', autoClose: 2000 });
+      }
+    }
+  );
 
   useEffect(() => {
     // Configurar fuentes de pdfmake con fallback para evitar undefined

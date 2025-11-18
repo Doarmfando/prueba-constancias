@@ -576,15 +576,6 @@ function ProyectoDetalle() {
                     <span>Privado</span>
                   </div>
                 )}
-                {window.__WEB_BRIDGE__ && conectado && (
-                  <span className="flex items-center gap-1 text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    En vivo
-                  </span>
-                )}
-                {window.__WEB_BRIDGE__ && sincronizando && (
-                  <FaSync className="text-blue-500 text-sm animate-spin" />
-                )}
               </div>
             </div>
 

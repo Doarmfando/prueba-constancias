@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fa';
 import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
 import { useAuth } from '../context/AuthContext';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
 
 function PersonaDetalle() {
   const { id } = useParams();
@@ -27,6 +28,12 @@ function PersonaDetalle() {
   const fileInputRef = useRef(null);
   const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
   const isWebBridge = typeof window !== 'undefined' && window.__WEB_BRIDGE__;
+
+  // Realtime
+  useRealtimeSync('documentos_persona', cargarDatos, {
+    habilitado: window.__WEB_BRIDGE__ === true,
+    debounceMs: 500
+  });
 
   useEffect(() => {
     cargarDatos();

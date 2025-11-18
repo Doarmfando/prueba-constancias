@@ -3,6 +3,7 @@ import { FaPlus, FaEdit, FaTrash, FaUsers, FaUserCheck, FaUserTimes, FaSearch, F
 import { MdAdminPanelSettings, MdWork, MdSettings } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
 
 function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -16,6 +17,12 @@ function Usuarios() {
 
   // Temporalmente sin autenticacion - simular usuario admin
   const usuarioActual = { id: 1, nombre: "Usuario Temporal", rol: "administrador" };
+
+  // Realtime
+  useRealtimeSync('usuarios', cargarUsuarios, {
+    habilitado: window.__WEB_BRIDGE__ === true,
+    debounceMs: 500
+  });
 
   useEffect(() => {
     cargarUsuarios();
