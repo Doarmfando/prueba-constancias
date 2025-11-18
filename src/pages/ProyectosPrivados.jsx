@@ -50,23 +50,23 @@ function ProyectosPrivados() {
   }
 
   // Realtime para proyectos y registros vinculados
-  useRealtimeSync(TABLA_PROYECTOS, () => cargarProyectosPrivados(), {
+  useRealtimeSync(TABLA_PROYECTOS, () => cargarProyectosPrivados({ mostrarLoading: false }), {
     habilitado: true,
     debounceMs: 500
   });
 
-  useRealtimeSync('registros', () => cargarProyectosPrivados(), {
+  useRealtimeSync('registros', () => cargarProyectosPrivados({ mostrarLoading: false }), {
     habilitado: true,
     debounceMs: 500
   });
 
   useEffect(() => {
-    cargarProyectosPrivados();
+    cargarProyectosPrivados({ mostrarLoading: true });
   }, []);
 
-  const cargarProyectosPrivados = async () => {
+  const cargarProyectosPrivados = async ({ mostrarLoading = false } = {}) => {
     try {
-      setCargando(true);
+      if (mostrarLoading) setCargando(true);
 
       const response = await window.electronAPI?.proyectos.obtenerPrivadosOtros(usuario);
 
@@ -79,11 +79,11 @@ function ProyectosPrivados() {
           mostrarError('Error', response.error);
         }
       }
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     } catch (error) {
       mostrarError('Error de conexión', 'No se pudieron cargar los proyectos privados');
       console.error('Error cargando proyectos privados:', error);
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     }
   };
 

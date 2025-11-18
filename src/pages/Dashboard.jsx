@@ -23,19 +23,19 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   // Realtime - actualizar cuando cambie cualquier registro
-  useRealtimeSync('registros', cargarEstadisticas, {
+  useRealtimeSync('registros', () => cargarEstadisticas({ mostrarLoading: false }), {
     habilitado: true,
     debounceMs: 1000
   });
 
   // Cargar estadísticas al montar el componente
   useEffect(() => {
-    cargarEstadisticas();
+    cargarEstadisticas({ mostrarLoading: true });
   }, []);
 
-  const cargarEstadisticas = async () => {
+  const cargarEstadisticas = async ({ mostrarLoading = false } = {}) => {
     try {
-      setLoading(true);
+      if (mostrarLoading) setLoading(true);
 
       // Obtener usuario actual
       const usuarioActual = JSON.parse(localStorage.getItem('sesion_usuario') || '{}');
@@ -88,7 +88,7 @@ function Dashboard() {
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
     } finally {
-      setLoading(false);
+      if (mostrarLoading) setLoading(false);
     }
   };
 
@@ -272,4 +272,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-

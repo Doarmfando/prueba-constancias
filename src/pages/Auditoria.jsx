@@ -18,10 +18,10 @@ function Auditoria() {
   const { usuario } = useAuth();
   const logsPerPage = 50;
 
-    // Realtime para auditoría (solo INSERT, no UPDATE/DELETE)
+  // Realtime para auditoría (solo INSERT, no UPDATE/DELETE)
   const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
     'auditoria',
-    cargarLogs,
+    () => cargarLogs({ mostrarLoading: false }),
     {
       habilitado: true,
       debounceMs: 1000
@@ -30,7 +30,7 @@ function Auditoria() {
 
   useEffect(() => {
     if (usuario) {
-      cargarLogs();
+      cargarLogs({ mostrarLoading: true });
       cargarUsuarios();
     }
   }, [pagina, usuario]);
@@ -38,13 +38,13 @@ function Auditoria() {
   // Efecto para recargar cuando cambien los filtros
   useEffect(() => {
     if (usuario && pagina === 1) {
-      cargarLogs();
+      cargarLogs({ mostrarLoading: true });
     }
   }, [busqueda, filtroUsuario, filtroAccion]);
 
-  const cargarLogs = async () => {
+  const cargarLogs = async ({ mostrarLoading = false } = {}) => {
     try {
-      setCargando(true);
+      if (mostrarLoading) setCargando(true);
 
       const response = await window.electronAPI?.auditoria.obtenerHistorial({
         usuario: usuario,
@@ -72,7 +72,7 @@ function Auditoria() {
       setTotalLogs(0);
       console.error('Error cargando logs de auditoría:', error);
     } finally {
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     }
   };
 

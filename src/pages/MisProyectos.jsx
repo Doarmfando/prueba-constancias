@@ -49,23 +49,23 @@ function MisProyectos() {
   };
 
   // Realtime para proyectos (alta/baja/cambios) y registros (conteos)
-  useRealtimeSync(TABLA_PROYECTOS, () => cargarProyectos(), {
+  useRealtimeSync(TABLA_PROYECTOS, () => cargarProyectos({ mostrarLoading: false }), {
     habilitado: true,
     debounceMs: 500
   });
 
-  useRealtimeSync('registros', () => cargarProyectos(), {
+  useRealtimeSync('registros', () => cargarProyectos({ mostrarLoading: false }), {
     habilitado: true,
     debounceMs: 500
   });
 
   useEffect(() => {
-    cargarProyectos();
+    cargarProyectos({ mostrarLoading: true });
   }, []);
 
-  const cargarProyectos = async () => {
+  const cargarProyectos = async ({ mostrarLoading = false } = {}) => {
     try {
-      setCargando(true);
+      if (mostrarLoading) setCargando(true);
 
       // Cargar proyectos desde la base de datos
       const response = await window.electronAPI?.proyectos.obtenerMisProyectos(usuario.id, usuario);
@@ -78,11 +78,11 @@ function MisProyectos() {
           mostrarError('Error al cargar proyectos', response.error);
         }
       }
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     } catch (error) {
       mostrarError('Error de conexión', 'No se pudieron cargar los proyectos');
       console.error('Error cargando proyectos:', error);
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     }
   };
 

@@ -19,18 +19,18 @@ function Usuarios() {
   const usuarioActual = { id: 1, nombre: "Usuario Temporal", rol: "administrador" };
 
   // Realtime
-  useRealtimeSync('usuarios', cargarUsuarios, {
+  useRealtimeSync('usuarios', () => cargarUsuarios({ mostrarLoading: false }), {
     habilitado: true,
     debounceMs: 500
   });
 
   useEffect(() => {
-    cargarUsuarios();
+    cargarUsuarios({ mostrarLoading: true });
   }, []);
 
-  const cargarUsuarios = async () => {
+  const cargarUsuarios = async ({ mostrarLoading = false } = {}) => {
     try {
-      setCargando(true);
+      if (mostrarLoading) setCargando(true);
 
       const response = await window.electronAPI?.auth.listarUsuarios(usuarioActual);
 
@@ -40,11 +40,11 @@ function Usuarios() {
         mostrarError('Error al cargar usuarios', response?.error || 'Error de conexión');
         setUsuarios([]);
       }
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     } catch (error) {
       mostrarError('Error de conexión', 'No se pudieron cargar los usuarios');
       console.error('Error cargando usuarios:', error);
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     }
   };
 

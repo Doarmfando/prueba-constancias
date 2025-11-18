@@ -65,7 +65,7 @@ function ProyectoDetalle() {
   const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
     'registros',
     () => {
-      cargarRegistros();
+      cargarRegistros({ mostrarLoading: false });
       cargarEstadisticas();
     },
     {
@@ -131,9 +131,9 @@ function ProyectoDetalle() {
 
       const response = await window.electronAPI?.proyectos.obtenerDetalle(id, usuario);
 
-      if (response?.success && response.proyecto) {
-        setProyecto(response.proyecto);
-        cargarRegistros(response.proyecto);
+        if (response?.success && response.proyecto) {
+          setProyecto(response.proyecto);
+          cargarRegistros({ proyectoData: response.proyecto, mostrarLoading: true });
       } else {
         console.error('Error cargando proyecto:', response?.error);
         setProyecto(null);
@@ -235,9 +235,9 @@ function ProyectoDetalle() {
     }
   };
 
-  const cargarRegistros = async (proyectoData = null) => {
+  const cargarRegistros = async ({ proyectoData = null, mostrarLoading = false } = {}) => {
     try {
-      setCargandoRegistros(true);
+      if (mostrarLoading) setCargandoRegistros(true);
 
       // Usar el proyecto pasado como parÃ¡metro o el del estado
       const proyectoActual = proyectoData || proyecto;
@@ -245,7 +245,7 @@ function ProyectoDetalle() {
       // Verificar que el proyecto estÃ© cargado
       if (!proyectoActual?.id) {
         console.warn('Proyecto no disponible, saltando carga de registros');
-        setCargandoRegistros(false);
+        if (mostrarLoading) setCargandoRegistros(false);
         return;
       }
 
@@ -260,10 +260,10 @@ function ProyectoDetalle() {
         setRegistros([]);
         setRegistrosEliminados([]);
       }
-      setCargandoRegistros(false);
+      if (mostrarLoading) setCargandoRegistros(false);
     } catch (error) {
       console.error('Error cargando registros:', error);
-      setCargandoRegistros(false);
+      if (mostrarLoading) setCargandoRegistros(false);
     }
   };
 
@@ -464,7 +464,7 @@ function ProyectoDetalle() {
 
         if (response?.success) {
           // Recargar los registros desde la base de datos para obtener el estado actualizado
-          await cargarRegistros();
+          await cargarRegistros({ mostrarLoading: false });
           mostrarExito('Registro movido a papelería correctamente');
         } else {
           mostrarError('Error al eliminar registro', response?.error || 'Error de conexiÃ³n');
@@ -492,7 +492,7 @@ function ProyectoDetalle() {
 
         if (response?.success) {
           // Recargar los registros desde la base de datos para obtener el estado actualizado
-          await cargarRegistros();
+          await cargarRegistros({ mostrarLoading: false });
           mostrarExito('Registro restaurado correctamente');
         } else {
           mostrarError('Error al restaurar registro', response?.error || 'Error de conexiÃ³n');
@@ -1167,7 +1167,7 @@ function ProyectoDetalle() {
           }}
           onSave={async () => {
             // Recargar los registros desde la base de datos despuÃ©s de guardar
-            await cargarRegistros();
+            await cargarRegistros({ mostrarLoading: false });
             setMostrarFormularioRegistro(false);
             setRegistroEditando(null);
           }}

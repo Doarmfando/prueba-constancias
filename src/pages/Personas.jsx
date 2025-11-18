@@ -24,7 +24,7 @@ function Personas() {
     // Configurar sincronización en tiempo real
   const { conectado, sincronizando, ultimaActualizacion, contadorCambios } = useRealtimeSync(
     'personas',
-    cargarPersonas,
+    () => cargarPersonas({ mostrarLoading: false }),
     {
       habilitado: true,
       debounceMs: 500
@@ -32,12 +32,12 @@ function Personas() {
   );
 
   useEffect(() => {
-    cargarPersonas();
+    cargarPersonas({ mostrarLoading: true });
   }, []);
 
-  const cargarPersonas = async () => {
+  const cargarPersonas = async ({ mostrarLoading = false } = {}) => {
     try {
-      setCargando(true);
+      if (mostrarLoading) setCargando(true);
       const response = await window.electronAPI?.personas.obtenerConDocumentos();
 
       if (response?.success) {
@@ -56,7 +56,7 @@ function Personas() {
       setPersonas([]);
       setTodasPersonas([]);
     } finally {
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     }
   };
 

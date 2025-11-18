@@ -31,7 +31,7 @@ function Registros() {
   // Realtime
   const { conectado, sincronizando } = useRealtimeSync(
     'registros',
-    cargarRegistros,
+    () => cargarRegistros({ mostrarLoading: false }),
     {
       habilitado: true,
       debounceMs: 500
@@ -44,12 +44,12 @@ function Registros() {
     if (pdfMake && fuentes) {
       pdfMake.vfs = fuentes;
     }
-    cargarRegistros();
+    cargarRegistros({ mostrarLoading: true });
   }, []);
 
-  const cargarRegistros = async () => {
+  const cargarRegistros = async ({ mostrarLoading = false } = {}) => {
     try {
-      setCargando(true);
+      if (mostrarLoading) setCargando(true);
 
       // Usar el IPC correcto para obtener registros
       const response = await window.electronAPI?.registros.obtener();
@@ -71,13 +71,13 @@ function Registros() {
           mostrarError('Error al cargar registros', response.error);
         }
       }
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
 
     } catch (error) {
       mostrarError('Error de conexión', 'No se pudieron cargar los registros');
       console.error('Error cargando registros:', error);
       setRegistros([]);
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     }
   };
 
