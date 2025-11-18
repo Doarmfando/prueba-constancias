@@ -173,7 +173,7 @@ function Auditoria() {
     }
 
     if (log.accion === 'logout' && detalles.fecha_logout) {
-      return `Cierre de sesión: ${new Date(detalles.fecha_logout).toLocaleString()}`;
+      return `Cierre de sesion: ${new Date(detalles.fecha_logout).toLocaleString()}`;
     }
 
     if (typeof detalles === 'string') return detalles;
