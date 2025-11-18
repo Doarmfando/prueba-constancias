@@ -4,6 +4,7 @@ import { FaPlus, FaEdit, FaTrash, FaGlobe, FaLock, FaUsers, FaChartBar } from 'r
 import { MdPublic, MdPrivateConnectivity, MdVisibility } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { TABLA_PROYECTOS } from '../services/supabaseRealtime';
 
 function MisProyectos() {
   const [proyectos, setProyectos] = useState([]);
@@ -47,8 +48,13 @@ function MisProyectos() {
     return usuario.rol === 'administrador' || proyecto.usuario_creador_id === usuario.id;
   };
 
-  // Realtime
-  useRealtimeSync('registros', cargarProyectos, {
+  // Realtime para proyectos (alta/baja/cambios) y registros (conteos)
+  useRealtimeSync(TABLA_PROYECTOS, () => cargarProyectos(), {
+    habilitado: true,
+    debounceMs: 500
+  });
+
+  useRealtimeSync('registros', () => cargarProyectos(), {
     habilitado: true,
     debounceMs: 500
   });

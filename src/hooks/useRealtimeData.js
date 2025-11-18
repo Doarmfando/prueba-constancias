@@ -97,6 +97,7 @@ export const useRealtimeSync = (tabla, cargarDatos, opciones = {}) => {
     debounceMs = 500, // Por defecto 500ms de debounce
     filtros = {},
     onCambio = null, // Callback adicional cuando hay cambios
+    fallbackIntervalMs = null // Polling pasivo opcional (desactivado por defecto para evitar parpadeos)
   } = opciones;
 
   const handleDataChange = async (evento) => {
@@ -131,6 +132,34 @@ export const useRealtimeSync = (tabla, cargarDatos, opciones = {}) => {
     { habilitado, filtros, debounceMs }
   );
 
+  // Polling pasivo opcional para asegurar refresco aunque Realtime falle o tarde
+  useEffect(() => {
+    if (!habilitado || !fallbackIntervalMs) return;
+    if (!cargarDatos || typeof cargarDatos !== 'function') return;
+
+    let pollingId = null;
+
+    const hacerPolling = async () => {
+      try {
+        setSincronizando(true);
+        await cargarDatos();
+        setUltimaActualizacion(new Date());
+      } catch (err) {
+        console.error('Polling fallback error:', err);
+      } finally {
+        setSincronizando(false);
+      }
+    };
+
+    // Activar polling como seguro pasivo (solo si se configura fallbackIntervalMs)
+    hacerPolling();
+    pollingId = setInterval(hacerPolling, fallbackIntervalMs);
+
+    return () => {
+      if (pollingId) clearInterval(pollingId);
+    };
+  }, [habilitado, fallbackIntervalMs, cargarDatos]);
+
   return {
     conectado,
     error,
@@ -151,7 +180,8 @@ export const useRealtimeMultiple = (suscripciones, opciones = {}) => {
   const { habilitado = true } = opciones;
 
   useEffect(() => {
-    if (!habilitado || !window.__WEB_BRIDGE__) {
+    const puedeRealtime = habilitado && (window.__WEB_BRIDGE__ || supabaseUser);
+    if (!puedeRealtime) {
       return;
     }
 

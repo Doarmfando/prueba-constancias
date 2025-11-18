@@ -5,6 +5,7 @@ import { MdPrivateConnectivity } from 'react-icons/md';
 import { mostrarError } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { TABLA_PROYECTOS } from '../services/supabaseRealtime';
 
 function ProyectosPrivados() {
   const [proyectos, setProyectos] = useState([]);
@@ -48,8 +49,13 @@ function ProyectosPrivados() {
     );
   }
 
-  // Realtime
-  useRealtimeSync('registros', cargarProyectosPrivados, {
+  // Realtime para proyectos y registros vinculados
+  useRealtimeSync(TABLA_PROYECTOS, () => cargarProyectosPrivados(), {
+    habilitado: true,
+    debounceMs: 500
+  });
+
+  useRealtimeSync('registros', () => cargarProyectosPrivados(), {
     habilitado: true,
     debounceMs: 500
   });

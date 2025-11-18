@@ -4,6 +4,9 @@
 // Importar cliente de Supabase para navegador
 import { supabaseUser } from '../config/supabaseBrowser';
 
+// Tablas base usadas en realtime
+export const TABLA_PROYECTOS = 'proyectos_registros';
+
 /**
  * Suscribe a cambios en tiempo real de una tabla
  * @param {string} tabla - Nombre de la tabla a suscribir
@@ -137,7 +140,7 @@ export const SUSCRIPCIONES_MODULOS = {
     eventos: ['INSERT', 'UPDATE', 'DELETE']
   },
   proyectos: {
-    tabla: 'proyectos',
+    tabla: TABLA_PROYECTOS,
     eventos: ['INSERT', 'UPDATE', 'DELETE']
   },
   documentos_persona: {
@@ -175,5 +178,6 @@ export default {
   cancelarMultiplesSuscripciones,
   suscribirseConFiltro,
   verificarRealtimeDisponible,
-  SUSCRIPCIONES_MODULOS
+  SUSCRIPCIONES_MODULOS,
+  TABLA_PROYECTOS
 };

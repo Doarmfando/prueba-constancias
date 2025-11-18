@@ -4,11 +4,13 @@ import { FaGlobe, FaUsers, FaEye, FaCalendarAlt, FaSearch, FaSync } from 'react-
 import { MdPublic } from 'react-icons/md';
 import { mostrarError } from '../utils/alertas';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { TABLA_PROYECTOS } from '../services/supabaseRealtime';
 
 function ProyectosPublicos() {
   const [proyectos, setProyectos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
+  const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
 
   // Obtener usuario actual del localStorage
   const getUsuarioActual = () => {
@@ -42,9 +44,18 @@ function ProyectosPublicos() {
   }
 
     // Configurar sincronización en tiempo real
-  const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
-    'proyectos',
-    cargarProyectosPublicos,
+  const { conectado, sincronizando } = useRealtimeSync(
+    TABLA_PROYECTOS,
+    () => cargarProyectosPublicos({ mostrarLoading: false }),
+    {
+      habilitado: true,
+      debounceMs: 500
+    }
+  );
+
+  useRealtimeSync(
+    'registros',
+    () => cargarProyectosPublicos({ mostrarLoading: false }),
     {
       habilitado: true,
       debounceMs: 500
@@ -52,12 +63,12 @@ function ProyectosPublicos() {
   );
 
   useEffect(() => {
-    cargarProyectosPublicos();
+    cargarProyectosPublicos({ mostrarLoading: true });
   }, []);
 
-  const cargarProyectosPublicos = async () => {
+  const cargarProyectosPublicos = async ({ mostrarLoading = false } = {}) => {
     try {
-      setCargando(true);
+      if (mostrarLoading) setCargando(true);
 
       const response = await window.electronAPI?.proyectos.obtenerProyectosPublicos();
 
@@ -67,11 +78,12 @@ function ProyectosPublicos() {
         console.error('Error cargando proyectos públicos:', response?.error);
         setProyectos([]);
       }
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
+      setUltimaActualizacion(new Date());
     } catch (error) {
       mostrarError('Error de conexión', 'No se pudieron cargar los proyectos públicos');
       console.error('Error cargando proyectos públicos:', error);
-      setCargando(false);
+      if (mostrarLoading) setCargando(false);
     }
   };
 
