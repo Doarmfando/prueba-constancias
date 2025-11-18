@@ -128,6 +128,27 @@ class AuditoriaController extends BaseController {
       };
     }
   }
+
+  async registrarLogout(usuario) {
+    try {
+      if (!usuario?.id) {
+        return { success: false, error: "Usuario requerido para registrar logout" };
+      }
+
+      await this.auditoriaModel.registrarAccion({
+        usuario_id: usuario.id,
+        accion: 'logout',
+        tabla_afectada: 'usuarios',
+        registro_id: usuario.id,
+        detalles: { fecha_logout: new Date().toISOString() }
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error registrando logout en auditoría:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 module.exports = AuditoriaController;

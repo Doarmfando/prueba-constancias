@@ -156,7 +156,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // API de Auditoría
   auditoria: {
-    obtenerHistorial: (filtros) => ipcRenderer.invoke("auditoria-obtener-historial", filtros)
+    obtenerHistorial: (filtros) => ipcRenderer.invoke("auditoria-obtener-historial", filtros),
+    registrarLogout: (usuario) => ipcRenderer.invoke("auditoria-registrar-logout", usuario)
   },
 
   // API de Gestión de Datos

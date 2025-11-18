@@ -386,6 +386,9 @@ function Registros() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  #
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Persona
                 </th>
@@ -409,7 +412,7 @@ function Registros() {
             <tbody className="bg-white divide-y divide-gray-200">
               {registrosPaginados.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
+                  <td colSpan="7" className="px-6 py-12 text-center">
                     <FaFileAlt className="mx-auto text-4xl text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
                       No se encontraron registros
@@ -423,8 +426,11 @@ function Registros() {
                   </td>
                 </tr>
               ) : (
-                registrosPaginados.map((registro) => (
+                registrosPaginados.map((registro, idx) => (
                   <tr key={registro.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {indiceInicio + idx + 1}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">

@@ -31,6 +31,8 @@ function Graficos() {
   const [estadisticas, setEstadisticas] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [filtroAnio, setFiltroAnio] = useState('Todo');
+  const [aniosDisponibles, setAniosDisponibles] = useState([]);
+  const [registrosRaw, setRegistrosRaw] = useState([]);
 
   useEffect(() => {
     cargarEstadisticas();
@@ -52,12 +54,25 @@ function Graficos() {
         registros = response.registros;
       }
 
-      // Calcular estadísticas reales
-      const total = registros.length;
-      const recibidos = registros.filter(r => r.estado === 'Recibido').length;
-      const enCaja = registros.filter(r => r.estado === 'En Caja').length;
-      const entregados = registros.filter(r => r.estado === 'Entregado').length;
-      const tesoreria = registros.filter(r => r.estado === 'Tesoreria').length;
+      const filtrarPorAnio = (lista) => {
+        if (filtroAnio === 'Todo') return lista;
+        const anioNum = parseInt(filtroAnio, 10);
+        if (Number.isNaN(anioNum)) return lista;
+        return lista.filter(r => {
+          if (!r.fecha_registro) return false;
+          const y = new Date(r.fecha_registro).getFullYear();
+          return y === anioNum;
+        });
+      };
+
+      const registrosFiltrados = filtrarPorAnio(registros);
+
+      // Calcular estadísticas reales (solo visibles según filtro)
+      const total = registrosFiltrados.length;
+      const recibidos = registrosFiltrados.filter(r => r.estado === 'Recibido').length;
+      const enCaja = registrosFiltrados.filter(r => r.estado === 'En Caja').length;
+      const entregados = registrosFiltrados.filter(r => r.estado === 'Entregado').length;
+      const tesoreria = registrosFiltrados.filter(r => r.estado === 'Tesoreria').length;
 
       // Agrupar por estado
       const porEstado = {
@@ -74,17 +89,10 @@ function Graficos() {
 
       meses.forEach((mes, index) => {
         const mesNum = index + 1;
-        const registrosDelMes = registros.filter(r => {
+        const registrosDelMes = registrosFiltrados.filter(r => {
           if (!r.fecha_registro) return false;
           const fecha = new Date(r.fecha_registro);
-          const anioRegistro = fecha.getFullYear();
           const mesRegistro = fecha.getMonth() + 1;
-
-          // Filtrar por año si no es "Todo"
-          if (filtroAnio !== 'Todo' && anioRegistro !== parseInt(filtroAnio)) {
-            return false;
-          }
-
           return mesRegistro === mesNum;
         });
         porMes[mes] = registrosDelMes.length;
@@ -100,6 +108,16 @@ function Graficos() {
       };
 
       setEstadisticas(stats);
+      setRegistrosRaw(registros);
+
+      const years = Array.from(new Set(
+        registros
+          .map(r => r.fecha_registro)
+          .filter(Boolean)
+          .map(f => new Date(f).getFullYear())
+          .filter(y => !Number.isNaN(y))
+      )).sort((a, b) => b - a).map(String);
+      setAniosDisponibles(years);
       setCargando(false);
     } catch (error) {
       console.error('Error al cargar estadísticas:', error);
@@ -158,9 +176,7 @@ function Graficos() {
     }
   };
 
-  const aniosDisponibles = ['2024', '2023', '2022'];
-
-  if (cargando) {
+if (cargando) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -180,13 +196,15 @@ function Graficos() {
         </div>
 
         {/* Filtros */}
-        <div className="flex space-x-3">
+        <div className="flex space-x-3 items-center">
+          <span className="text-sm text-gray-700 font-medium">Año (fecha de registro)</span>
           <select
             value={filtroAnio}
             onChange={(e) => setFiltroAnio(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="Todo">Todos los años</option>
+            {aniosDisponibles.length === 0 && <option value="" disabled>No hay registros</option>}
             {aniosDisponibles.map((anio) => (
               <option key={anio} value={anio}>
                 Año {anio}

@@ -53,6 +53,16 @@ class AuditoriaIPCHandler {
       }
     });
 
+    // Registrar logout (sin exigir rol admin)
+    ipcMain.handle("auditoria-registrar-logout", async (event, usuario) => {
+      try {
+        return await this.auditoriaController.registrarLogout(usuario);
+      } catch (error) {
+        console.error("Error en auditoria-registrar-logout:", error);
+        return { success: false, error: error.message };
+      }
+    });
+
     this.registeredChannels = [
       "auditoria-obtener-historial",
       "auditoria-obtener-estadisticas",

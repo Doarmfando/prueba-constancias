@@ -58,9 +58,23 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    setUsuario(null);
-    localStorage.removeItem('sesion_usuario');
+  const logout = async () => {
+    try {
+      const usuarioPrevio = usuario;
+      setUsuario(null);
+      localStorage.removeItem('sesion_usuario');
+
+      if (isElectron() && usuarioPrevio?.id) {
+        // Registrar auditoría de cierre de sesión
+        window.electronAPI?.auditoria?.registrarLogout({
+          id: usuarioPrevio.id,
+          nombre_usuario: usuarioPrevio.nombre_usuario,
+          rol: usuarioPrevio.rol
+        });
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   const estaAutenticado = () => {

@@ -14,7 +14,6 @@ const ProyectosPrivados = lazy(() => import("./pages/ProyectosPrivados"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
 const Auditoria = lazy(() => import("./pages/Auditoria"));
 const Informacion = lazy(() => import("./pages/Informacion"));
-const GestionDatos = lazy(() => import("./pages/GestionDatos"));
 const Personas = lazy(() => import("./pages/Personas"));
 const PersonaDetalle = lazy(() => import("./pages/PersonaDetalle"));
 // Rutas legacy (mantener por compatibilidad)
@@ -149,7 +148,6 @@ function AppRoutes() {
             <Route path="/persona/:id" element={<ProtectedRoute><PersonaDetalle /></ProtectedRoute>} />
             <Route path="/informacion" element={<ProtectedRoute><Informacion /></ProtectedRoute>} />
             <Route path="/informacion/:dni" element={<ProtectedRoute><Informacion /></ProtectedRoute>} />
-            <Route path="/gestion-datos" element={<ProtectedRoute><GestionDatos /></ProtectedRoute>} />
 
             {/* Rutas legacy (mantener por compatibilidad) */}
             <Route path="/registros" element={<ProtectedRoute><Registros /></ProtectedRoute>} />
