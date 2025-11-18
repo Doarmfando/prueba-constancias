@@ -242,13 +242,13 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Mover mÃºltiples registros a papelera
+  // Mover múltiples registros a papelera
   async moverMultipleAPapelera(payload) {
     try {
       const ids = Array.isArray(payload) ? payload : payload?.ids;
       const usuario = Array.isArray(payload) ? null : payload?.usuario;
       if (!Array.isArray(ids) || ids.length === 0) {
-        throw new Error("No se proporcionaron IDs vÃ¡lidos");
+        throw new Error("No se proporcionaron IDs válidos");
       }
       // Validar permisos por cada registro
       for (const id of ids) {
@@ -260,7 +260,7 @@ class RegistroController extends BaseController {
       const resultado = await this.model.moverMultipleAPapelera(ids);
       return resultado;
     } catch (error) {
-      this.handleError(error, "Error moviendo mÃºltiples registros a papelera");
+      this.handleError(error, "Error moviendo múltiples registros a papelera");
     }
   }
 
@@ -282,13 +282,13 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Restaurar mÃºltiples registros
+  // Restaurar múltiples registros
   async restaurarMultiple(payload) {
     try {
       const ids = Array.isArray(payload) ? payload : payload?.ids;
       const usuario = Array.isArray(payload) ? null : payload?.usuario;
       if (!Array.isArray(ids) || ids.length === 0) {
-        throw new Error("No se proporcionaron IDs vÃ¡lidos");
+        throw new Error("No se proporcionaron IDs válidos");
       }
       for (const id of ids) {
         const reg = await this.model.getById(id);
@@ -299,7 +299,7 @@ class RegistroController extends BaseController {
       const resultado = await this.model.restaurarMultiple(ids);
       return resultado;
     } catch (error) {
-      this.handleError(error, "Error restaurando mÃºltiples registros");
+      this.handleError(error, "Error restaurando múltiples registros");
     }
   }
 
@@ -320,16 +320,16 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Eliminar mÃºltiples registros permanentemente
+  // Eliminar múltiples registros permanentemente
   async eliminarMultiple(payload) {
     try {
       const ids = Array.isArray(payload) ? payload : payload?.ids;
       const usuario = Array.isArray(payload) ? null : payload?.usuario;
       if (!Array.isArray(ids) || ids.length === 0) {
-        throw new Error("No se proporcionaron IDs vÃ¡lidos");
+        throw new Error("No se proporcionaron IDs válidos");
       }
 
-      // Eliminar uno por uno para mantener la lÃ³gica de limpieza
+      // Eliminar uno por uno para mantener la lógica de limpieza
       const resultados = [];
       for (const id of ids) {
         try {
@@ -352,7 +352,7 @@ class RegistroController extends BaseController {
         details: resultados
       };
     } catch (error) {
-      this.handleError(error, "Error eliminando mÃºltiples registros");
+      this.handleError(error, "Error eliminando múltiples registros");
     }
   }
 
@@ -363,7 +363,7 @@ class RegistroController extends BaseController {
       
       // Validar formato de DNI
       if (!/^\d{8}$/.test(dni.trim())) {
-        throw new Error("El DNI debe tener exactamente 8 dÃ­gitos");
+        throw new Error("El DNI debe tener exactamente 8 dígitos");
       }
       
       const resultado = await this.model.buscarPorDni(dni.trim());
@@ -379,7 +379,7 @@ class RegistroController extends BaseController {
       this.validateRequired({ dni }, ['dni']);
       
       if (!/^\d{8}$/.test(dni.trim())) {
-        throw new Error("El DNI debe tener exactamente 8 dÃ­gitos");
+        throw new Error("El DNI debe tener exactamente 8 dígitos");
       }
       
       const resultado = await this.model.moverDniCompletoPapelera(dni.trim());
@@ -399,15 +399,15 @@ class RegistroController extends BaseController {
     }
   }
 
-  // Obtener estadÃ­sticas del dashboard
+  // Obtener estadísticas del dashboard
   async obtenerEstadisticas(params = {}) {
     try {
       const { tipo = "registro", anio = "Todo" } = params;
 
-      // Obtener estadÃ­sticas bÃ¡sicas y detalladas
+      // Obtener estadísticas básicas y detalladas
       const resultado = await this.calcularEstadisticas(tipo, anio);
 
-      // Agregar estadÃ­sticas adicionales para el dashboard
+      // Agregar estadísticas adicionales para el dashboard
       const hoy = new Date().toISOString().split('T')[0];
 
       // Contar registros de hoy usando Supabase
@@ -423,11 +423,11 @@ class RegistroController extends BaseController {
         hoy: registrosHoy || 0
       };
     } catch (error) {
-      this.handleError(error, "Error obteniendo estadÃ­sticas");
+      this.handleError(error, "Error obteniendo estadísticas");
     }
   }
 
-  // Obtener aÃ±os disponibles para filtros
+  // Obtener años disponibles para filtros
   async obtenerFechasDisponibles(tipo = "registro") {
     try {
       const resultado = await this.model.obtenerFechasDisponibles(tipo);
@@ -437,14 +437,14 @@ class RegistroController extends BaseController {
     }
   }
 
-  // MÃ©todos auxiliares privados
+  // Métodos auxiliares privados
 
   verificarCamposFaltantes(datos) {
     const { nombre, numero, dni, expediente } = datos;
     const faltantes = [];
     
     if (!nombre || nombre === "---") faltantes.push("nombre");
-    if (!numero || numero === "---") faltantes.push("nÃºmero");
+    if (!numero || numero === "---") faltantes.push("número");
     if (!dni || dni === "---") faltantes.push("DNI");
     if (!expediente || expediente === "" || expediente === "---") faltantes.push("expediente");
     

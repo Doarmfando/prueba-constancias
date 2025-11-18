@@ -59,7 +59,7 @@ function Auditoria() {
     } catch (error) {
       setLogs([]);
       setTotalLogs(0);
-      console.error('Error cargando logs de auditorÃ­a:', error);
+      console.error('Error cargando logs de auditoría:', error);
     } finally {
       setCargando(false);
     }
@@ -83,7 +83,7 @@ function Auditoria() {
 
   const exportarLogs = async () => {
     try {
-      mostrarExito('Funcionalidad de exportaciÃ³n en desarrollo');
+      mostrarExito('Funcionalidad de exportación en desarrollo');
     } catch (error) {
       mostrarError('Error al exportar logs', error.message);
     }
@@ -91,10 +91,10 @@ function Auditoria() {
 
   const traducirAccion = (accion) => {
     const traducciones = {
-      'crear': 'CreaciÃ³n',
-      'editar': 'EdiciÃ³n',
-      'eliminar': 'EliminaciÃ³n',
-      'publicar': 'PublicaciÃ³n',
+      'crear': 'Creación',
+      'editar': 'Edición',
+      'eliminar': 'Eliminación',
+      'publicar': 'Publicación',
       'acceso': 'Acceso al Sistema'
     };
     return traducciones[accion] || accion;
@@ -105,7 +105,7 @@ function Auditoria() {
       'proyectos_registros': 'Proyectos',
       'usuarios': 'Usuarios',
       'sistema': 'Sistema',
-      'auditoria': 'AuditorÃ­a',
+      'auditoria': 'Auditoría',
       'personas': 'Personas',
       'expedientes': 'Expedientes',
       'registros': 'Registros'
@@ -159,7 +159,7 @@ function Auditoria() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">AuditorÃ­a del Sistema</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Auditoría del Sistema</h1>
           <p className="text-gray-600 mt-1">
             Registro completo de todas las acciones realizadas en el sistema
           </p>
@@ -172,11 +172,11 @@ function Auditoria() {
           >
             <MdRefresh className="text-lg" />
           </button>
-          {/* BotÃ³n de exportaciÃ³n removido */}
+          {/* Botón de exportación removido */}
         </div>
       </div>
 
-      {/* EstadÃ­sticas */}
+      {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow border">
           <div className="flex items-center justify-between">
@@ -353,7 +353,7 @@ function Auditoria() {
         </div>
       </div>
 
-      {/* PaginaciÃ³n */}
+      {/* Paginación */}
       {totalPaginas > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
@@ -381,16 +381,16 @@ function Auditoria() {
         </div>
       )}
 
-      {/* InformaciÃ³n adicional */}
+      {/* Información adicional */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <FaHistory className="text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">InformaciÃ³n sobre la auditorÃ­a</p>
+            <p className="font-medium mb-1">Información sobre la auditoría</p>
             <ul className="space-y-1">
               <li> Se registran todas las acciones de los usuarios en el sistema</li>
-              <li> Los logs incluyen fecha, usuario, acciÃ³n realizada y detalles</li>
-              <li> Solo los administradores pueden acceder a esta informaciÃ³n</li>
+              <li> Los logs incluyen fecha, usuario, acción realizada y detalles</li>
+              <li> Solo los administradores pueden acceder a esta información</li>
               <li> Los registros se mantienen por tiempo indefinido para trazabilidad</li>
             </ul>
           </div>

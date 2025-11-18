@@ -95,7 +95,7 @@ function ProyectoDetalle() {
     cargarProyecto();
   }, [id]);
 
-  // Recalcular estadÃ­sticas cuando cambien los registros
+  // Recalcular estadísticas cuando cambien los registros
   useEffect(() => {
     cargarEstadisticas();
   }, [registros, registrosEliminados]);
@@ -879,12 +879,12 @@ function ProyectoDetalle() {
                   <select className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option>Todo</option>
                     <option>Última semana</option>
-                    <option>Ãšltimo mes</option>
+                    <option>Último mes</option>
                   </select>
                 </div>
               </div>
 
-              {/* Tarjetas de estadÃ­sticas */}
+              {/* Tarjetas de estadísticas */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-yellow-500 p-6 rounded-lg shadow">
                   <p className="text-white text-sm font-medium mb-1">Recibidos</p>
@@ -1054,17 +1054,12 @@ function ProyectoDetalle() {
                   <h4 className="font-medium text-gray-900 mb-2">Permisos</h4>
                   <div className="space-y-2 text-sm text-gray-600">
                     <p><strong>Creador:</strong> {proyecto.nombre_creador}</p>
-                    <p><strong>EdiciÃ³n:</strong> {proyecto.permite_edicion ? 'Habilitada' : 'Solo propietario'}</p>
+                    <p><strong>Edicion:</strong> {proyecto.permite_edicion ? 'Habilitada' : 'Solo propietario'}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
-                  <strong>Nota:</strong> Las opciones de configuraciÃ³n avanzada estÃ¡n disponibles
-                  para administradores y propietarios del proyecto.
-                </p>
-              </div>
+
             </div>
           )}
         </div>
