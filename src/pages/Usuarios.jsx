@@ -20,7 +20,7 @@ function Usuarios() {
 
   // Realtime
   useRealtimeSync('usuarios', cargarUsuarios, {
-    habilitado: window.__WEB_BRIDGE__ === true,
+    habilitado: true,
     debounceMs: 500
   });
 

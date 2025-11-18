@@ -6,7 +6,6 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { FaDownload } from 'react-icons/fa';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
-import { toast } from 'react-toastify';
 
 function Registros() {
   const [registros, setRegistros] = useState([]);
@@ -34,12 +33,8 @@ function Registros() {
     'registros',
     cargarRegistros,
     {
-      habilitado: window.__WEB_BRIDGE__ === true,
-      debounceMs: 500,
-      onCambio: (evento) => {
-        const msgs = { INSERT: '✨ Nuevo registro', UPDATE: '🔄 Actualizado', DELETE: '🗑️ Eliminado' };
-        if (msgs[evento.tipo]) toast.info(msgs[evento.tipo], { position: 'bottom-right', autoClose: 2000 });
-      }
+      habilitado: true,
+      debounceMs: 500
     }
   );
 

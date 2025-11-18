@@ -69,21 +69,8 @@ function ProyectoDetalle() {
       cargarEstadisticas();
     },
     {
-      habilitado: window.__WEB_BRIDGE__ === true,
-      debounceMs: 500,
-      onCambio: (evento) => {
-        const mensajes = {
-          INSERT: '✨ Nuevo registro agregado',
-          UPDATE: '🔄 Registro actualizado',
-          DELETE: '🗑️ Registro eliminado'
-        };
-        if (mensajes[evento.tipo]) {
-          toast.info(mensajes[evento.tipo], {
-            position: 'bottom-right',
-            autoClose: 2000
-          });
-        }
-      }
+      habilitado: true,
+      debounceMs: 500
     }
   );
 

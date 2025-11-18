@@ -9,22 +9,22 @@ import { supabaseUser } from '../config/supabaseBrowser';
  * Hook para suscribirse a cambios en tiempo real de una tabla
  * @param {string} tabla - Nombre de la tabla de Supabase
  * @param {Function} onDataChange - Callback que se ejecuta cuando hay cambios
- * @param {Object} opciones - Opciones de configuración
- * @returns {Object} Estado de la suscripción
+ * @param {Object} opciones - Opciones de configuraci?n
+ * @returns {Object} Estado de la suscripci?n
  */
 export const useRealtimeData = (tabla, onDataChange, opciones = {}) => {
   const [conectado, setConectado] = useState(false);
   const [error, setError] = useState(null);
   const canalRef = useRef(null);
   const {
-    habilitado = true, // Permite habilitar/deshabilitar la suscripción
+    habilitado = true, // Permite habilitar/deshabilitar la suscripci?n
     filtros = {},
-    debounceMs = 0, // Tiempo de espera antes de ejecutar el callback (evita múltiples llamadas)
+    debounceMs = 0, // Tiempo de espera antes de ejecutar el callback (evita m?ltiples llamadas)
   } = opciones;
 
   useEffect(() => {
     const puedeRealtime = habilitado && (window.__WEB_BRIDGE__ || supabaseUser);
-    // Solo suscribirse si está habilitado y hay cliente Supabase disponible
+    // Solo suscribirse si est? habilitado y hay cliente Supabase disponible
     if (!puedeRealtime) {
       return;
     }
@@ -45,27 +45,27 @@ export const useRealtimeData = (tabla, onDataChange, opciones = {}) => {
 
     try {
       setError(null);
-      console.log(`🔌 Intentando conectar a ${tabla}...`);
+      console.log(`?? Intentando conectar a ${tabla}...`);
 
       canalRef.current = suscribirseATabla(tabla, handleChange, filtros);
 
       if (canalRef.current) {
         setConectado(true);
       } else {
-        setError('No se pudo crear la suscripción');
+        setError('No se pudo crear la suscripci?n');
       }
     } catch (err) {
-      console.error(`Error en suscripción a ${tabla}:`, err);
+      console.error(`Error en suscripci?n a ${tabla}:`, err);
       setError(err.message);
       setConectado(false);
     }
 
-    // Cleanup: cancelar suscripción cuando el componente se desmonta
+    // Cleanup: cancelar suscripci?n cuando el componente se desmonta
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
 
       if (canalRef.current) {
-        console.log(`🔌 Desconectando de ${tabla}...`);
+        console.log(`?? Desconectando de ${tabla}...`);
         cancelarSuscripcion(canalRef.current);
         canalRef.current = null;
         setConectado(false);
@@ -81,11 +81,11 @@ export const useRealtimeData = (tabla, onDataChange, opciones = {}) => {
 };
 
 /**
- * Hook para recargar datos automáticamente cuando hay cambios
+ * Hook para recargar datos autom?ticamente cuando hay cambios
  * @param {string} tabla - Nombre de la tabla
- * @param {Function} cargarDatos - Función para cargar los datos
- * @param {Object} opciones - Opciones de configuración
- * @returns {Object} Estado de la sincronización
+ * @param {Function} cargarDatos - Funci?n para cargar los datos
+ * @param {Object} opciones - Opciones de configuraci?n
+ * @returns {Object} Estado de la sincronizaci?n
  */
 export const useRealtimeSync = (tabla, cargarDatos, opciones = {}) => {
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
@@ -100,7 +100,7 @@ export const useRealtimeSync = (tabla, cargarDatos, opciones = {}) => {
   } = opciones;
 
   const handleDataChange = async (evento) => {
-    console.log(`📡 Cambio detectado en ${tabla}:`, evento.tipo);
+    console.log(`?? Cambio detectado en ${tabla}:`, evento.tipo);
 
     setContadorCambios(prev => prev + 1);
     setUltimaActualizacion(new Date());
@@ -113,11 +113,7 @@ export const useRealtimeSync = (tabla, cargarDatos, opciones = {}) => {
     // Recargar datos
     try {
       setSincronizando(true);
-      if (typeof cargarDatos === 'function') {
-        await cargarDatos();
-      } else {
-        console.warn(`useRealtimeSync: cargarDatos no es función para tabla ${tabla}`);
-      }
+      await cargarDatos();
     } catch (error) {
       console.error('Error recargando datos:', error);
     } finally {
@@ -141,7 +137,7 @@ export const useRealtimeSync = (tabla, cargarDatos, opciones = {}) => {
 };
 
 /**
- * Hook para suscribirse a múltiples tablas
+ * Hook para suscribirse a m?ltiples tablas
  * @param {Array<{tabla: string, callback: Function}>} suscripciones
  * @param {Object} opciones
  * @returns {Object} Estado de las suscripciones
@@ -185,8 +181,8 @@ export const useRealtimeMultiple = (suscripciones, opciones = {}) => {
 /**
  * Hook para mostrar notificaciones cuando hay cambios en tiempo real
  * @param {string} tabla - Nombre de la tabla
- * @param {Object} opciones - Opciones de configuración
- * @returns {Object} Estado de la suscripción
+ * @param {Object} opciones - Opciones de configuraci?n
+ * @returns {Object} Estado de la suscripci?n
  */
 export const useRealtimeNotifications = (tabla, opciones = {}) => {
   const {
@@ -231,3 +227,4 @@ export default {
   useRealtimeMultiple,
   useRealtimeNotifications
 };
+

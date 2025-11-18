@@ -4,7 +4,6 @@ import { MdRefresh } from 'react-icons/md';
 import { mostrarError, mostrarExito } from '../utils/alertas';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
-import { toast } from 'react-toastify';
 
 function Auditoria() {
   const [logs, setLogs] = useState([]);
@@ -19,21 +18,13 @@ function Auditoria() {
   const { usuario } = useAuth();
   const logsPerPage = 50;
 
-  // Realtime para auditoría (solo INSERT, no UPDATE/DELETE)
+    // Realtime para auditoría (solo INSERT, no UPDATE/DELETE)
   const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
     'auditoria',
     cargarLogs,
     {
-      habilitado: window.__WEB_BRIDGE__ === true,
-      debounceMs: 1000, // 1 segundo para auditoría
-      onCambio: (evento) => {
-        if (evento.tipo === 'INSERT') {
-          toast.info('📝 Nueva actividad registrada', {
-            position: 'bottom-right',
-            autoClose: 2000
-          });
-        }
-      }
+      habilitado: true,
+      debounceMs: 1000
     }
   );
 

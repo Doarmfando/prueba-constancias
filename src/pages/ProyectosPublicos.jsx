@@ -4,7 +4,6 @@ import { FaGlobe, FaUsers, FaEye, FaCalendarAlt, FaSearch, FaSync } from 'react-
 import { MdPublic } from 'react-icons/md';
 import { mostrarError } from '../utils/alertas';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
-import { toast } from 'react-toastify';
 
 function ProyectosPublicos() {
   const [proyectos, setProyectos] = useState([]);
@@ -42,27 +41,13 @@ function ProyectosPublicos() {
     );
   }
 
-  // Configurar sincronización en tiempo real
+    // Configurar sincronización en tiempo real
   const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
     'proyectos',
     cargarProyectosPublicos,
     {
-      habilitado: window.__WEB_BRIDGE__ === true,
-      debounceMs: 500,
-      onCambio: (evento) => {
-        const mensajes = {
-          INSERT: '✨ Nuevo proyecto público disponible',
-          UPDATE: '🔄 Proyecto actualizado',
-          DELETE: '🗑️ Proyecto eliminado'
-        };
-
-        if (mensajes[evento.tipo]) {
-          toast.info(mensajes[evento.tipo], {
-            position: 'bottom-right',
-            autoClose: 2000
-          });
-        }
-      }
+      habilitado: true,
+      debounceMs: 500
     }
   );
 

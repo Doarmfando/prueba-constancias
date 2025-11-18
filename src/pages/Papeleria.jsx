@@ -3,7 +3,6 @@ import { FaTrash, FaUndo, FaSearch, FaUser, FaCalendarAlt, FaFileAlt, FaExclamat
 import { MdRestore, MdDeleteForever } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
-import { toast } from 'react-toastify';
 
 function Papeleria() {
   const [registrosEliminados, setRegistrosEliminados] = useState([]);
@@ -34,24 +33,10 @@ function Papeleria() {
     }
   }
 
-  // Sincronización en tiempo real con Supabase Realtime (registros -> movimientos a papelería)
+    // Sincronización en tiempo real con Supabase Realtime (registros -> movimientos a papelería)
   useRealtimeSync('registros', cargarRegistrosEliminados, {
-    habilitado: window.__WEB_BRIDGE__ === true,
-    debounceMs: 800,
-    onCambio: (evento) => {
-      // Sólo mostrar notificación si el cambio afecta a eliminados/restaurados
-      if (evento.nuevo?.eliminado || evento.viejo?.eliminado || evento.tipo === 'DELETE') {
-        const mensajes = {
-          INSERT: 'Nuevo registro añadido (revisar papelera)',
-          UPDATE: evento.nuevo?.eliminado
-            ? 'Registro movido a papelería'
-            : 'Registro restaurado',
-          DELETE: 'Registro eliminado definitivamente'
-        };
-        const msg = mensajes[evento.tipo] || 'Papelera actualizada';
-        toast.info(msg, { position: 'bottom-right', autoClose: 2000 });
-      }
-    }
+    habilitado: true,
+    debounceMs: 800
   });
 
   useEffect(() => {

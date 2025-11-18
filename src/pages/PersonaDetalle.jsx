@@ -31,7 +31,7 @@ function PersonaDetalle() {
 
   // Realtime
   useRealtimeSync('documentos_persona', cargarDatos, {
-    habilitado: window.__WEB_BRIDGE__ === true,
+    habilitado: true,
     debounceMs: 500
   });
 

@@ -49,7 +49,7 @@ function MisProyectos() {
 
   // Realtime
   useRealtimeSync('registros', cargarProyectos, {
-    habilitado: window.__WEB_BRIDGE__ === true,
+    habilitado: true,
     debounceMs: 500
   });
 

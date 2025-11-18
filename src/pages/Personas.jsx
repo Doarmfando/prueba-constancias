@@ -8,7 +8,6 @@ import {
 import { mostrarError, mostrarExito } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
-import { toast } from 'react-toastify';
 
 function Personas() {
   const [personas, setPersonas] = useState([]);
@@ -22,32 +21,13 @@ function Personas() {
   const navigate = useNavigate();
   const { esAdministrador, usuario } = useAuth();
 
-  // Configurar sincronización en tiempo real (solo en modo web)
+    // Configurar sincronización en tiempo real
   const { conectado, sincronizando, ultimaActualizacion, contadorCambios } = useRealtimeSync(
     'personas',
     cargarPersonas,
     {
-      habilitado: window.__WEB_BRIDGE__ === true, // Solo en modo web
-      debounceMs: 500, // Esperar 500ms antes de recargar
-      onCambio: (evento) => {
-        // Mostrar notificación según el tipo de cambio
-        const mensajes = {
-          INSERT: '✨ Nueva persona agregada',
-          UPDATE: '🔄 Persona actualizada',
-          DELETE: '🗑️ Persona eliminada'
-        };
-
-        if (mensajes[evento.tipo]) {
-          toast.info(mensajes[evento.tipo], {
-            position: 'bottom-right',
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true
-          });
-        }
-      }
+      habilitado: true,
+      debounceMs: 500
     }
   );
 

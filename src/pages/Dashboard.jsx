@@ -24,7 +24,7 @@ function Dashboard() {
 
   // Realtime - actualizar cuando cambie cualquier registro
   useRealtimeSync('registros', cargarEstadisticas, {
-    habilitado: window.__WEB_BRIDGE__ === true,
+    habilitado: true,
     debounceMs: 1000
   });
 
@@ -272,5 +272,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
-
 

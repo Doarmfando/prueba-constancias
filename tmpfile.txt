@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { suscribirseATabla, cancelarSuscripcion } from '../services/supabaseRealtime';
-import { supabaseUser } from '../config/supabaseBrowser';
 
 /**
  * Hook para suscribirse a cambios en tiempo real de una tabla
@@ -23,9 +22,8 @@ export const useRealtimeData = (tabla, onDataChange, opciones = {}) => {
   } = opciones;
 
   useEffect(() => {
-    const puedeRealtime = habilitado && (window.__WEB_BRIDGE__ || supabaseUser);
-    // Solo suscribirse si está habilitado y hay cliente Supabase disponible
-    if (!puedeRealtime) {
+    // Solo suscribirse si está habilitado y en modo web
+    if (!habilitado || !window.__WEB_BRIDGE__) {
       return;
     }
 
@@ -113,11 +111,7 @@ export const useRealtimeSync = (tabla, cargarDatos, opciones = {}) => {
     // Recargar datos
     try {
       setSincronizando(true);
-      if (typeof cargarDatos === 'function') {
-        await cargarDatos();
-      } else {
-        console.warn(`useRealtimeSync: cargarDatos no es función para tabla ${tabla}`);
-      }
+      await cargarDatos();
     } catch (error) {
       console.error('Error recargando datos:', error);
     } finally {
