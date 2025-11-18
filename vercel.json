@@ -1,4 +1,5 @@
 {
+   "_comment": "Solo sirve como nota temporal, quítalo antes del deploy",
   "version": 2,
   "framework": "other",
   "buildCommand": "npm run build",
