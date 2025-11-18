@@ -3,10 +3,12 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   FaArrowLeft, FaEdit, FaTrash, FaGlobe, FaLock, FaPlus,
   FaDownload, FaChartBar, FaCog, FaUsers, FaFileAlt, FaSearch,
-  FaCalendarAlt, FaUser, FaIdCard, FaFilter, FaPrint, FaCheckCircle
+  FaCalendarAlt, FaUser, FaIdCard, FaFilter, FaPrint, FaCheckCircle, FaSync
 } from 'react-icons/fa';
 import { MdPublic, MdPrivateConnectivity, MdRestore, MdDeleteForever } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { toast } from 'react-toastify';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import Paginacion from '../components/Paginacion';
 import {
@@ -58,6 +60,32 @@ function ProyectoDetalle() {
   const itemsPorPagina = 10;
   const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
   const isWebBridge = typeof window !== 'undefined' && window.__WEB_BRIDGE__;
+
+  // Realtime para registros del proyecto
+  const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
+    'registros',
+    () => {
+      cargarRegistros();
+      cargarEstadisticas();
+    },
+    {
+      habilitado: window.__WEB_BRIDGE__ === true,
+      debounceMs: 500,
+      onCambio: (evento) => {
+        const mensajes = {
+          INSERT: '✨ Nuevo registro agregado',
+          UPDATE: '🔄 Registro actualizado',
+          DELETE: '🗑️ Registro eliminado'
+        };
+        if (mensajes[evento.tipo]) {
+          toast.info(mensajes[evento.tipo], {
+            position: 'bottom-right',
+            autoClose: 2000
+          });
+        }
+      }
+    }
+  );
 
   const generarNombreArchivoPDF = () => {
     const base = tituloPDF || proyecto?.nombre || 'proyecto';
@@ -547,6 +575,15 @@ function ProyectoDetalle() {
                     <MdPrivateConnectivity className="text-sm" />
                     <span>Privado</span>
                   </div>
+                )}
+                {window.__WEB_BRIDGE__ && conectado && (
+                  <span className="flex items-center gap-1 text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    En vivo
+                  </span>
+                )}
+                {window.__WEB_BRIDGE__ && sincronizando && (
+                  <FaSync className="text-blue-500 text-sm animate-spin" />
                 )}
               </div>
             </div>

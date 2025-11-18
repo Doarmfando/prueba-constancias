@@ -114,16 +114,7 @@ function ProyectosPrivados() {
         </div>
       </div>
 
-      {/* Advertencia de administrador */}
-      <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <FaShieldAlt className="text-orange-600 mt-0.5 text-lg" />
-          <div className="text-sm text-orange-800">
-            <p className="font-semibold mb-1">Acceso de Administrador</p>
-            <p>Estás viendo proyectos privados de otros usuarios. Ten en cuenta la confidencialidad de la información.</p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -277,21 +268,6 @@ function ProyectosPrivados() {
         </>
       )}
 
-      {/* Informacion adicional */}
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <FaLock className="text-orange-600 mt-0.5" />
-          <div className="text-sm text-orange-800">
-            <p className="font-medium mb-1">Información sobre proyectos privados</p>
-            <ul className="space-y-1">
-              <li>• Estos proyectos son privados y pertenecen a otros usuarios</li>
-              <li>• Solo los administradores pueden acceder a esta vista</li>
-              <li>• Respeta la privacidad y confidencialidad de la información</li>
-              <li>• Los cambios que realices se registran en la auditoría</li>
-            </ul>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

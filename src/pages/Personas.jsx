@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   FaUsers, FaSearch, FaIdCard, FaFileAlt, FaFolderOpen,
-  FaCalendarAlt, FaEye, FaUser, FaEdit, FaTrash, FaPlus
+  FaCalendarAlt, FaEye, FaUser, FaEdit, FaTrash, FaPlus, FaSync
 } from 'react-icons/fa';
 import { mostrarError, mostrarExito } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { toast } from 'react-toastify';
 
 function Personas() {
   const [personas, setPersonas] = useState([]);
@@ -19,6 +21,35 @@ function Personas() {
   const itemsPorPagina = 10;
   const navigate = useNavigate();
   const { esAdministrador, usuario } = useAuth();
+
+  // Configurar sincronización en tiempo real (solo en modo web)
+  const { conectado, sincronizando, ultimaActualizacion, contadorCambios } = useRealtimeSync(
+    'personas',
+    cargarPersonas,
+    {
+      habilitado: window.__WEB_BRIDGE__ === true, // Solo en modo web
+      debounceMs: 500, // Esperar 500ms antes de recargar
+      onCambio: (evento) => {
+        // Mostrar notificación según el tipo de cambio
+        const mensajes = {
+          INSERT: '✨ Nueva persona agregada',
+          UPDATE: '🔄 Persona actualizada',
+          DELETE: '🗑️ Persona eliminada'
+        };
+
+        if (mensajes[evento.tipo]) {
+          toast.info(mensajes[evento.tipo], {
+            position: 'bottom-right',
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true
+          });
+        }
+      }
+    }
+  );
 
   useEffect(() => {
     cargarPersonas();
@@ -125,9 +156,24 @@ function Personas() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <FaUsers className="text-blue-600" />
             Gestión de Personas
+            {/* Indicador de sincronización en tiempo real */}
+            {window.__WEB_BRIDGE__ && conectado && (
+              <span className="flex items-center gap-1 text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                En vivo
+              </span>
+            )}
+            {window.__WEB_BRIDGE__ && sincronizando && (
+              <FaSync className="text-blue-500 text-sm animate-spin" />
+            )}
           </h1>
           <p className="text-gray-600 mt-1">
             Administra la información y documentos de las personas registradas
+            {window.__WEB_BRIDGE__ && ultimaActualizacion && (
+              <span className="text-xs text-gray-500 ml-2">
+                • Última actualización: {ultimaActualizacion.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
         <button

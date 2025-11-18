@@ -4,6 +4,9 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
+// Cargar variables de entorno desde .env
+require('dotenv').config();
+
 const isProduction = process.env.NODE_ENV === "production";
 
 module.exports = {
@@ -87,6 +90,9 @@ module.exports = {
       "process.env.REACT_APP_ENV": JSON.stringify("electron"),
       "process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
       "process.env.API_URL": JSON.stringify(process.env.API_URL || "http://localhost:3001/api"),
+      // Variables de Supabase para el navegador
+      "process.env.SUPABASE_URL": JSON.stringify(process.env.SUPABASE_URL || ""),
+      "process.env.SUPABASE_ANON_KEY": JSON.stringify(process.env.SUPABASE_ANON_KEY || ""),
     }),
 
     new webpack.ProvidePlugin({

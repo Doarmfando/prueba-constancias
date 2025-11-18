@@ -1,4 +1,6 @@
 // src/config/supabase.js
+// Configuración de clientes de Supabase para Node.js (Electron/Backend)
+
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 

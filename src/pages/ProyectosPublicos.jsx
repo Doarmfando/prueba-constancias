@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaGlobe, FaUsers, FaEye, FaCalendarAlt, FaSearch } from 'react-icons/fa';
+import { FaGlobe, FaUsers, FaEye, FaCalendarAlt, FaSearch, FaSync } from 'react-icons/fa';
 import { MdPublic } from 'react-icons/md';
 import { mostrarError } from '../utils/alertas';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { toast } from 'react-toastify';
 
 function ProyectosPublicos() {
   const [proyectos, setProyectos] = useState([]);
@@ -39,6 +41,30 @@ function ProyectosPublicos() {
       </div>
     );
   }
+
+  // Configurar sincronización en tiempo real
+  const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
+    'proyectos',
+    cargarProyectosPublicos,
+    {
+      habilitado: window.__WEB_BRIDGE__ === true,
+      debounceMs: 500,
+      onCambio: (evento) => {
+        const mensajes = {
+          INSERT: '✨ Nuevo proyecto público disponible',
+          UPDATE: '🔄 Proyecto actualizado',
+          DELETE: '🗑️ Proyecto eliminado'
+        };
+
+        if (mensajes[evento.tipo]) {
+          toast.info(mensajes[evento.tipo], {
+            position: 'bottom-right',
+            autoClose: 2000
+          });
+        }
+      }
+    }
+  );
 
   useEffect(() => {
     cargarProyectosPublicos();
@@ -89,9 +115,26 @@ function ProyectosPublicos() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Proyectos Públicos</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            Proyectos Públicos
+            {/* Indicador de sincronización en tiempo real */}
+            {window.__WEB_BRIDGE__ && conectado && (
+              <span className="flex items-center gap-1 text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                En vivo
+              </span>
+            )}
+            {window.__WEB_BRIDGE__ && sincronizando && (
+              <FaSync className="text-blue-500 text-sm animate-spin" />
+            )}
+          </h1>
           <p className="text-gray-600 mt-1">
             Explora proyectos compartidos por la comunidad
+            {window.__WEB_BRIDGE__ && ultimaActualizacion && (
+              <span className="text-xs text-gray-500 ml-2">
+                • Última actualización: {ultimaActualizacion.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
       </div>

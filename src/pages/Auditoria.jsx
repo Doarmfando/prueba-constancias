@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FaHistory, FaSearch, FaFilter, FaUser, FaCalendarAlt } from 'react-icons/fa';
+import { FaHistory, FaSearch, FaFilter, FaUser, FaCalendarAlt, FaSync } from 'react-icons/fa';
 import { MdRefresh } from 'react-icons/md';
 import { mostrarError, mostrarExito } from '../utils/alertas';
 import { useAuth } from '../context/AuthContext';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { toast } from 'react-toastify';
 
 function Auditoria() {
   const [logs, setLogs] = useState([]);
@@ -16,6 +18,24 @@ function Auditoria() {
 
   const { usuario } = useAuth();
   const logsPerPage = 50;
+
+  // Realtime para auditoría (solo INSERT, no UPDATE/DELETE)
+  const { conectado, sincronizando, ultimaActualizacion } = useRealtimeSync(
+    'auditoria',
+    cargarLogs,
+    {
+      habilitado: window.__WEB_BRIDGE__ === true,
+      debounceMs: 1000, // 1 segundo para auditoría
+      onCambio: (evento) => {
+        if (evento.tipo === 'INSERT') {
+          toast.info('📝 Nueva actividad registrada', {
+            position: 'bottom-right',
+            autoClose: 2000
+          });
+        }
+      }
+    }
+  );
 
   useEffect(() => {
     if (usuario) {
@@ -159,9 +179,25 @@ function Auditoria() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Auditoría del Sistema</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            Auditoría del Sistema
+            {window.__WEB_BRIDGE__ && conectado && (
+              <span className="flex items-center gap-1 text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                En vivo
+              </span>
+            )}
+            {window.__WEB_BRIDGE__ && sincronizando && (
+              <FaSync className="text-blue-500 text-sm animate-spin" />
+            )}
+          </h1>
           <p className="text-gray-600 mt-1">
             Registro completo de todas las acciones realizadas en el sistema
+            {window.__WEB_BRIDGE__ && ultimaActualizacion && (
+              <span className="text-xs text-gray-500 ml-2">
+                • Última actualización: {ultimaActualizacion.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -172,7 +208,6 @@ function Auditoria() {
           >
             <MdRefresh className="text-lg" />
           </button>
-          {/* Botón de exportación removido */}
         </div>
       </div>
 
