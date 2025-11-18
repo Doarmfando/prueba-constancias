@@ -466,7 +466,7 @@ function PersonaDetalle() {
           {/* Tab: Documentos */}
           {tabActiva === 'documentos' && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">Documentos Adjuntos</h3>
                 <button
                   onClick={() => setMostrarModalDocumento(true)}

@@ -60,8 +60,10 @@ function ProtectedRoute({ children }) {
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <Navbar />
-      <main className="flex-1 p-6 lg:p-8 overflow-auto">
-        {children}
+      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 overflow-auto">
+        <div className="max-w-7xl mx-auto w-full">
+          {children}
+        </div>
       </main>
     </div>
   );
@@ -90,8 +92,10 @@ function AdminRoute({ children }) {
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <Navbar />
-      <main className="flex-1 p-6 lg:p-8 overflow-auto">
-        {children}
+      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 overflow-auto">
+        <div className="max-w-7xl mx-auto w-full">
+          {children}
+        </div>
       </main>
     </div>
   );

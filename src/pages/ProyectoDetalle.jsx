@@ -737,9 +737,9 @@ const eliminarProyecto = async () => {
           {tabActiva === 'registros' && (
             <div className="space-y-6">
               {/* BÃºsqueda */}
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-medium text-gray-900">Registros Activos</h3>
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:space-x-4">
                   <div className="relative max-w-md">
                     <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
