@@ -37,7 +37,8 @@ class RegistroModel extends BaseModel {
         dni,
         numero = '',
         expediente_codigo = '',
-        fecha_solicitud,
+        fecha_registro, // Fecha para la tabla registros
+        fecha_solicitud, // Fecha para la tabla expedientes
         fecha_entrega,
         observacion = '',
         estado_id,
@@ -125,9 +126,12 @@ class RegistroModel extends BaseModel {
       }
 
       // 3. Crear registro
-      // Asegurar que fecha_en_caja esté en formato yyyy-MM-dd
+      // Asegurar que las fechas estén en formato yyyy-MM-dd
       const fechaEnCajaFormateada = fecha_en_caja ?
         (fecha_en_caja.includes('T') ? fecha_en_caja.split('T')[0] : fecha_en_caja) : null;
+
+      const fechaRegistroFormateada = fecha_registro ?
+        (fecha_registro.includes('T') ? fecha_registro.split('T')[0] : fecha_registro) : null;
 
       const { data: nuevoRegistro, error: errorCrearRegistro } = await this.db
         .from(this.tableName)
@@ -137,6 +141,7 @@ class RegistroModel extends BaseModel {
           expediente_id: expediente.id,
           estado_id,
           usuario_creador_id,
+          fecha_registro: fechaRegistroFormateada, // Insertar fecha_registro
           fecha_en_caja: fechaEnCajaFormateada,
           eliminado: false
         })
@@ -332,6 +337,11 @@ class RegistroModel extends BaseModel {
       // Actualizar registro
       const datosRegistro = {};
       if (estado_id) datosRegistro.estado_id = estado_id;
+      if (fecha_registro !== undefined) {
+        // Asegurar formato yyyy-MM-dd para fecha_registro
+        datosRegistro.fecha_registro = fecha_registro ?
+          (fecha_registro.includes('T') ? fecha_registro.split('T')[0] : fecha_registro) : null;
+      }
       if (fecha_en_caja !== undefined) {
         // Asegurar formato yyyy-MM-dd o null
         datosRegistro.fecha_en_caja = fecha_en_caja ?

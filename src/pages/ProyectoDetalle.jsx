@@ -52,6 +52,9 @@ function ProyectoDetalle() {
   const [fechaPDF, setFechaPDF] = useState('');
   const [paginaActual, setPaginaActual] = useState(1);
   const [paginaEliminados, setPaginaEliminados] = useState(1);
+  const [tipoFecha, setTipoFecha] = useState('registro'); // 'registro' o 'caja'
+  const [periodoFiltro, setPeriodoFiltro] = useState('todo'); // 'todo', 'hoy', 'semana', 'mes', 'año' o año específico
+  const [añosDisponibles, setAñosDisponibles] = useState([]);
   const itemsPorPagina = 10;
   const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
   const isWebBridge = typeof window !== 'undefined' && window.__WEB_BRIDGE__;
@@ -95,10 +98,17 @@ function ProyectoDetalle() {
     cargarProyecto();
   }, [id]);
 
-  // Recalcular estadísticas cuando cambien los registros
+  // Recalcular estadísticas cuando cambien los registros o filtros
   useEffect(() => {
     cargarEstadisticas();
-  }, [registros, registrosEliminados]);
+  }, [registros, registrosEliminados, tipoFecha, periodoFiltro]);
+
+  // Cargar años disponibles cuando se carguen los registros
+  useEffect(() => {
+    if (registros.length > 0) {
+      calcularAñosDisponibles();
+    }
+  }, [registros, tipoFecha]);
 
   const cargarProyecto = async () => {
     try {
@@ -121,15 +131,68 @@ function ProyectoDetalle() {
     }
   };
 
+  const filtrarRegistrosPorFecha = (registrosParaFiltrar) => {
+    const ahora = new Date();
+    const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
+    return registrosParaFiltrar.filter(registro => {
+      const campoFecha = tipoFecha === 'registro' ? registro.fecha_registro : registro.fecha_en_caja;
+      if (!campoFecha) return false;
+
+      const fechaRegistro = new Date(campoFecha);
+
+      switch (periodoFiltro) {
+        case 'todo':
+          return true;
+        case 'hoy':
+          const inicioHoy = new Date(hoy);
+          const finHoy = new Date(hoy);
+          finHoy.setDate(finHoy.getDate() + 1);
+          return fechaRegistro >= inicioHoy && fechaRegistro < finHoy;
+        case 'semana':
+          const inicioSemana = new Date(hoy);
+          inicioSemana.setDate(inicioSemana.getDate() - 7);
+          return fechaRegistro >= inicioSemana;
+        case 'mes':
+          const inicioMes = new Date(hoy);
+          inicioMes.setDate(inicioMes.getDate() - 30);
+          return fechaRegistro >= inicioMes;
+        default:
+          // Si es un año específico
+          if (!isNaN(periodoFiltro)) {
+            const año = parseInt(periodoFiltro);
+            return fechaRegistro.getFullYear() === año;
+          }
+          return true;
+      }
+    });
+  };
+
+  const calcularAñosDisponibles = () => {
+    const años = new Set();
+    registros.forEach(registro => {
+      const campoFecha = tipoFecha === 'registro' ? registro.fecha_registro : registro.fecha_en_caja;
+      if (campoFecha) {
+        const fecha = new Date(campoFecha);
+        años.add(fecha.getFullYear());
+      }
+    });
+    setAñosDisponibles(Array.from(años).sort((a, b) => b - a));
+  };
+
   const cargarEstadisticas = async () => {
     try {
-      // Calcular estadÃ­sticas por estado desde los registros reales
-      const recibidos = registros.filter(r => r.estado === 'Recibido').length;
-      const enCaja = registros.filter(r => r.estado === 'En Caja').length;
-      const entregados = registros.filter(r => r.estado === 'Entregado').length;
-      const tesoreria = registros.filter(r => r.estado === 'Tesoreria').length;
-      const activos = registros.length;
-      const papeleria = registrosEliminados.length;
+      // Filtrar registros según el tipo de fecha y periodo seleccionado
+      const registrosFiltrados = filtrarRegistrosPorFecha(registros);
+      const eliminadosFiltrados = filtrarRegistrosPorFecha(registrosEliminados);
+
+      // Calcular estadísticas por estado desde los registros filtrados
+      const recibidos = registrosFiltrados.filter(r => r.estado === 'Recibido').length;
+      const enCaja = registrosFiltrados.filter(r => r.estado === 'En Caja').length;
+      const entregados = registrosFiltrados.filter(r => r.estado === 'Entregado').length;
+      const tesoreria = registrosFiltrados.filter(r => r.estado === 'Tesoreria').length;
+      const activos = registrosFiltrados.length;
+      const papeleria = eliminadosFiltrados.length;
       const total = activos + papeleria;
 
       setEstadisticas({
@@ -140,10 +203,10 @@ function ProyectoDetalle() {
         total,
         activos,
         papeleria,
-        pendientes: recibidos // Pendientes = los que estÃ¡n en estado "Recibido"
+        pendientes: recibidos // Pendientes = los que están en estado "Recibido"
       });
     } catch (error) {
-      console.error('Error cargando estadÃ­sticas:', error);
+      console.error('Error cargando estadísticas:', error);
       setEstadisticas({
         recibidos: 0,
         enCaja: 0,
@@ -872,14 +935,26 @@ function ProyectoDetalle() {
               <div className="flex items-center justify-between">
                 <h3 className="text-2xl font-bold text-gray-900">Resumen General</h3>
                 <div className="flex items-center space-x-3">
-                  <select className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option>Fecha de Registro</option>
-                    <option>Fecha en Caja</option>
+                  <select
+                    value={tipoFecha}
+                    onChange={(e) => setTipoFecha(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="registro">Fecha de Registro</option>
+                    <option value="caja">Fecha en Caja</option>
                   </select>
-                  <select className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option>Todo</option>
-                    <option>Última semana</option>
-                    <option>Último mes</option>
+                  <select
+                    value={periodoFiltro}
+                    onChange={(e) => setPeriodoFiltro(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="todo">Todo</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="semana">Última semana</option>
+                    <option value="mes">Último mes</option>
+                    {añosDisponibles.length > 0 && añosDisponibles.map(año => (
+                      <option key={año} value={año}>Año {año}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1131,7 +1206,11 @@ function ProyectoDetalle() {
                     onChange={(e) => {
                       setIncluirFechaEnPDF(e.target.checked);
                       if (e.target.checked) {
-                        setFechaPDF(new Date().toISOString().split('T')[0]);
+                        const ahora = new Date();
+                        const año = ahora.getFullYear();
+                        const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+                        const dia = String(ahora.getDate()).padStart(2, '0');
+                        setFechaPDF(`${año}-${mes}-${dia}`);
                       }
                     }}
                     className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -1198,12 +1277,21 @@ function ProyectoDetalle() {
 
 // Componente del Formulario de Registro
 function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
+  // Función para obtener fecha local en formato YYYY-MM-DD (sin desfase UTC)
+  const getFechaLocal = () => {
+    const ahora = new Date();
+    const año = ahora.getFullYear();
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dia = String(ahora.getDate()).padStart(2, '0');
+    return `${año}-${mes}-${dia}`;
+  };
+
   const [formData, setFormData] = useState({
     nombre: '',
     dni: '',
     numero: '',
     expediente_codigo: '',
-    fecha_registro: new Date().toISOString().split('T')[0], // Fecha actual por defecto
+    fecha_registro: getFechaLocal(), // Fecha local actual por defecto
     Observación: '',
     fecha_en_caja: '',
     estado_id: 1,
@@ -1354,8 +1442,12 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
       const estadoId = parseInt(value);
 
       if (estadoId === 2) {
-        // Estado "En Caja" - poner fecha actual (editable)
-        newFormData.fecha_en_caja = new Date().toISOString().split('T')[0];
+        // Estado "En Caja" - poner fecha actual local (editable)
+        const ahora = new Date();
+        const año = ahora.getFullYear();
+        const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+        const dia = String(ahora.getDate()).padStart(2, '0');
+        newFormData.fecha_en_caja = `${año}-${mes}-${dia}`;
       } else if (estadoId === 3 || estadoId === 1 || estadoId === 4) {
         // Estados "Entregado", "Recibido", "Tesoreria" - dejar vacío (---)
         newFormData.fecha_en_caja = '';
@@ -1423,7 +1515,10 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
         numero: formData.numero.trim() || null,
         expediente: formData.expediente_codigo.trim(), // RegistroModel espera 'expediente', no 'expediente_codigo'
         estado: estadosMap[parseInt(formData.estado_id)], // RegistroModel espera nombre del estado, no ID
-        fecha_registro: formData.fecha_registro || new Date().toISOString().split('T')[0],
+        fecha_registro: formData.fecha_registro || (() => {
+          const ahora = new Date();
+          return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+        })(),
         fecha_en_caja: formData.fecha_en_caja || null,
         usuario_creador_id: 1, // Usuario temporal
         persona_existente_id: personaEncontrada?.id || null, // Enviar ID de persona si existe
@@ -1615,6 +1710,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                <p className="mt-1 text-xs text-gray-500">Puede escribir manualmente o usar el selector</p>
               </div>
 
               <div>

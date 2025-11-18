@@ -3,13 +3,22 @@ import { FaSave, FaTimes, FaSearch, FaCheckCircle, FaExclamationTriangle } from 
 import { mostrarExito, mostrarError } from '../utils/alertas';
 
 function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEditar = null }) {
+  // Función para obtener fecha local sin desfase UTC
+  const getFechaLocal = () => {
+    const ahora = new Date();
+    const año = ahora.getFullYear();
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dia = String(ahora.getDate()).padStart(2, '0');
+    return `${año}-${mes}-${dia}`;
+  };
+
   const [formData, setFormData] = useState({
     nombre: '',
     dni: '',
     numero: '',
     expediente: '',
     estado: 'Recibido',
-    fecha_registro: new Date().toISOString().split('T')[0],
+    fecha_registro: getFechaLocal(),
     fecha_en_caja: ''
   });
 
@@ -27,7 +36,7 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
         numero: registroEditar.numero || '',
         expediente: registroEditar.expediente || registroEditar.codigo || '',
         estado: registroEditar.estado || 'Recibido',
-        fecha_registro: registroEditar.fecha_registro || new Date().toISOString().split('T')[0],
+        fecha_registro: registroEditar.fecha_registro || getFechaLocal(),
         fecha_en_caja: registroEditar.fecha_en_caja || ''
       });
     } else {
@@ -38,7 +47,7 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
         numero: '',
         expediente: '',
         estado: 'Recibido',
-        fecha_registro: new Date().toISOString().split('T')[0],
+        fecha_registro: getFechaLocal(),
         fecha_en_caja: ''
       });
     }
@@ -93,8 +102,12 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
     // Lógica automática de fecha_en_caja según el estado
     if (name === 'estado') {
       if (value === 'En Caja') {
-        // Cuando cambia a "En Caja", poner la fecha actual (editable)
-        newFormData.fecha_en_caja = new Date().toISOString().split('T')[0];
+        // Cuando cambia a "En Caja", poner la fecha actual local (editable)
+        const ahora = new Date();
+        const año = ahora.getFullYear();
+        const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+        const dia = String(ahora.getDate()).padStart(2, '0');
+        newFormData.fecha_en_caja = `${año}-${mes}-${dia}`;
       } else if (value === 'Entregado') {
         // Cuando está "Entregado", dejarlo vacío (---)
         newFormData.fecha_en_caja = '';
@@ -160,7 +173,7 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
             numero: '',
             expediente: '',
             estado: 'Recibido',
-            fecha_registro: new Date().toISOString().split('T')[0],
+            fecha_registro: getFechaLocal(),
             fecha_en_caja: ''
           });
         }

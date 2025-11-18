@@ -230,7 +230,13 @@ class InformacionController extends BaseController {
           fecha_entrega: r.fecha_entrega,
           observacion: r.observacion || "Sin observaciones"
         })),
-        generado: new Date().toISOString().split('T')[0]
+        generado: (() => {
+          const ahora = new Date();
+          const año = ahora.getFullYear();
+          const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+          const dia = String(ahora.getDate()).padStart(2, '0');
+          return `${año}-${mes}-${dia}`;
+        })()
       };
 
       return {

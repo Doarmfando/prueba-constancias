@@ -71,7 +71,7 @@ function Navbar() {
         section: "Registros y Reportes",
         items: [
           { path: "/registros", icon: FaFileAlt, label: "Registros" },
-          { path: "/graficos", icon: FaChartBar, label: "Gráficos" },
+          { path: "/estadisticas", icon: FaChartBar, label: "Estadísticas" },
         ]
       }
     );

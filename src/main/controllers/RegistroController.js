@@ -100,14 +100,23 @@ class RegistroController extends BaseController {
 
 
       // Mapear nombres del frontend a nombres del backend
-      // fecha_registro del frontend -> fecha_solicitud del backend (expedientes)
+      // fecha_registro se usa tanto para tabla registros como para fecha_solicitud en expedientes
+      const fechaRegistroDefault = (() => {
+        const ahora = new Date();
+        const año = ahora.getFullYear();
+        const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+        const dia = String(ahora.getDate()).padStart(2, '0');
+        return `${año}-${mes}-${dia}`;
+      })();
+
       const datosMapeados = {
         proyecto_id: datosSanitizados.proyecto_id,
         nombre: datosSanitizados.nombre,
         dni: datosSanitizados.dni,
         numero: datosSanitizados.numero,
         expediente_codigo: datosSanitizados.expediente || datosSanitizados.expediente_codigo || '',
-        fecha_solicitud: datosSanitizados.fecha_registro || datosSanitizados.fecha_solicitud || new Date().toISOString().split('T')[0],
+        fecha_registro: datosSanitizados.fecha_registro || fechaRegistroDefault, // Para tabla registros
+        fecha_solicitud: datosSanitizados.fecha_registro || datosSanitizados.fecha_solicitud || fechaRegistroDefault, // Para tabla expedientes
         fecha_entrega: datosSanitizados.fecha_entrega,
         observacion: datosSanitizados.Observación || datosSanitizados.observacion || '',
         estado_id: datosSanitizados.estado_id, // Será buscado si viene como string
@@ -408,7 +417,11 @@ class RegistroController extends BaseController {
       const resultado = await this.calcularEstadisticas(tipo, anio);
 
       // Agregar estadísticas adicionales para el dashboard
-      const hoy = new Date().toISOString().split('T')[0];
+      const ahora = new Date();
+      const año = ahora.getFullYear();
+      const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+      const dia = String(ahora.getDate()).padStart(2, '0');
+      const hoy = `${año}-${mes}-${dia}`;
 
       // Contar registros de hoy usando Supabase
       const { data: registrosHoy } = await this.model.db

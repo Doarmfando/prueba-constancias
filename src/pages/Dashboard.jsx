@@ -17,7 +17,6 @@ function Dashboard() {
   const [stats, setStats] = useState({
     totalRegistros: 0,
     registrosHoy: 0,
-    papeleria: 0,
     proyectos: 0
   });
   const [loading, setLoading] = useState(true);
@@ -31,18 +30,42 @@ function Dashboard() {
     try {
       setLoading(true);
 
-      // Código real para cargar estadísticas de la base de datos:
+      // Obtener usuario actual
+      const usuarioActual = JSON.parse(localStorage.getItem('sesion_usuario') || '{}');
+
+      // Código para cargar estadísticas (compatible con Electron y Web)
       try {
-        const [registros, papeleria] = await Promise.all([
-          window.electronAPI?.dashboard.obtenerEstadisticas(),
-          window.electronAPI?.registros.obtenerBorrados()
-        ]);
+        const api = window.electronAPI || window.__WEB_BRIDGE__;
+
+        // Obtener estadísticas de registros
+        const registrosResp = await api?.dashboard?.obtenerEstadisticas();
+
+        // Obtener proyectos del usuario
+        let cantidadProyectos = 0;
+        try {
+          // En modo web usa obtenerMisProyectos
+          const proyectosResp = await api?.proyectos?.obtenerMisProyectos(usuarioActual.id, usuarioActual);
+
+          console.log('📊 Dashboard - Proyectos respuesta:', proyectosResp);
+
+          // La respuesta puede venir como { success: true, proyectos: [...] } o directamente [...]
+          const proyectos = proyectosResp?.proyectos || proyectosResp || [];
+          cantidadProyectos = Array.isArray(proyectos) ? proyectos.length : 0;
+        } catch (errorProyectos) {
+          console.error('Error obteniendo proyectos:', errorProyectos);
+          cantidadProyectos = 0;
+        }
+
+        console.log('📊 Dashboard - Estadísticas finales:', {
+          totalRegistros: registrosResp?.total || 0,
+          registrosHoy: registrosResp?.hoy || 0,
+          proyectos: cantidadProyectos
+        });
 
         setStats({
-          totalRegistros: registros?.total || 0,
-          registrosHoy: registros?.hoy || 0,
-          papeleria: papeleria?.length || 0,
-          proyectos: 1 // Proyecto por defecto creado
+          totalRegistros: registrosResp?.total || 0,
+          registrosHoy: registrosResp?.hoy || 0,
+          proyectos: cantidadProyectos
         });
       } catch (error) {
         console.error('Error cargando estadísticas:', error);
@@ -50,8 +73,7 @@ function Dashboard() {
         setStats({
           totalRegistros: 0,
           registrosHoy: 0,
-          papeleria: 0,
-          proyectos: 1
+          proyectos: 0
         });
       }
       setLoading(false);
@@ -96,32 +118,40 @@ function Dashboard() {
       color: "hover:bg-indigo-50"
     },
     {
-      title: "Ver Estadísticas",
+      title: "Ver Registros",
+      description: "Gestiona todos los registros del sistema",
+      icon: <FaFileAlt className="text-blue-500 text-xl" />,
+      path: "/registros",
+      color: "hover:bg-blue-50"
+    },
+    {
+      title: "Estadísticas",
       description: "Análisis y gráficos del sistema",
-      icon: <MdInsertChart className="text-sky-500 text-xl" />,
-      path: "/graficos",
+      icon: <FaChartBar className="text-sky-500 text-xl" />,
+      path: "/estadisticas",
       color: "hover:bg-sky-50"
     },
     {
       title: "Proyectos Públicos",
       description: "Explora proyectos compartidos",
-      icon: <MdPublic className="text-blue-500 text-xl" />,
+      icon: <MdPublic className="text-green-500 text-xl" />,
       path: "/proyectos-publicos",
-      color: "hover:bg-blue-50"
+      color: "hover:bg-green-50"
     },
     {
-      title: "Auditoría",
-      description: "Registro de actividades del sistema",
-      icon: <FaHistory className="text-gray-500 text-xl" />,
-      path: "/auditoria",
-      color: "hover:bg-gray-50"
+      title: "Mis Proyectos",
+      description: "Gestiona tus proyectos personales",
+      icon: <FaFolderOpen className="text-purple-500 text-xl" />,
+      path: "/mis-proyectos",
+      color: "hover:bg-purple-50"
+    },
+    {
+      title: "Personas",
+      description: "Administra el registro de personas",
+      icon: <FaUser className="text-orange-500 text-xl" />,
+      path: "/personas",
+      color: "hover:bg-orange-50"
     }
-  ];
-
-  const recentActivity = [
-    { action: "Proyecto publicado", time: "Hace 15 minutos", type: "info" },
-    { action: "Usuario eliminado", time: "Hace 1 hora", type: "warning" },
-    { action: "Datos exportadosos", time: "Hace 2 horas", type: "success" }
   ];
 
   return (
@@ -174,99 +204,56 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Acciones Rápidas */}
-          <div className="lg:col-span-2">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {quickActions.map((action, index) => (
-                <div
-                  key={index}
-                  onClick={() => navigate(action.path)}
-                  className={`bg-white border border-gray-200 rounded-xl p-6 cursor-pointer hover:shadow-md transition-all duration-200 ${action.color}`}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      {action.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{action.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{action.description}</p>
-                    </div>
+        {/* Acciones Rápidas */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Módulos del Sistema</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {quickActions.map((action, index) => (
+              <div
+                key={index}
+                onClick={() => navigate(action.path)}
+                className={`bg-white border border-gray-200 rounded-xl p-6 cursor-pointer hover:shadow-md transition-all duration-200 ${action.color}`}
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    {action.icon}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">{action.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{action.description}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Actividad Reciente */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Actividad Reciente</h2>
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <div className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      activity.type === 'success' ? 'bg-green-500' :
-                      activity.type === 'warning' ? 'bg-yellow-500' :
-                      activity.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-                    }`}></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                      <p className="text-xs text-gray-500">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => navigate('/auditoria')}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Ver todo el historial→
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Módulos Legacy */}
+        {/* Información del sistema */}
         <div className="mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Módulos Legacy</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div
-              onClick={() => navigate('/registros')}
-              className="bg-white border border-gray-200 rounded-xl p-6 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
-            >
-              <div className="flex items-center space-x-4">
-                <FaFolderOpen className="text-indigo-500 text-2xl" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Registros</h3>
-                  <p className="text-sm text-gray-600">Sistema legacy de registros</p>
-                </div>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+            <div className="flex items-start space-x-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <MdDashboard className="text-blue-600 text-2xl" />
               </div>
-            </div>
-            <div
-              onClick={() => navigate('/papeleria')}
-              className="bg-white border border-gray-200 rounded-xl p-6 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
-            >
-              <div className="flex items-center space-x-4">
-                <FaTrashAlt className="text-rose-500 text-2xl" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Papelería</h3>
-                  <p className="text-sm text-gray-600">Registros eliminados</p>
-                </div>
-              </div>
-            </div>
-            <div
-              onClick={() => navigate('/graficos')}
-              className="bg-white border border-gray-200 rounded-xl p-6 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
-            >
-              <div className="flex items-center space-x-4">
-                <MdInsertChart className="text-sky-500 text-2xl" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Gráficos</h3>
-                  <p className="text-sm text-gray-600">Estadísticas visuales</p>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Sistema de Control de Documentos A30</h3>
+                <p className="text-sm text-gray-600">
+                  Gestiona eficientemente todos tus registros, proyectos y estadísticas desde un solo lugar.
+                  El sistema ofrece módulos integrados para administración completa de documentos.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                     Proyectos
+                  </span>
+                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                     Estadísticas
+                  </span>
+                  <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                     Personas
+                  </span>
+                  <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                     Registros
+                  </span>
                 </div>
               </div>
             </div>

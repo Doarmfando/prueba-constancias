@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS registros (
   expediente_id BIGINT NOT NULL,
   estado_id BIGINT NOT NULL,
   usuario_creador_id BIGINT NOT NULL DEFAULT 1,
-  fecha_registro TIMESTAMPTZ DEFAULT NOW(),
+  fecha_registro DATE DEFAULT CURRENT_DATE,
   fecha_en_caja DATE,
   eliminado BOOLEAN DEFAULT false,
   eliminado_por BIGINT,

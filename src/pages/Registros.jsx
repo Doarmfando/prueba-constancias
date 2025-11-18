@@ -15,13 +15,15 @@ function Registros() {
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 10;
   const [incluirFechaPdf, setIncluirFechaPdf] = useState(false);
-  const [fechaPdf, setFechaPdf] = useState(() => {
+  // Función auxiliar para obtener fecha local sin desfase UTC
+  const getFechaLocal = () => {
     const hoy = new Date();
     const yyyy = hoy.getFullYear();
     const mm = String(hoy.getMonth() + 1).padStart(2, '0');
     const dd = String(hoy.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`; // Fecha local sin desfase UTC
-  });
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const [fechaPdf, setFechaPdf] = useState(getFechaLocal());
   const [nombrePdf, setNombrePdf] = useState('Registros Generales');
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false);
 
@@ -548,11 +550,7 @@ function Registros() {
                     onChange={(e) => {
                       setIncluirFechaPdf(e.target.checked);
                       if (e.target.checked) {
-                        const hoy = new Date();
-                        const yyyy = hoy.getFullYear();
-                        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-                        const dd = String(hoy.getDate()).padStart(2, '0');
-                        setFechaPdf(`${yyyy}-${mm}-${dd}`);
+                        setFechaPdf(getFechaLocal());
                       }
                     }}
                     className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"

@@ -19,7 +19,7 @@ const PersonaDetalle = lazy(() => import("./pages/PersonaDetalle"));
 // Rutas legacy (mantener por compatibilidad)
 const Registros = lazy(() => import("./pages/Registros"));
 const Papeleria = lazy(() => import("./pages/Papeleria"));
-const Graficos = lazy(() => import("./pages/Graficos"));
+const Estadisticas = lazy(() => import("./pages/Estadisticas"));
 
 function AppWithNavigationHandler({ children }) {
   const navigate = useNavigate();
@@ -149,10 +149,13 @@ function AppRoutes() {
             <Route path="/informacion" element={<ProtectedRoute><Informacion /></ProtectedRoute>} />
             <Route path="/informacion/:dni" element={<ProtectedRoute><Informacion /></ProtectedRoute>} />
 
+            {/* 📊 Estadísticas */}
+            <Route path="/estadisticas" element={<ProtectedRoute><Estadisticas /></ProtectedRoute>} />
+
             {/* Rutas legacy (mantener por compatibilidad) */}
             <Route path="/registros" element={<ProtectedRoute><Registros /></ProtectedRoute>} />
             <Route path="/papeleria" element={<ProtectedRoute><Papeleria /></ProtectedRoute>} />
-            <Route path="/graficos" element={<ProtectedRoute><Graficos /></ProtectedRoute>} />
+            <Route path="/graficos" element={<ProtectedRoute><Estadisticas /></ProtectedRoute>} />
 
             {/* Ruta 404 */}
             <Route path="*" element={
