@@ -194,16 +194,7 @@ function CrearProyecto() {
             </div>
           </div>
 
-          {/* Información adicional */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">💡 Información importante</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Puedes cambiar la visibilidad del proyecto en cualquier momento</li>
-              <li>• Los proyectos privados solo son visibles para ti y los administradores</li>
-              <li>• Los proyectos públicos permiten a todos los usuarios ver, crear y editar registros</li>
-              <li>• Solo tú y los administradores pueden editar o eliminar el proyecto en sí</li>
-            </ul>
-          </div>
+
 
           {/* Botones */}
           <div className="flex items-center justify-end space-x-4 pt-6 border-t">

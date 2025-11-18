@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FaTrash, FaUndo, FaSearch, FaUser, FaCalendarAlt, FaFileAlt, FaExclamationTriangle } from 'react-icons/fa';
 import { MdRestore, MdDeleteForever } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError, formatearFecha } from '../utils/alertas';
+import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { toast } from 'react-toastify';
 
 function Papeleria() {
   const [registrosEliminados, setRegistrosEliminados] = useState([]);
@@ -10,11 +12,7 @@ function Papeleria() {
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 10;
 
-  useEffect(() => {
-    cargarRegistrosEliminados();
-  }, []);
-
-  const cargarRegistrosEliminados = async () => {
+  async function cargarRegistrosEliminados() {
     try {
       setCargando(true);
 
@@ -34,7 +32,31 @@ function Papeleria() {
       console.error('Error cargando registros eliminados:', error);
       setCargando(false);
     }
-  };
+  }
+
+  // Sincronización en tiempo real con Supabase Realtime (registros -> movimientos a papelería)
+  useRealtimeSync('registros', cargarRegistrosEliminados, {
+    habilitado: window.__WEB_BRIDGE__ === true,
+    debounceMs: 800,
+    onCambio: (evento) => {
+      // Sólo mostrar notificación si el cambio afecta a eliminados/restaurados
+      if (evento.nuevo?.eliminado || evento.viejo?.eliminado || evento.tipo === 'DELETE') {
+        const mensajes = {
+          INSERT: 'Nuevo registro añadido (revisar papelera)',
+          UPDATE: evento.nuevo?.eliminado
+            ? 'Registro movido a papelería'
+            : 'Registro restaurado',
+          DELETE: 'Registro eliminado definitivamente'
+        };
+        const msg = mensajes[evento.tipo] || 'Papelera actualizada';
+        toast.info(msg, { position: 'bottom-right', autoClose: 2000 });
+      }
+    }
+  });
+
+  useEffect(() => {
+    cargarRegistrosEliminados();
+  }, []);
 
   const registrosFiltrados = registrosEliminados.filter(registro =>
     registro.nombres.toLowerCase().includes(busqueda.toLowerCase()) ||

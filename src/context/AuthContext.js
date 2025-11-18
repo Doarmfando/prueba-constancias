@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabaseUser } from '../config/supabaseBrowser';
 
 const AuthContext = createContext();
 
@@ -61,11 +62,22 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       const usuarioPrevio = usuario;
+
+      // 1) Cerrar sesión en Supabase (limpia tokens/localStorage/cookies)
+      if (supabaseUser) {
+        try {
+          await supabaseUser.auth.signOut();
+        } catch (errorSignOut) {
+          console.warn('Supabase signOut falló (continuando logout local):', errorSignOut);
+        }
+      }
+
+      // 2) Limpiar cache local
       setUsuario(null);
       localStorage.removeItem('sesion_usuario');
 
-      if (isElectron() && usuarioPrevio?.id) {
-        // Registrar auditoría de cierre de sesión
+      // 3) Registrar logout en auditoría (web bridge o electron)
+      if (usuarioPrevio?.id) {
         window.electronAPI?.auditoria?.registrarLogout({
           id: usuarioPrevio.id,
           nombre_usuario: usuarioPrevio.nombre_usuario,

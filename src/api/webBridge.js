@@ -146,6 +146,8 @@ const buildWebBridge = () => ({
   auditoria: {
     obtenerHistorial: (filtros) =>
       callIPC('auditoria-obtener-historial', filtros),
+    registrarLogout: (usuario) =>
+      callIPC('auditoria-registrar-logout', usuario),
   },
 
   gestionDatos: {

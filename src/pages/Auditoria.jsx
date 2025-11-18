@@ -115,7 +115,11 @@ function Auditoria() {
       'editar': 'Edición',
       'eliminar': 'Eliminación',
       'publicar': 'Publicación',
-      'acceso': 'Acceso al Sistema'
+      'acceso': 'Acceso al Sistema',
+      'login': 'Inicio de sesión',
+      'logout': 'Cierre de sesión',
+      'limpiar': 'Limpieza de auditoría',
+      'exportar': 'Exportación de auditoría'
     };
     return traducciones[accion] || accion;
   };
@@ -146,10 +150,43 @@ function Auditoria() {
       case 'publicar':
         return 'bg-purple-100 text-purple-800';
       case 'acceso':
+      case 'login':
         return 'bg-gray-100 text-gray-800';
+      case 'logout':
+        return 'bg-orange-100 text-orange-800';
+      case 'limpiar':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'exportar':
+        return 'bg-indigo-100 text-indigo-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const parseDetalles = (detalles) => {
+    if (!detalles) return null;
+    if (typeof detalles === 'object') return detalles;
+    try {
+      return JSON.parse(detalles);
+    } catch {
+      return detalles;
+    }
+  };
+
+  const renderDetalles = (log) => {
+    const detalles = parseDetalles(log.detalles);
+    if (!detalles) return '---';
+
+    if (log.accion === 'login' && detalles.fecha_acceso) {
+      return `Inicio de sesión: ${new Date(detalles.fecha_acceso).toLocaleString()}`;
+    }
+
+    if (log.accion === 'logout' && detalles.fecha_logout) {
+      return `Cierre de sesión: ${new Date(detalles.fecha_logout).toLocaleString()}`;
+    }
+
+    if (typeof detalles === 'string') return detalles;
+    return JSON.stringify(detalles);
   };
 
   const logsFiltrados = logs.filter(log => {
@@ -292,6 +329,10 @@ function Auditoria() {
             <option value="eliminar">Eliminacion</option>
             <option value="publicar">Publicacion</option>
             <option value="acceso">Acceso al Sistema</option>
+            <option value="login">Inicio de sesión</option>
+            <option value="logout">Cierre de sesión</option>
+            <option value="limpiar">Limpieza de auditoría</option>
+            <option value="exportar">Exportación de auditoría</option>
           </select>
 
           <div className="text-sm text-gray-600 flex items-center">
@@ -359,10 +400,8 @@ function Auditoria() {
                     {log.nombre_proyecto || '---'}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
-                    <div className="truncate" title={log.detalles}>
-                      {log.detalles ? (
-                        typeof log.detalles === 'string' ? log.detalles : JSON.stringify(log.detalles)
-                      ) : '---'}
+                    <div className="truncate" title={renderDetalles(log)}>
+                      {renderDetalles(log)}
                     </div>
                   </td>
                 </tr>

@@ -234,6 +234,11 @@ function registerChannelHandlers() {
     controllers.auditoria.obtenerEstadisticas(usuario || { id: 1, rol: 'administrador' })
   );
 
+  // Registrar cierre de sesión para modo web
+  register('auditoria-registrar-logout', (usuario = {}) =>
+    controllers.auditoria.registrarLogout(usuario)
+  );
+
   register('obtener-estadisticas-base-datos', notAvailable('Estadísticas de base de datos'));
   register('exportar-datos', notAvailable('Exportación de datos'));
   register('importar-datos', notAvailable('Importación de datos'));

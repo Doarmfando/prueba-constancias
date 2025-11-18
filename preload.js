@@ -51,6 +51,7 @@ const allowedChannels = new Set([
   "proyecto-exportar-pdf",
   // Canales de auditoría
   "auditoria-obtener-historial",
+  "auditoria-registrar-logout",
   // Canales de gestión de datos
   "obtener-estadisticas-base-datos",
   "exportar-datos",

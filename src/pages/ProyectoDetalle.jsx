@@ -282,9 +282,9 @@ function ProyectoDetalle() {
 
   const eliminarProyecto = async () => {
     const confirmado = await mostrarConfirmacion({
-      titulo: 'Â¿Eliminar proyecto?',
-      texto: `Se eliminarÃ¡ el proyecto \"${proyecto.nombre}\" y todos sus registros.`,
-      confirmButtonText: 'SÃ­, eliminar',
+      titulo: '¿Eliminar proyecto?',
+      texto: `Se eliminará el proyecto \"${proyecto.nombre}\" y todos sus registros.`,
+      confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     });
 
@@ -464,9 +464,9 @@ function ProyectoDetalle() {
   const eliminarRegistro = async (registro) => {
     const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || 'este registro';
     const confirmado = await mostrarConfirmacion({
-      titulo: 'Â¿Eliminar registro?',
-      texto: `Se eliminarÃ¡ el registro de ${nombreCompleto}`,
-      confirmButtonText: 'SÃ­, eliminar',
+      titulo: '¿Eliminar registro?',
+      texto: `Se eliminará el registro de ${nombreCompleto}`,
+      confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     });
 
@@ -1668,7 +1668,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
 
               <div>
                 <label htmlFor="numero" className="block text-sm font-medium text-gray-700 mb-2">
-                  NÃºmero (opcional)
+                  Número (opcional)
                 </label>
                 <input
                   type="text"
