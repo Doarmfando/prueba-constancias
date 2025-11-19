@@ -66,10 +66,18 @@ class PersonaModel extends BaseModel {
 
   // Eliminar persona (solo si no tiene registros)
   async eliminar(id) {
-    // Verificar si tiene registros asociados
-    const tieneRegistros = await this.contar({ persona_id: id });
+    // Verificar si tiene registros asociados en la tabla 'registros'
+    const { count, error: errorCount } = await this.db
+      .from('registros')
+      .select('*', { count: 'exact', head: true })
+      .eq('persona_id', id);
 
-    if (tieneRegistros > 0) {
+    if (errorCount) {
+      console.error('Error verificando registros:', errorCount);
+      throw new Error("Error al verificar registros asociados");
+    }
+
+    if (count > 0) {
       throw new Error("No se puede eliminar la persona porque tiene registros asociados");
     }
 
@@ -110,7 +118,16 @@ class PersonaModel extends BaseModel {
 
   // Verificar si tiene registros asociados
   async tieneRegistros(personaId) {
-    const count = await this.contar({ persona_id: personaId });
+    const { count, error } = await this.db
+      .from('registros')
+      .select('*', { count: 'exact', head: true })
+      .eq('persona_id', personaId);
+
+    if (error) {
+      console.error('Error verificando registros:', error);
+      return false;
+    }
+
     return count > 0;
   }
 

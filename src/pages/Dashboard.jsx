@@ -101,13 +101,6 @@ function Dashboard() {
       path: "/registros"
     },
     {
-      title: "Hoy",
-      value: stats.registrosHoy,
-      icon: <FaCalendarDay className="text-green-500 text-2xl" />,
-      color: "bg-green-50 border-green-200",
-      path: "/registros"
-    },
-    {
       title: "Proyectos",
       value: stats.proyectos,
       icon: <MdWork className="text-purple-500 text-2xl" />,

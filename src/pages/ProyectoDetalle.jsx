@@ -517,6 +517,32 @@ const eliminarProyecto = async () => {
     }
   };
 
+  const eliminarRegistroPermanentemente = async (registro) => {
+    const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim() || 'este registro';
+    const confirmado = await mostrarConfirmacion({
+      titulo: '¿Eliminar PERMANENTEMENTE?',
+      texto: `ADVERTENCIA: Se eliminará permanentemente.`,
+      confirmButtonText: 'Sí, eliminar definitivamente',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (confirmado) {
+      try {
+        const response = await window.electronAPI?.registros.eliminar(registro.id, usuario);
+
+        if (response?.success) {
+          await cargarRegistros({ mostrarLoading: false });
+          mostrarExito('Registro eliminado permanentemente', 'El registro y expediente han sido eliminados de forma permanente');
+        } else {
+          mostrarError('Error', response?.error || 'No se pudo eliminar el registro');
+        }
+      } catch (error) {
+        console.error('Error eliminando registro:', error);
+        mostrarError('Error', 'No se pudo eliminar el registro');
+      }
+    }
+  };
+
   if (cargando) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -928,13 +954,22 @@ const eliminarProyecto = async () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             {puedeEditar() && (
-                              <button
-                                onClick={() => restaurarRegistro(registro)}
-                                className="text-green-600 hover:text-green-900"
-                                title="Restaurar registro"
-                              >
-                                <MdRestore />
-                              </button>
+                              <div className="flex items-center justify-end space-x-3">
+                                <button
+                                  onClick={() => restaurarRegistro(registro)}
+                                  className="text-green-600 hover:bg-green-50 p-2 rounded-lg transition-colors"
+                                  title="Restaurar registro"
+                                >
+                                  <MdRestore className="text-lg" />
+                                </button>
+                                <button
+                                  onClick={() => eliminarRegistroPermanentemente(registro)}
+                                  className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                  title="Eliminar permanentemente"
+                                >
+                                  <MdDeleteForever className="text-lg" />
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>

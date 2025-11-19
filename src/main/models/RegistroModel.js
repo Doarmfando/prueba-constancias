@@ -401,7 +401,41 @@ class RegistroModel extends BaseModel {
       eliminado_por: null,
       fecha_eliminacion: null
     });
-    return { success: true };
+    return { success: true, message: 'Registro restaurado correctamente' };
+  }
+
+  // Eliminar permanentemente (borra registro y expediente, mantiene persona)
+  async eliminarPermanentemente(id) {
+    try {
+      // Obtener el registro para saber el expediente_id
+      const registro = await this.getById(id);
+
+      if (!registro) {
+        throw new Error('Registro no encontrado');
+      }
+
+      const expediente_id = registro.expediente_id;
+
+      // 1. Eliminar el registro de la tabla registros
+      await this.delete(id);
+
+      // 2. Eliminar el expediente asociado (si existe)
+      if (expediente_id) {
+        await this.db
+          .from('expedientes')
+          .delete()
+          .eq('id', expediente_id);
+      }
+
+      // NOTA: La persona NO se elimina, se mantiene en el sistema
+      return {
+        success: true,
+        message: 'Registro y expediente eliminados permanentemente. La persona se mantiene en el sistema.'
+      };
+    } catch (error) {
+      console.error('Error en eliminarPermanentemente:', error);
+      throw error;
+    }
   }
 
   // Contar registros por proyecto

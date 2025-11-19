@@ -43,47 +43,69 @@ function Papeleria() {
     cargarRegistrosEliminados();
   }, []);
 
-  const registrosFiltrados = registrosEliminados.filter(registro =>
-    registro.nombres.toLowerCase().includes(busqueda.toLowerCase()) ||
-    registro.apellidos.toLowerCase().includes(busqueda.toLowerCase()) ||
-    registro.dni.includes(busqueda) ||
-    registro.expediente.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (registro.expediente || registro.codigo || '').toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const registrosFiltrados = registrosEliminados.filter(registro => {
+    const nombre = registro.nombre || registro.nombres || '';
+    const apellidos = registro.apellidos || '';
+    const dni = registro.dni || '';
+    const expediente = registro.expediente || registro.codigo || '';
+
+    return (
+      nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      apellidos.toLowerCase().includes(busqueda.toLowerCase()) ||
+      dni.includes(busqueda) ||
+      expediente.toLowerCase().includes(busqueda.toLowerCase())
+    );
+  });
 
   const totalPaginas = Math.ceil(registrosFiltrados.length / registrosPorPagina);
   const indiceInicio = (paginaActual - 1) * registrosPorPagina;
   const registrosPaginados = registrosFiltrados.slice(indiceInicio, indiceInicio + registrosPorPagina);
 
   const restaurarRegistro = async (registro) => {
-    const confirmado = await mostrarConfirmacion({
-      titulo: '¿Restaurar registro?',
-      texto: `Se restaurará el registro de ${registro.nombres} ${registro.apellidos}`,
-      confirmButtonText: 'Sí, restaurar',
-      cancelButtonText: 'Cancelar'
-    });
+    const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim();
+    const confirmado = await mostrarConfirmacion(
+      '¿Restaurar registro?',
+      `Se restaurará el registro de ${nombreCompleto}. El expediente volverá a estar activo en el sistema.`
+    );
 
     if (confirmado) {
-      setTimeout(() => {
-        setRegistrosEliminados(prev => prev.filter(r => r.id !== registro.id));
-        mostrarExito('Registro restaurado correctamente');
-      }, 500);
+      try {
+        const response = await window.electronAPI?.registros.restaurar(registro.id);
+
+        if (response?.success) {
+          mostrarExito('Registro restaurado', 'El registro ha sido restaurado correctamente');
+          await cargarRegistrosEliminados(); // Recargar lista
+        } else {
+          mostrarError('Error', response?.error || 'No se pudo restaurar el registro');
+        }
+      } catch (error) {
+        console.error('Error restaurando registro:', error);
+        mostrarError('Error', 'No se pudo restaurar el registro');
+      }
     }
   };
 
   const eliminarDefinitivamente = async (registro) => {
-    const confirmado = await mostrarConfirmacion({
-      titulo: '¿Eliminar definitivamente?',
-      texto: `Se eliminará permanentemente el registro de ${registro.nombres} ${registro.apellidos}. Esta acción NO se puede deshacer.`,
-      confirmButtonText: 'Sí, eliminar definitivamente',
-      cancelButtonText: 'Cancelar'
-    });
+    const nombreCompleto = registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim();
+    const confirmado = await mostrarConfirmacion(
+      '¿Eliminar PERMANENTEMENTE?',
+      `ADVERTENCIA: Se eliminará permanentemente el registro y expediente de ${nombreCompleto}. Esta acción es irreversible.`
+    );
 
     if (confirmado) {
-      setTimeout(() => {
-        setRegistrosEliminados(prev => prev.filter(r => r.id !== registro.id));
-        mostrarExito('Registro eliminado definitivamente');
-      }, 500);
+      try {
+        const response = await window.electronAPI?.registros.eliminar(registro.id);
+
+        if (response?.success) {
+          mostrarExito('Eliminado permanentemente', 'El registro y expediente han sido eliminados de forma permanente');
+          await cargarRegistrosEliminados(); // Recargar lista
+        } else {
+          mostrarError('Error', response?.error || 'No se pudo eliminar el registro');
+        }
+      } catch (error) {
+        console.error('Error eliminando registro:', error);
+        mostrarError('Error', 'No se pudo eliminar el registro');
+      }
     }
   };
 
@@ -224,7 +246,7 @@ function Papeleria() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {registro.nombres} {registro.apellidos}
+                            {registro.nombre || `${registro.nombres || ''} ${registro.apellidos || ''}`.trim()}
                           </div>
                           <div className="text-sm text-gray-500">
                             DNI: {registro.dni}

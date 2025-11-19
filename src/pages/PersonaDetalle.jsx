@@ -43,9 +43,6 @@ function PersonaDetalle() {
     try {
       setCargando(true);
 
-      // Cargar persona (usando la API de informacion)
-      const responsePersona = await window.electronAPI?.informacion.buscarPersonaPorDni('');
-
       // Buscar la persona por ID
       const todasLasPersonas = await window.electronAPI?.personas.obtenerConDocumentos();
 
