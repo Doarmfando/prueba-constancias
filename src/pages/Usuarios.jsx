@@ -4,6 +4,7 @@ import { MdAdminPanelSettings, MdWork, MdSettings } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
 import { useRealtimeSync } from '../hooks/useRealtimeData';
+import { useAuth } from '../context/AuthContext';
 
 function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -15,22 +16,30 @@ function Usuarios() {
   const [paginaActual, setPaginaActual] = useState(1);
   const itemsPorPagina = 10;
 
-  // Temporalmente sin autenticacion - simular usuario admin
-  const usuarioActual = { id: 1, nombre: "Usuario Temporal", rol: "administrador" };
+  const { usuario: usuarioActual } = useAuth();
 
   // Realtime
   useRealtimeSync('usuarios', () => cargarUsuarios({ mostrarLoading: false }), {
-    habilitado: true,
+    habilitado: usuarioActual?.rol === 'administrador',
     debounceMs: 500
   });
 
   useEffect(() => {
-    cargarUsuarios({ mostrarLoading: true });
-  }, []);
+    if (usuarioActual?.rol === 'administrador') {
+      cargarUsuarios({ mostrarLoading: true });
+    } else {
+      setCargando(false);
+    }
+  }, [usuarioActual]);
 
   const cargarUsuarios = async ({ mostrarLoading = false } = {}) => {
     try {
       if (mostrarLoading) setCargando(true);
+
+      if (!usuarioActual) {
+        mostrarError('Sesión no encontrada', 'Vuelve a iniciar sesión para gestionar usuarios');
+        return;
+      }
 
       const response = await window.electronAPI?.auth.listarUsuarios(usuarioActual);
 
@@ -50,6 +59,11 @@ function Usuarios() {
 
   const crearUsuario = async (datosUsuario) => {
     try {
+      if (!usuarioActual) {
+        mostrarError('Sesión no encontrada', 'Vuelve a iniciar sesión para crear usuarios');
+        return;
+      }
+
       const response = await window.electronAPI?.auth.crearUsuario(datosUsuario, usuarioActual);
 
       if (response?.success) {
@@ -66,7 +80,12 @@ function Usuarios() {
 
   const actualizarUsuario = async (datosUsuario) => {
     try {
-      const response = await window.electronAPI?.auth.actualizarUsuario(usuarioEditando.id, datosUsuario);
+      if (!usuarioActual) {
+        mostrarError('Sesión no encontrada', 'Vuelve a iniciar sesión para editar usuarios');
+        return;
+      }
+
+      const response = await window.electronAPI?.auth.actualizarUsuario(usuarioEditando.id, datosUsuario, usuarioActual);
 
       if (response?.success) {
         mostrarExito('Usuario actualizado correctamente');
@@ -93,7 +112,7 @@ function Usuarios() {
     if (confirmado) {
       try {
         const apiMethod = usuario.activo ? 'desactivarUsuario' : 'activarUsuario';
-        const response = await window.electronAPI?.auth[apiMethod](usuario.id);
+        const response = await window.electronAPI?.auth[apiMethod](usuario.id, usuarioActual);
 
         if (response?.success) {
           mostrarExito(`Usuario ${accion === 'activar' ? 'activado' : 'desactivado'} correctamente`);
@@ -150,6 +169,22 @@ function Usuarios() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!usuarioActual) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow border text-center">
+        <p className="text-gray-700">Inicia sesión para gestionar usuarios.</p>
+      </div>
+    );
+  }
+
+  if (usuarioActual.rol !== 'administrador') {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow border text-center">
+        <p className="text-gray-700">Solo los administradores pueden gestionar usuarios.</p>
       </div>
     );
   }

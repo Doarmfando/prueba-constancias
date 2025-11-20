@@ -93,7 +93,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     login: (nombre_usuario, password) => ipcRenderer.invoke("auth-login", { nombre_usuario, password }),
     verificarSesion: (usuarioId) => ipcRenderer.invoke("auth-verificar-sesion", { usuarioId }),
     obtenerPerfil: (usuarioId) => ipcRenderer.invoke("auth-obtener-perfil", { usuarioId }),
-    cambiarPassword: (id, passwordAnterior, passwordNuevo) => ipcRenderer.invoke("auth-cambiar-password", { id, passwordAnterior, passwordNuevo }),
+    cambiarPassword: (id, passwordAnterior, passwordNuevo, usuario) => ipcRenderer.invoke("auth-cambiar-password", { id, passwordAnterior, passwordNuevo, usuario }),
     crearUsuario: (datos, usuario) => ipcRenderer.invoke("auth-crear-usuario", { datosUsuario: datos, usuario }),
     listarUsuarios: (usuario) => ipcRenderer.invoke("auth-listar-usuarios", { usuario }),
     actualizarUsuario: (id, datos, usuario) => ipcRenderer.invoke("auth-actualizar-usuario", { id, datos, usuario }),

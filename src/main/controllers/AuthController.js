@@ -91,7 +91,7 @@ class AuthController extends BaseController {
   // Actualizar usuario
   async actualizarUsuario(id, datos, usuarioActual) {
     try {
-      // Solo admin puede actualizar otros usuarios, o el usuario puede actualizarse a sí mismo
+      // Solo admin puede actualizar otros usuarios, o el usuario puede actualizarse a s? mismo
       const puedeActualizar = usuarioActual.rol === 'administrador' || usuarioActual.id === parseInt(id);
 
       if (!puedeActualizar) {
@@ -103,15 +103,26 @@ class AuthController extends BaseController {
         delete datos.rol;
       }
 
-      const usuarioActualizado = await this.usuarioModel.actualizar(id, datos);
+      const { password: passwordNuevo, ...datosActualizacion } = datos || {};
 
-      // Registrar acción en auditoría
+      const usuarioActualizado = await this.usuarioModel.actualizar(id, datosActualizacion);
+
+      if (passwordNuevo) {
+        await this.usuarioModel.cambiarPasswordAdmin(id, passwordNuevo);
+      }
+
+      const cambiosAuditoria = {
+        ...datosActualizacion,
+        ...(passwordNuevo ? { password: '[cambiado]' } : {})
+      };
+
+      // Registrar acci?n en auditor?a
       await this.auditoriaModel.registrarEdicion(
         usuarioActual.id,
         'usuarios',
         id,
         null,
-        datos
+        cambiosAuditoria
       );
 
       return {
@@ -126,26 +137,41 @@ class AuthController extends BaseController {
     }
   }
 
+
+
   // Cambiar contraseña con Supabase Auth
-  async cambiarPassword(id, passwordNuevo, usuarioActual) {
+  async cambiarPassword(id, passwordAnterior, passwordNuevo, usuarioActual) {
     try {
-      // Solo admin puede cambiar passwords de otros, o el usuario puede cambiar la suya
-      const puedeCambiar = usuarioActual.rol === 'administrador' || usuarioActual.id === parseInt(id);
+      if (!usuarioActual) {
+        throw new Error('Sesión inválida');
+      }
+
+      if (!passwordNuevo) {
+        throw new Error('La nueva contraseña es obligatoria');
+      }
+
+      const esPropio = usuarioActual.id === parseInt(id);
+      const esAdmin = usuarioActual.rol === 'administrador';
+
+      const puedeCambiar = esAdmin || esPropio;
 
       if (!puedeCambiar) {
         throw new Error('No tienes permisos para cambiar esta contraseña');
       }
 
-      // Si el usuario cambia su propia contraseña
-      if (usuarioActual.id === parseInt(id)) {
-        await this.usuarioModel.cambiarPasswordPropia(passwordNuevo);
-      }
-      // Si es admin cambiando la contraseña de otro usuario
-      else {
-        await this.usuarioModel.cambiarPasswordAdmin(id, passwordNuevo);
+      if (esPropio && !esAdmin) {
+        if (!passwordAnterior) {
+          throw new Error('Debes ingresar tu contraseña actual');
+        }
+
+        await this.usuarioModel.autenticar(
+          usuarioActual.email || usuarioActual.nombre_usuario,
+          passwordAnterior
+        );
       }
 
-      // Registrar acción en auditoría
+      await this.usuarioModel.cambiarPasswordAdmin(id, passwordNuevo);
+
       await this.auditoriaModel.registrarEdicion(
         usuarioActual.id,
         'usuarios',
@@ -165,6 +191,8 @@ class AuthController extends BaseController {
       };
     }
   }
+
+
 
   // Desactivar usuario (solo admin)
   async desactivarUsuario(id, usuarioActual) {
