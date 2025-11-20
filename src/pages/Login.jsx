@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Shield, User, CheckCircle } from 'lucide-react';
 import { mostrarError, mostrarExito } from '../utils/alertas';
 import { useAuth } from '../context/AuthContext';
+import iconoIco from '../../public/icono2.ico';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -107,7 +108,7 @@ function Login() {
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-blue-400/20 rounded-3xl blur-xl animate-pulse" />
               <img
-                src="/icono2.ico"
+                src={iconoIco}
                 alt="Logo del sistema"
                 className="w-28 h-28 mb-6 drop-shadow-2xl relative z-10 hover:scale-110 transition-transform duration-300"
               />
@@ -154,7 +155,7 @@ function Login() {
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-blue-400/20 rounded-3xl blur-xl animate-pulse" />
               <img
-                src="/icono2.ico"
+                src={iconoIco}
                 alt="Logo del sistema"
                 className="w-20 h-20 mx-auto mb-4 drop-shadow-2xl relative z-10"
               />
