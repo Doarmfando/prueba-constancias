@@ -138,6 +138,18 @@ class RegistroController extends BaseController {
       if (datosMapeados?.proyecto_id) {
         await this.verificarPermisoEdicion(datosMapeados.proyecto_id, usuario);
       }
+
+      // Validar que el expediente no esté duplicado
+      if (datosMapeados.expediente_codigo) {
+        const expedienteExiste = await this.model.existeExpedientePorCodigo(datosMapeados.expediente_codigo);
+        if (expedienteExiste) {
+          return {
+            success: false,
+            error: `El expediente "${datosMapeados.expediente_codigo}" ya existe en el sistema. Por favor, ingrese un código de expediente diferente.`
+          };
+        }
+      }
+
       const resultado = await this.model.agregar(datosMapeados);
 
       // Crear una respuesta serializable

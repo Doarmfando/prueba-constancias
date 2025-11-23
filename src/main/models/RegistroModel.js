@@ -534,6 +534,20 @@ class RegistroModel extends BaseModel {
     return !!data;
   }
 
+  // Verificar si un código de expediente ya existe (globalmente)
+  async existeExpedientePorCodigo(codigo) {
+    if (!codigo || codigo.trim() === '') return false;
+
+    const { data, error } = await this.db
+      .from('expedientes')
+      .select('id, codigo')
+      .eq('codigo', codigo.trim())
+      .limit(1);
+
+    if (error) throw error;
+    return data && data.length > 0;
+  }
+
   // Buscar registros por DNI de persona
   async buscarPorDni(dni) {
     const { data, error } = await this.db
