@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaUsers, FaUserCheck, FaUserTimes, FaSearch, FaKey } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaUsers, FaUserCheck, FaUserTimes, FaSearch, FaKey, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { MdAdminPanelSettings, MdWork, MdSettings } from 'react-icons/md';
 import { mostrarConfirmacion, mostrarExito, mostrarError } from '../utils/alertas';
 import Paginacion from '../components/Paginacion';
@@ -495,6 +495,8 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
   });
 
   const [errores, setErrores] = useState({});
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mostrarConfirmarPassword, setMostrarConfirmarPassword] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -626,15 +628,24 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {usuario ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
               </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errores.password ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
+              <div className="relative">
+                <input
+                  type={mostrarPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errores.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarPassword(!mostrarPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                >
+                  {mostrarPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </button>
+              </div>
               {errores.password && (
                 <p className="mt-1 text-sm text-red-600">{errores.password}</p>
               )}
@@ -645,15 +656,24 @@ function FormularioUsuario({ usuario, onGuardar, onCancelar }) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Confirmar Contraseña
                 </label>
-                <input
-                  type="password"
-                  name="confirmar_password"
-                  value={formData.confirmar_password}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errores.confirmar_password ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
+                <div className="relative">
+                  <input
+                    type={mostrarConfirmarPassword ? "text" : "password"}
+                    name="confirmar_password"
+                    value={formData.confirmar_password}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errores.confirmar_password ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarConfirmarPassword(!mostrarConfirmarPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    {mostrarConfirmarPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                </div>
                 {errores.confirmar_password && (
                   <p className="mt-1 text-sm text-red-600">{errores.confirmar_password}</p>
                 )}

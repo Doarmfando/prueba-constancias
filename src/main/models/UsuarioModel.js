@@ -21,6 +21,28 @@ class UsuarioModel extends BaseModel {
         throw new Error('Cliente admin no configurado. Operación no permitida.');
       }
 
+      // Validar que el nombre de usuario no exista
+      const { data: usuarioExistente, error: errorBusqueda } = await this.adminClient
+        .from(this.tableName)
+        .select('id, nombre_usuario')
+        .eq('nombre_usuario', nombre_usuario.trim())
+        .limit(1);
+
+      if (!errorBusqueda && usuarioExistente && usuarioExistente.length > 0) {
+        throw new Error(`El nombre de usuario "${nombre_usuario}" ya está registrado. Por favor, elige otro nombre de usuario.`);
+      }
+
+      // Validar que el email no exista (además de la validación de Supabase Auth)
+      const { data: emailExistente, error: errorEmail } = await this.adminClient
+        .from(this.tableName)
+        .select('id, email')
+        .eq('email', email.trim().toLowerCase())
+        .limit(1);
+
+      if (!errorEmail && emailExistente && emailExistente.length > 0) {
+        throw new Error(`El email "${email}" ya está registrado. Por favor, usa otro email.`);
+      }
+
       // 1. Crear usuario en Supabase Auth usando cliente ADMIN
       const { data: authData, error: authError } = await this.adminClient.auth.admin.createUser({
         email,
@@ -163,11 +185,39 @@ class UsuarioModel extends BaseModel {
     }
 
     try {
+      // Validar nombre_usuario duplicado si se está cambiando
+      if (datosActualizar.nombre_usuario) {
+        const { data: usuarioExistente } = await this.db
+          .from(this.tableName)
+          .select('id, nombre_usuario')
+          .eq('nombre_usuario', datosActualizar.nombre_usuario.trim())
+          .neq('id', id)
+          .limit(1);
+
+        if (usuarioExistente && usuarioExistente.length > 0) {
+          throw new Error(`El nombre de usuario "${datosActualizar.nombre_usuario}" ya está en uso. Por favor, elige otro.`);
+        }
+      }
+
+      // Validar email duplicado si se está cambiando
+      if (datosActualizar.email) {
+        const { data: emailExistente } = await this.db
+          .from(this.tableName)
+          .select('id, email')
+          .eq('email', datosActualizar.email.trim().toLowerCase())
+          .neq('id', id)
+          .limit(1);
+
+        if (emailExistente && emailExistente.length > 0) {
+          throw new Error(`El email "${datosActualizar.email}" ya está en uso. Por favor, usa otro email.`);
+        }
+      }
+
       await this.update(id, datosActualizar);
       return await this.obtenerPorId(id);
     } catch (error) {
       if (error.code === '23505') {
-        throw new Error('El nombre de usuario ya está en uso');
+        throw new Error('El nombre de usuario o email ya está en uso');
       }
       throw error;
     }
