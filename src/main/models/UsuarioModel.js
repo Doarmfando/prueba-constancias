@@ -83,7 +83,10 @@ class UsuarioModel extends BaseModel {
 
       return usuario.id;
     } catch (error) {
-      console.error('Error en crear usuario:', error);
+      // Solo mostrar log si es un error inesperado (no de validación)
+      if (!error.message.includes('ya está registrado')) {
+        console.error('Error en crear usuario:', error);
+      }
       throw error;
     }
   }
