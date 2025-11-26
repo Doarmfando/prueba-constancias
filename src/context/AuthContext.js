@@ -34,6 +34,56 @@ export function AuthProvider({ children }) {
     setCargando(false);
   }, []);
 
+  // Cerrar sesión automáticamente cuando se cierra la ventana del navegador
+  useEffect(() => {
+    const handleBeforeUnload = async (event) => {
+      // Solo en modo web (navegador), no en Electron
+      if (!isElectron() && usuario) {
+        // Registrar logout en auditoría
+        if (usuario?.id) {
+          try {
+            // Usar sendBeacon para garantizar que se envíe antes de cerrar
+            const API_URL = 'http://localhost:3001/api';
+
+            // sendBeacon requiere un Blob con tipo application/json
+            const data = new Blob([JSON.stringify({
+              id: usuario.id,
+              nombre_usuario: usuario.nombre_usuario,
+              rol: usuario.rol
+            })], { type: 'application/json' });
+
+            // sendBeacon es más confiable que fetch para eventos beforeunload
+            navigator.sendBeacon(`${API_URL}/auditoria/logout`, data);
+          } catch (error) {
+            console.error('Error registrando logout:', error);
+          }
+        }
+
+        // Limpiar sesión de Supabase
+        if (supabaseUser) {
+          try {
+            await supabaseUser.auth.signOut();
+          } catch (error) {
+            console.warn('Error en signOut:', error);
+          }
+        }
+
+        // Limpiar localStorage
+        localStorage.removeItem('sesion_usuario');
+      }
+    };
+
+    // Solo agregar el listener si hay usuario autenticado
+    if (usuario && !isElectron()) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      // Cleanup: remover el listener cuando el componente se desmonte
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [usuario]);
+
   const login = async (nombre_usuario, password) => {
     try {
       let response;

@@ -412,6 +412,21 @@ app.post('/api/usuarios/login', ensureInitialized, async (req, res) => {
   }
 });
 
+// Endpoint para registrar logout (usado por sendBeacon al cerrar ventana)
+app.post('/api/auditoria/logout', ensureInitialized, async (req, res) => {
+  try {
+    const usuario = req.body;
+    if (usuario && usuario.id) {
+      await controllers.auditoria.registrarLogout(usuario);
+    }
+    // Responder inmediatamente para que sendBeacon tenga éxito
+    res.status(204).send(); // 204 No Content
+  } catch (error) {
+    console.error('Error registrando logout:', error);
+    res.status(204).send(); // Aún así responder 204 para no bloquear el cierre
+  }
+});
+
 app.get('/api/usuarios', ensureInitialized, async (req, res) => {
   try {
     const resultado = await controllers.auth.listarUsuarios(req.body);
