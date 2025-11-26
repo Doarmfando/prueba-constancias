@@ -54,12 +54,19 @@ export const mostrarExito = (mensaje = 'Operación completada') => {
 
 /**
  * Muestra una alerta de error
+ * @param {string} tituloOMensaje - Si solo se pasa un parámetro, es el mensaje. Si se pasan dos, es el título
+ * @param {string} mensaje - El mensaje de error (opcional)
  */
-export const mostrarError = (mensaje = 'Ocurrió un error') => {
+export const mostrarError = (tituloOMensaje = 'Ocurrió un error', mensaje = null) => {
+  // Si se pasa solo un parámetro, usarlo como mensaje
+  // Si se pasan dos, el primero es título y el segundo es mensaje
+  const titulo = mensaje ? tituloOMensaje : 'Error';
+  const texto = mensaje || tituloOMensaje;
+
   Swal.fire({
     icon: 'error',
-    title: 'Error',
-    text: mensaje,
+    title: titulo,
+    text: texto,
     confirmButtonText: 'Cerrar',
     customClass: clasesPersonalizadas,
     buttonsStyling: false,
