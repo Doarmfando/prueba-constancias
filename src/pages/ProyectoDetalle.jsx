@@ -1541,7 +1541,7 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
     if (!formData.dni.trim()) {
       nuevosErrores.dni = 'El DNI es obligatorio';
     } else if (!/^\d{8}$/.test(formData.dni.trim())) {
-      nuevosErrores.dni = 'El DNI debe tener 8 dÃ­gitos';
+      nuevosErrores.dni = 'El DNI debe tener 8 dígitos';
     }
 
     if (!formData.expediente_codigo.trim()) {
@@ -1549,7 +1549,21 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
     }
 
     setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
+
+    // Si hay errores, mostrar mensaje al usuario
+    if (Object.keys(nuevosErrores).length > 0) {
+      const camposFaltantes = Object.keys(nuevosErrores).map(campo => {
+        if (campo === 'expediente_codigo') return 'Código de Expediente';
+        if (campo === 'nombre') return 'Nombre';
+        if (campo === 'dni') return 'DNI';
+        return campo;
+      }).join(', ');
+
+      mostrarError('Campos requeridos', `Por favor complete: ${camposFaltantes}`);
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e) => {
@@ -1599,12 +1613,19 @@ function FormularioRegistro({ proyecto, registro, onClose, onSave, usuario }) {
         response = await window.electronAPI?.registros.agregar(datosRegistro, usuario);
       }
 
+      // Verificar primero si hubo un error
+      if (response && response.success === false) {
+        mostrarError('Error al guardar', response.error || 'No se pudo guardar el registro');
+        return; // No cerrar el formulario para que el usuario pueda corregir
+      }
+
+      // Si fue exitoso, proceder normalmente
       if (response?.success) {
         mostrarExito(registro ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
         // Esperar a que se recarguen los datos antes de cerrar el modal
         await onSave(response.registro || { ...datosRegistro, id: Date.now() });
       } else {
-        mostrarError('Error al guardar registro', response?.error || 'Error desconocido');
+        mostrarError('Error', 'No se pudo guardar el registro');
       }
     } catch (error) {
       mostrarError('Error de conexiÃ³n', 'No se pudo guardar el registro');

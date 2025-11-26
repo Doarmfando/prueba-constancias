@@ -98,7 +98,6 @@ class RegistroController extends BaseController {
       const usuario = payload?.usuario || null;
       const datosSanitizados = this.sanitizeInput(datos);
 
-
       // Mapear nombres del frontend a nombres del backend
       // fecha_registro se usa tanto para tabla registros como para fecha_solicitud en expedientes
       const fechaRegistroDefault = (() => {
@@ -228,9 +227,20 @@ class RegistroController extends BaseController {
       }
 
       // Obtener el registro para verificar permisos
-      const reg = await this.model.getById(datosMapeados.id);
+      const reg = await this.model.obtenerPorId(datosMapeados.id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
+      }
+
+      // Validar que el expediente no esté duplicado (solo si se cambió el código)
+      if (datosMapeados.expediente_codigo && reg.expediente_codigo !== datosMapeados.expediente_codigo) {
+        const expedienteExiste = await this.model.existeExpedientePorCodigo(datosMapeados.expediente_codigo);
+        if (expedienteExiste) {
+          return {
+            success: false,
+            error: `No se puede actualizar. El expediente "${datosMapeados.expediente_codigo}" ya existe en otro registro. Por favor, ingrese un código de expediente diferente.`
+          };
+        }
       }
 
       const resultado = await this.model.actualizar(datosMapeados);
@@ -251,7 +261,7 @@ class RegistroController extends BaseController {
       const id = typeof payload === 'object' ? payload.id : payload;
       const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
-      const reg = await this.model.getById(id);
+      const reg = await this.model.obtenerPorId(id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
@@ -273,7 +283,7 @@ class RegistroController extends BaseController {
       }
       // Validar permisos por cada registro
       for (const id of ids) {
-        const reg = await this.model.getById(id);
+        const reg = await this.model.obtenerPorId(id);
         if (reg?.proyecto_id) {
           await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
         }
@@ -291,7 +301,7 @@ class RegistroController extends BaseController {
       const id = typeof payload === 'object' ? payload.id : payload;
       const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
-      const reg = await this.model.getById(id);
+      const reg = await this.model.obtenerPorId(id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
@@ -312,7 +322,7 @@ class RegistroController extends BaseController {
         throw new Error("No se proporcionaron IDs válidos");
       }
       for (const id of ids) {
-        const reg = await this.model.getById(id);
+        const reg = await this.model.obtenerPorId(id);
         if (reg?.proyecto_id) {
           await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
         }
@@ -330,7 +340,7 @@ class RegistroController extends BaseController {
       const id = typeof payload === 'object' ? payload.id : payload;
       const usuario = typeof payload === 'object' ? payload.usuario : null;
       this.validateRequired({ id }, ['id']);
-      const reg = await this.model.getById(id);
+      const reg = await this.model.obtenerPorId(id);
       if (reg?.proyecto_id) {
         await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
       }
@@ -354,7 +364,7 @@ class RegistroController extends BaseController {
       const resultados = [];
       for (const id of ids) {
         try {
-          const reg = await this.model.getById(id);
+          const reg = await this.model.obtenerPorId(id);
           if (reg?.proyecto_id) {
             await this.verificarPermisoEdicion(reg.proyecto_id, usuario);
           }

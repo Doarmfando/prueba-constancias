@@ -135,6 +135,28 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validar campos obligatorios
+    if (!formData.nombre || !formData.nombre.trim()) {
+      mostrarError('Campo requerido', 'Por favor ingrese el nombre completo');
+      return;
+    }
+
+    if (!formData.dni || !formData.dni.trim()) {
+      mostrarError('Campo requerido', 'Por favor ingrese el DNI');
+      return;
+    }
+
+    if (!/^\d{8}$/.test(formData.dni.trim())) {
+      mostrarError('DNI inválido', 'El DNI debe tener exactamente 8 dígitos');
+      return;
+    }
+
+    if (!formData.expediente || !formData.expediente.trim()) {
+      mostrarError('Campo requerido', 'Por favor ingrese el código de expediente');
+      return;
+    }
+
     setGuardando(true);
 
     try {
@@ -160,6 +182,13 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
         response = await window.electronAPI?.registros.agregar(datosCrear);
       }
 
+      // Verificar primero si hubo un error
+      if (response && response.success === false) {
+        mostrarError('Error al guardar', response.error || 'No se pudo guardar el registro');
+        return; // No cerrar el formulario para que el usuario pueda corregir
+      }
+
+      // Si fue exitoso, proceder normalmente
       if (response && (response.success || response.registro)) {
         mostrarExito(registroEditar ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
         onRegistroCreado && onRegistroCreado();
@@ -178,7 +207,7 @@ function FormularioRegistro({ mostrar, onCerrar, onRegistroCreado, registroEdita
           });
         }
       } else {
-        mostrarError('Error', response?.error || 'No se pudo guardar el registro');
+        mostrarError('Error', 'No se pudo guardar el registro');
       }
     } catch (error) {
       console.error('Error guardando registro:', error);
